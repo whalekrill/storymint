@@ -1,0 +1,32 @@
+[package]
+name = "storymint"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "storymint"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+devnet = []
+mainnet = []
+
+[dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"
+mpl-core = { version = "0.7.2", features = ["anchor"] }
+
+[package.metadata.solana]
+version = "0.1.1"
+default-program-authority = ["../../../../keys/devnet.json"]
+upgradeable = true

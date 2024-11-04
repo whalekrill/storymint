@@ -1,0 +1,34 @@
+[toolchain]
+anchor_version = "0.30.1"
+solana_version = "1.18.18"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+storymint = "5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B"
+
+[programs.devnet]
+storymint = "5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B"
+
+[provider]
+cluster = "localnet"
+wallet = "./only-for-testing/localnet.json"
+
+[scripts]
+test = " ../node_modules/.bin/jest --preset ts-jest"
+
+[test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgradeable = false
+
+[[test.genesis]]
+address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+program = "fixtures/mpl_core.so"
+
+[test.validator]
+bind_address = "127.0.0.1"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
