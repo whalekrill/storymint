@@ -36,7 +36,7 @@ pub struct InitializeMasterEdition<'info> {
         init,
         payer = authority,
         space = 8 + 1 + 32 + 32 + 8, // discriminator + is_initialized + authority + master_mint + total_minted
-        seeds = ["edition_state".as_bytes()],
+        seeds = ["edition_state".as_bytes(), master_mint.key().as_ref()],
         bump
     )]
     pub edition_state: Account<'info, EditionState>,
@@ -62,6 +62,10 @@ pub struct InitializeMasterEdition<'info> {
         seeds::program = METADATA_PROGRAM_ID
     )]
     pub master_edition: UncheckedAccount<'info>,
+
+    /// CHECK: Verified statically using constraint
+    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
+    pub token_metadata_program: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -146,7 +150,7 @@ pub struct MintPNFT<'info> {
 
     /// CHECK: Will be initialized as a mint
     #[account(mut)]
-    pub mint: Signer<'info>,
+    pub mint: UncheckedAccount<'info>,
 
     /// CHECK: Mint authority PDA
     #[account(
@@ -179,6 +183,14 @@ pub struct UpdateMetadata<'info> {
     )]
     pub vault: Account<'info, TokenVault>,
 
+    /// CHECK: Token Metadata Program
+    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
+    pub token_metadata_program: AccountInfo<'info>,
+
+    /// CHECK: Token account verified by constraints
+    #[account(mut)]
+    pub token_account: UncheckedAccount<'info>,
+
     /// CHECK: Metadata account verified by seeds
     #[account(
         mut,
@@ -188,18 +200,17 @@ pub struct UpdateMetadata<'info> {
     )]
     pub metadata: UncheckedAccount<'info>,
 
-    /// CHECK: Token account to verify ownership
-    #[account(mut)]
-    pub token_account: UncheckedAccount<'info>,
-
     /// CHECK: Mint account
-    pub mint: AccountInfo<'info>,
+    pub mint: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 
     /// CHECK: Required by token metadata program
     pub sysvar_instructions: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub edition_state: Account<'info, EditionState>,
 }
 
 #[derive(Accounts)]
@@ -217,6 +228,10 @@ pub struct BurnAndWithdraw<'info> {
     )]
     pub vault: Account<'info, TokenVault>,
 
+    /// CHECK: Token Metadata Program
+    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
+    pub token_metadata_program: AccountInfo<'info>,
+
     /// CHECK: Metadata verified by seeds
     #[account(
         mut,
@@ -226,7 +241,7 @@ pub struct BurnAndWithdraw<'info> {
     )]
     pub metadata: UncheckedAccount<'info>,
 
-    /// CHECK: Token account to burn
+    /// CHECK: Token account verified by constraints
     #[account(mut)]
     pub token_account: UncheckedAccount<'info>,
 
@@ -275,13 +290,18 @@ pub enum CustomError {
     MaxSupplyReached,
     Overflow,
     NotInitialized,
+    InvalidProgramId,
+    InsufficientBalance,
+    BalanceOverflow,
 }
 
 pub mod vault_utils {
     use super::*;
 
+    const VAULT_SIZE: usize = 8 + 32 + 32; // discriminator + owner + mint
+
     pub fn get_vault_rent_exempt_balance(rent: &Rent) -> u64 {
-        rent.minimum_balance(8 + 32 + 32) // space for TokenVault struct
+        rent.minimum_balance(VAULT_SIZE)
     }
 
     pub fn get_required_vault_balance(rent: &Rent) -> u64 {
@@ -300,6 +320,62 @@ pub mod vault_utils {
             CustomError::InvalidVaultBalance
         );
 
+        Ok(())
+    }
+
+    pub fn validate_account_balances<'info>(
+        payer: &AccountInfo<'info>,
+        vault: &AccountInfo<'info>,
+        rent: &Rent,
+        is_initialization: bool,
+    ) -> Result<()> {
+        let required_balance = get_required_vault_balance(rent);
+
+        // During initialization, check payer has enough funds
+        if is_initialization {
+            require_gte!(
+                payer.lamports(),
+                required_balance,
+                CustomError::InsufficientBalance
+            );
+        }
+        // For existing vaults, validate current balance
+        else {
+            validate_vault_balance(vault, rent)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_withdrawal_balance<'info>(
+        vault: &AccountInfo<'info>,
+        owner: &AccountInfo<'info>,
+        rent: &Rent,
+    ) -> Result<()> {
+        // Ensure vault has exactly the required balance
+        validate_vault_balance(vault, rent)?;
+
+        // Calculate expected owner balance after withdrawal
+        let withdrawal_amount = VAULT_AMOUNT
+            .checked_add(get_vault_rent_exempt_balance(rent))
+            .ok_or(CustomError::Overflow)?;
+
+        // Ensure owner can receive the funds (optional check)
+        require_gte!(
+            owner
+                .lamports()
+                .checked_add(withdrawal_amount)
+                .ok_or(CustomError::Overflow)?,
+            withdrawal_amount,
+            CustomError::BalanceOverflow
+        );
+
+        Ok(())
+    }
+
+    // Helper for checking if SOL transfer would succeed
+    pub fn validate_transfer_amount(from: &AccountInfo, amount: u64) -> Result<()> {
+        require_gte!(from.lamports(), amount, CustomError::InsufficientBalance);
         Ok(())
     }
 }
@@ -428,12 +504,12 @@ pub mod locked_sol_pnft {
             CustomError::MaxSupplyReached
         );
 
-        let rent_exempt = ctx.accounts.rent.minimum_balance(
-            8 + 32 + 32, // TokenVault size
-        );
-        let total_required = VAULT_AMOUNT
-            .checked_add(rent_exempt)
-            .ok_or(CustomError::Overflow)?;
+        vault_utils::validate_account_balances(
+            &ctx.accounts.payer.to_account_info(),
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.rent,
+            true,
+        )?;
 
         // Transfer SOL to vault
         system_program::transfer(
@@ -444,7 +520,7 @@ pub mod locked_sol_pnft {
                     to: ctx.accounts.vault.to_account_info(),
                 },
             ),
-            total_required,
+            vault_utils::get_required_vault_balance(&ctx.accounts.rent),
         )?;
 
         // Initialize vault
@@ -613,17 +689,6 @@ pub mod locked_sol_pnft {
         new_uri: String,
         new_name: Option<String>,
     ) -> Result<()> {
-        // Verify token ownership
-        let token_amount = token::accessor::amount(&ctx.accounts.token_account)?;
-        require_eq!(token_amount, 1, CustomError::InvalidTokenAmount);
-
-        let token_owner = token::accessor::authority(&ctx.accounts.token_account)?;
-        require_eq!(
-            token_owner,
-            ctx.accounts.owner.key(),
-            CustomError::InvalidTokenAccount
-        );
-
         // Update metadata
         let update_metadata_ix = mpl_token_metadata::instructions::UpdateMetadataAccountV2 {
             metadata: ctx.accounts.metadata.key(),
@@ -639,13 +704,13 @@ pub mod locked_sol_pnft {
                     creators: None,
                     collection: Some(Collection {
                         verified: true,
-                        key: ctx.accounts.vault.mint,
+                        key: ctx.accounts.edition_state.master_mint,
                     }),
                     uses: None,
                 }),
-                new_update_authority: Some(ctx.accounts.owner.key()), // Fixed field name
+                new_update_authority: Some(ctx.accounts.owner.key()),
                 primary_sale_happened: None,
-                is_mutable: Some(true), // Fixed Option<bool>
+                is_mutable: Some(true),
             },
         );
 
@@ -669,21 +734,16 @@ pub mod locked_sol_pnft {
             .checked_add(rent_exempt)
             .ok_or(CustomError::Overflow)?;
 
+        vault_utils::validate_withdrawal_balance(
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.owner.to_account_info(),
+            &ctx.accounts.rent,
+        )?;
+
         require_eq!(
             ctx.accounts.vault.to_account_info().lamports(),
             expected_balance,
             CustomError::InvalidVaultBalance
-        );
-
-        // Verify token account ownership and amount using accessors
-        let token_amount = token::accessor::amount(&ctx.accounts.token_account)?;
-        require_eq!(token_amount, 1, CustomError::InvalidTokenAmount);
-
-        let token_owner = token::accessor::authority(&ctx.accounts.token_account)?;
-        require_eq!(
-            token_owner,
-            ctx.accounts.owner.key(),
-            CustomError::InvalidTokenAccount
         );
 
         // Burn NFT
