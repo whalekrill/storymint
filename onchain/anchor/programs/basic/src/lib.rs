@@ -5,14 +5,229 @@ use anchor_spl::{
     token::{self, Token},
 };
 
+use mpl_token_metadata::instructions::VerifyCollection;
+use mpl_token_metadata::instructions::{Burn, BurnInstructionArgs};
 use mpl_token_metadata::instructions::{
     CreateMasterEditionV3, CreateMasterEditionV3InstructionArgs, CreateMetadataAccountV3,
     CreateMetadataAccountV3InstructionArgs,
 };
+use mpl_token_metadata::types::BurnArgs;
 use mpl_token_metadata::types::{Collection, DataV2};
 use mpl_token_metadata::ID as METADATA_PROGRAM_ID;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+
+const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL in lamports
+const MAX_SUPPLY: u64 = 10_000; // Max NFTs in master edition
+
+#[derive(Accounts)]
+pub struct InitializeMasterEdition<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    /// CHECK: Master authority PDA
+    #[account(
+        seeds = ["master_authority".as_bytes(), master_mint.key().as_ref()],
+        bump
+    )]
+    pub master_authority: UncheckedAccount<'info>,
+
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + 1 + 32 + 32 + 8, // discriminator + is_initialized + authority + master_mint + total_minted
+        seeds = ["edition_state".as_bytes()],
+        bump
+    )]
+    pub edition_state: Account<'info, EditionState>,
+
+    /// CHECK: Will be initialized
+    #[account(mut)]
+    pub master_mint: AccountInfo<'info>,
+
+    /// CHECK: Metadata account for master edition
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), master_mint.key().as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub master_metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Master edition account
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), master_mint.key().as_ref(), "edition".as_bytes()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub master_edition: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct MintPNFT<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + 32 + 32, // discriminator + owner + mint
+        seeds = ["vault".as_bytes(), mint.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, TokenVault>,
+
+    #[account(
+        mut,
+        seeds = ["edition_state".as_bytes()],
+        bump,
+        constraint = edition_state.is_initialized @ CustomError::NotInitialized
+    )]
+    pub edition_state: Account<'info, EditionState>,
+
+    /// CHECK: Master authority PDA for collection verification
+    #[account(
+        seeds = ["master_authority".as_bytes(), edition_state.master_mint.as_ref()],
+        bump
+    )]
+    pub master_authority: UncheckedAccount<'info>,
+
+    /// CHECK: Collection metadata - owner validated
+    #[account(
+        mut,
+        owner = METADATA_PROGRAM_ID,
+        seeds = ["metadata".as_bytes(), edition_state.master_mint.as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub collection_metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Collection master edition - owner validated
+    #[account(
+        owner = METADATA_PROGRAM_ID,
+        seeds = ["metadata".as_bytes(), edition_state.master_mint.as_ref(), "edition".as_bytes()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub collection_master_edition: UncheckedAccount<'info>,
+
+    /// CHECK: Master edition verified by seeds
+    #[account(
+        mut,
+        owner = METADATA_PROGRAM_ID,
+        seeds = ["metadata".as_bytes(), edition_state.master_mint.as_ref(), "edition".as_bytes()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub master_edition: UncheckedAccount<'info>,
+
+    /// CHECK: Metadata account created via CPI
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Edition account created via CPI
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), "edition".as_bytes()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub edition_marker: UncheckedAccount<'info>,
+
+    /// CHECK: Will be initialized as a mint
+    #[account(mut)]
+    pub mint: Signer<'info>,
+
+    /// CHECK: Mint authority PDA
+    #[account(
+        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
+        bump
+    )]
+    pub mint_authority: UncheckedAccount<'info>,
+
+    /// CHECK: Will be initialized as a token account
+    #[account(mut)]
+    pub token_account: UncheckedAccount<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct BurnAndWithdraw<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = ["vault".as_bytes(), mint.key().as_ref()],
+        bump,
+        has_one = owner,
+        has_one = mint,
+        close = owner
+    )]
+    pub vault: Account<'info, TokenVault>,
+
+    /// CHECK: Metadata verified by seeds
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Token account to burn
+    #[account(mut)]
+    pub token_account: UncheckedAccount<'info>,
+
+    /// CHECK: Mint account
+    #[account(mut)]
+    pub mint: UncheckedAccount<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+
+    /// CHECK: Required by token metadata program
+    pub sysvar_instructions: AccountInfo<'info>,
+
+    /// CHECK: Edition marker account for burning
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), "edition".as_bytes()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub edition_marker: UncheckedAccount<'info>,
+}
+
+#[account]
+pub struct EditionState {
+    pub is_initialized: bool,
+    pub authority: Pubkey,
+    pub master_mint: Pubkey,
+    pub total_minted: u64,
+}
+
+#[account]
+#[derive(Default)]
+pub struct TokenVault {
+    pub owner: Pubkey,
+    pub mint: Pubkey,
+}
 
 #[error_code]
 pub enum CustomError {
@@ -22,10 +237,35 @@ pub enum CustomError {
     TokenAccountNotClosed,
     MaxSupplyReached,
     Overflow,
+    NotInitialized,
 }
 
-const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL in lamports
-const MAX_SUPPLY: u64 = 10_000; // Max NFTs in master edition
+pub mod vault_utils {
+    use super::*;
+
+    pub fn get_vault_rent_exempt_balance(rent: &Rent) -> u64 {
+        rent.minimum_balance(8 + 32 + 32) // space for TokenVault struct
+    }
+
+    pub fn get_required_vault_balance(rent: &Rent) -> u64 {
+        VAULT_AMOUNT
+            .checked_add(get_vault_rent_exempt_balance(rent))
+            .expect("Vault balance overflow")
+    }
+
+    pub fn validate_vault_balance(vault: &AccountInfo, rent: &Rent) -> Result<()> {
+        let required_balance = get_required_vault_balance(rent);
+        let current_balance = vault.lamports();
+
+        require_eq!(
+            current_balance,
+            required_balance,
+            CustomError::InvalidVaultBalance
+        );
+
+        Ok(())
+    }
+}
 
 #[program]
 pub mod locked_sol_pnft {
@@ -36,6 +276,7 @@ pub mod locked_sol_pnft {
         uri: String,
     ) -> Result<()> {
         // Initialize collection state
+        ctx.accounts.edition_state.is_initialized = true;
         ctx.accounts.edition_state.authority = ctx.accounts.authority.key();
         ctx.accounts.edition_state.master_mint = ctx.accounts.master_mint.key();
         ctx.accounts.edition_state.total_minted = 0;
@@ -135,11 +376,24 @@ pub mod locked_sol_pnft {
     }
 
     pub fn mint_pnft(ctx: Context<MintPNFT>, metadata_uri: String) -> Result<()> {
+        // Check edition state is initialized
+        require!(
+            ctx.accounts.edition_state.is_initialized,
+            CustomError::NotInitialized
+        );
+
         // Check we haven't exceeded max supply
         require!(
             ctx.accounts.edition_state.total_minted < MAX_SUPPLY,
             CustomError::MaxSupplyReached
         );
+
+        let rent_exempt = ctx.accounts.rent.minimum_balance(
+            8 + 32 + 32, // TokenVault size
+        );
+        let total_required = VAULT_AMOUNT
+            .checked_add(rent_exempt)
+            .ok_or(CustomError::Overflow)?;
 
         // Transfer SOL to vault
         system_program::transfer(
@@ -150,7 +404,7 @@ pub mod locked_sol_pnft {
                     to: ctx.accounts.vault.to_account_info(),
                 },
             ),
-            VAULT_AMOUNT,
+            total_required,
         )?;
 
         // Initialize vault
@@ -274,6 +528,35 @@ pub mod locked_sol_pnft {
             mint_authority_signer,
         )?;
 
+        // Verify Collection
+        let verify_ix = VerifyCollection {
+            metadata: ctx.accounts.metadata.key(),
+            collection_authority: ctx.accounts.master_authority.key(),
+            payer: ctx.accounts.payer.key(),
+            collection_mint: ctx.accounts.edition_state.master_mint,
+            collection: ctx.accounts.collection_metadata.key(),
+            collection_master_edition_account: ctx.accounts.collection_master_edition.key(),
+            collection_authority_record: None,
+        }
+        .instruction();
+
+        anchor_lang::solana_program::program::invoke_signed(
+            &verify_ix,
+            &[
+                ctx.accounts.metadata.to_account_info(),
+                ctx.accounts.master_authority.to_account_info(),
+                ctx.accounts.payer.to_account_info(),
+                ctx.accounts.mint.to_account_info(),
+                ctx.accounts.collection_metadata.to_account_info(),
+                ctx.accounts.collection_master_edition.to_account_info(),
+            ],
+            &[&[
+                b"master_authority".as_ref(),
+                ctx.accounts.edition_state.master_mint.as_ref(),
+                &[ctx.bumps.master_authority],
+            ]],
+        )?;
+
         // Revoke mint authority
         token::set_authority(
             CpiContext::new_with_signer(
@@ -300,16 +583,23 @@ pub mod locked_sol_pnft {
     }
 
     pub fn burn_and_withdraw(ctx: Context<BurnAndWithdraw>) -> Result<()> {
-        // Verify vault balance
+        // Verify vault balance includes both locked amount and rent
+        let rent_exempt = ctx.accounts.rent.minimum_balance(
+            8 + 32 + 32, // TokenVault size
+        );
+        let expected_balance = VAULT_AMOUNT
+            .checked_add(rent_exempt)
+            .ok_or(CustomError::Overflow)?;
+
         require_eq!(
             ctx.accounts.vault.to_account_info().lamports(),
-            VAULT_AMOUNT,
+            expected_balance,
             CustomError::InvalidVaultBalance
         );
 
-        // Verify token account ownership and amount
-        let token_account = token::accessor::amount(&ctx.accounts.token_account)?;
-        require_eq!(token_account, 1, CustomError::InvalidTokenAmount);
+        // Verify token account ownership and amount using accessors
+        let token_amount = token::accessor::amount(&ctx.accounts.token_account)?;
+        require_eq!(token_amount, 1, CustomError::InvalidTokenAmount);
 
         let token_owner = token::accessor::authority(&ctx.accounts.token_account)?;
         require_eq!(
@@ -331,6 +621,27 @@ pub mod locked_sol_pnft {
             1,
         )?;
 
+        // Close metadata account
+        Burn {
+            authority: ctx.accounts.owner.key(),
+            collection_metadata: None,
+            metadata: ctx.accounts.metadata.key(),
+            edition: None,
+            mint: ctx.accounts.mint.key(),
+            token: ctx.accounts.token_account.key(),
+            master_edition: None,
+            master_edition_mint: None,
+            master_edition_token: None,
+            edition_marker: None,
+            token_record: None,
+            system_program: ctx.accounts.system_program.key(),
+            sysvar_instructions: ctx.accounts.sysvar_instructions.key(),
+            spl_token_program: ctx.accounts.token_program.key(),
+        }
+        .instruction(BurnInstructionArgs {
+            burn_args: BurnArgs::V1 { amount: 1 },
+        });
+
         // Close token account
         token::close_account(CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -341,184 +652,27 @@ pub mod locked_sol_pnft {
             },
         ))?;
 
-        // Verify token account is closed by checking its lamports are 0
+        // Verify token account is closed - checking lamports on AccountInfo
         require_eq!(
-            ctx.accounts.token_account.lamports(),
+            ctx.accounts.token_account.to_account_info().lamports(),
             0,
             CustomError::TokenAccountNotClosed
         );
 
-        // Transfer SOL back to owner
-        **ctx.accounts.vault.to_account_info().lamports.borrow_mut() = 0;
-        **ctx.accounts.owner.to_account_info().lamports.borrow_mut() += VAULT_AMOUNT;
+        // Transfer exact VAULT_AMOUNT back to owner
+        // When closing the vault, the rent will be returned to owner
+        // due to close = owner constraint in the account validation
+        system_program::transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.vault.to_account_info(),
+                    to: ctx.accounts.owner.to_account_info(),
+                },
+            ),
+            VAULT_AMOUNT,
+        )?;
 
         Ok(())
     }
-}
-
-#[derive(Accounts)]
-pub struct InitializeMasterEdition<'info> {
-    #[account(mut)]
-    pub authority: Signer<'info>,
-
-    /// CHECK: Master authority PDA
-    #[account(
-        seeds = ["master_authority".as_bytes(), master_mint.key().as_ref()],
-        bump
-    )]
-    pub master_authority: UncheckedAccount<'info>,
-
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + 32 + 32 + 8, // discriminator + authority + master_mint + total_minted
-        seeds = ["edition_state".as_bytes()],
-        bump
-    )]
-    pub edition_state: Account<'info, EditionState>,
-
-    /// CHECK: Will be initialized
-    #[account(mut)]
-    pub master_mint: AccountInfo<'info>,
-
-    /// CHECK: Metadata account for master edition
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), master_mint.key().as_ref(), token_program.key().as_ref()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub master_metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Master edition account
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), master_mint.key().as_ref(), "edition".as_bytes()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub master_edition: UncheckedAccount<'info>,
-
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
-}
-
-#[derive(Accounts)]
-pub struct MintPNFT<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-        init,
-        payer = payer,
-        space = 8 + 32 + 32, // discriminator + owner + mint
-        seeds = ["vault".as_bytes(), mint.key().as_ref()],
-        bump
-    )]
-    pub vault: Account<'info, TokenVault>,
-
-    #[account(
-        mut,
-        seeds = ["edition_state".as_bytes()],
-        bump,
-    )]
-    pub edition_state: Account<'info, EditionState>,
-
-    /// CHECK: Master edition verified by seeds
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), edition_state.master_mint.as_ref(), "edition".as_bytes()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub master_edition: UncheckedAccount<'info>,
-
-    /// CHECK: Metadata account created via CPI
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Edition account created via CPI
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), mint.key().as_ref(), "edition".as_bytes()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub edition_marker: UncheckedAccount<'info>,
-
-    /// CHECK: Will be initialized
-    #[account(mut)]
-    pub mint: AccountInfo<'info>,
-
-    /// CHECK: Mint authority PDA
-    #[account(
-        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
-        bump
-    )]
-    pub mint_authority: UncheckedAccount<'info>,
-
-    /// CHECK: Will be initialized
-    #[account(mut)]
-    pub token_account: AccountInfo<'info>,
-
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-}
-
-#[derive(Accounts)]
-pub struct BurnAndWithdraw<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
-
-    #[account(
-        mut,
-        seeds = ["vault".as_bytes(), mint.key().as_ref()],
-        bump,
-        has_one = owner,
-        has_one = mint,
-        close = owner
-    )]
-    pub vault: Account<'info, TokenVault>,
-
-    /// CHECK: Metadata verified by seeds
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Token account validated in instruction
-    #[account(mut)]
-    pub token_account: AccountInfo<'info>,
-
-    /// CHECK: Mint validated by vault constraint
-    #[account(mut)]
-    pub mint: AccountInfo<'info>,
-
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-}
-
-#[account]
-pub struct EditionState {
-    pub authority: Pubkey,   // Edition authority
-    pub master_mint: Pubkey, // Master edition mint
-    pub total_minted: u64,   // Total NFTs minted in this edition
-}
-
-#[account]
-#[derive(Default)]
-pub struct TokenVault {
-    pub owner: Pubkey, // 32
-    pub mint: Pubkey,  // 32
 }
