@@ -4,15 +4,29 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Token},
 };
-use mpl_token_metadata::{
-    instructions::{
-        CreateMasterEditionV3, CreateMasterEditionV3InstructionArgs, CreateMetadataAccountV3,
-        CreateMetadataAccountV3InstructionArgs,
-    },
-    types::DataV2,
+
+use mpl_token_metadata::instructions::{
+    CreateMasterEditionV3, CreateMasterEditionV3InstructionArgs, CreateMetadataAccountV3,
+    CreateMetadataAccountV3InstructionArgs,
 };
+use mpl_token_metadata::types::DataV2;
+use mpl_token_metadata::ID as METADATA_PROGRAM_ID;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+
+#[error_code]
+pub enum CustomError {
+    InvalidTokenAmount,
+    InvalidVaultBalance,
+    InvalidOwner,
+}
+
+#[event]
+pub struct BurnAndWithdrawEvent {
+    owner: Pubkey,
+    amount: u64,
+    timestamp: i64,
+}
 
 #[program]
 pub mod locked_sol_pnft {
@@ -166,26 +180,62 @@ pub mod locked_sol_pnft {
         Ok(())
     }
 
-    pub fn update_metadata(
-        _ctx: Context<UpdateMetadata>,
-        _name: String,
-        _symbol: String,
-        _uri: String,
-    ) -> Result<()> {
-        msg!("Cannot update metadata in this implementation");
-        Ok(())
-    }
-
     pub fn burn_and_withdraw(ctx: Context<BurnAndWithdraw>) -> Result<()> {
-        // This would need to be implemented with the correct burn instruction
-        // For now, just withdraw the SOL
+        // 1. First verify the token account owns exactly 1 token
+        let token_account = token::accessor::amount(&ctx.accounts.token_account)?;
+        require_eq!(token_account, 1, CustomError::InvalidTokenAmount);
+
+        // 2. Burn the NFT token first
+        token::burn(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::Burn {
+                    mint: ctx.accounts.mint.to_account_info(),
+                    from: ctx.accounts.token_account.to_account_info(),
+                    authority: ctx.accounts.owner.to_account_info(),
+                },
+            ),
+            1,
+        )?;
+
+        // 3. Close the token account to recover rent
+        token::close_account(CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            token::CloseAccount {
+                account: ctx.accounts.token_account.to_account_info(),
+                destination: ctx.accounts.owner.to_account_info(),
+                authority: ctx.accounts.owner.to_account_info(),
+            },
+        ))?;
+
+        // 4. Get the vault balance and ensure it matches expected amount
         let vault_balance = ctx.accounts.vault.to_account_info().lamports();
-        **ctx
-            .accounts
-            .vault
-            .to_account_info()
-            .try_borrow_mut_lamports()? = 0;
-        **ctx.accounts.owner.try_borrow_mut_lamports()? += vault_balance;
+        require!(
+            vault_balance == ctx.accounts.vault.amount,
+            CustomError::InvalidVaultBalance
+        );
+
+        // 5. Transfer SOL using system program
+        system_program::transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.vault.to_account_info(),
+                    to: ctx.accounts.owner.to_account_info(),
+                },
+            ),
+            vault_balance,
+        )?;
+
+        // 6. Set vault amount to 0 to prevent double withdrawal
+        ctx.accounts.vault.amount = 0;
+
+        // 7. Emit an event for tracking
+        emit!(BurnAndWithdrawEvent {
+            owner: ctx.accounts.owner.key(),
+            amount: vault_balance,
+            timestamp: Clock::get()?.unix_timestamp,
+        });
 
         Ok(())
     }
@@ -205,15 +255,15 @@ pub struct MintPNFT<'info> {
     )]
     pub vault: Account<'info, TokenVault>,
 
-    /// CHECK: Metadata account
+    /// CHECK: Metadata account created via CPI
     #[account(mut)]
     pub metadata: UncheckedAccount<'info>,
 
-    /// CHECK: Master Edition account
+    /// CHECK: Master Edition account created via CPI
     #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
 
-    /// CHECK: Token Mint Account
+    /// CHECK: Will be initialized in the instruction
     #[account(mut)]
     pub mint: AccountInfo<'info>,
 
@@ -224,7 +274,7 @@ pub struct MintPNFT<'info> {
     )]
     pub mint_authority: UncheckedAccount<'info>,
 
-    /// CHECK: Token Account
+    /// CHECK: Will be initialized in the instruction
     #[account(mut)]
     pub token_account: AccountInfo<'info>,
 
@@ -232,18 +282,6 @@ pub struct MintPNFT<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-}
-
-#[derive(Accounts)]
-pub struct UpdateMetadata<'info> {
-    #[account(mut)]
-    pub authority: Signer<'info>,
-
-    /// CHECK: Metadata account
-    #[account(mut)]
-    pub metadata: UncheckedAccount<'info>,
-
-    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -255,26 +293,31 @@ pub struct BurnAndWithdraw<'info> {
         mut,
         seeds = ["vault".as_bytes()],
         bump,
-        has_one = owner
+        has_one = owner,
+        constraint = vault.amount > 0 @ CustomError::InvalidVaultBalance
     )]
     pub vault: Account<'info, TokenVault>,
 
-    /// CHECK: Metadata account
-    #[account(mut)]
+    /// CHECK: Metadata account validated by seeds
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
     pub metadata: UncheckedAccount<'info>,
 
-    /// CHECK: Token Mint Account
-    #[account(mut)]
-    pub mint: AccountInfo<'info>,
-
-    /// CHECK: Token Account
+    /// CHECK: Token account that will be verified in the instruction
     #[account(mut)]
     pub token_account: AccountInfo<'info>,
 
-    /// CHECK: Master edition account
+    /// CHECK: Mint account that will be verified in the instruction
     #[account(mut)]
-    pub master_edition: UncheckedAccount<'info>,
+    pub mint: AccountInfo<'info>,
 
+    /// CHECK: Account validated by address
+    #[account(address = METADATA_PROGRAM_ID)]
+    pub token_metadata_program: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
