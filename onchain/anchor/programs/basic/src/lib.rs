@@ -166,6 +166,43 @@ pub struct MintPNFT<'info> {
 }
 
 #[derive(Accounts)]
+pub struct UpdateMetadata<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = ["vault".as_bytes(), mint.key().as_ref()],
+        bump,
+        has_one = owner,
+        has_one = mint,
+    )]
+    pub vault: Account<'info, TokenVault>,
+
+    /// CHECK: Metadata account verified by seeds
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub metadata: UncheckedAccount<'info>,
+
+    /// CHECK: Token account to verify ownership
+    #[account(mut)]
+    pub token_account: UncheckedAccount<'info>,
+
+    /// CHECK: Mint account
+    pub mint: AccountInfo<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+
+    /// CHECK: Required by token metadata program
+    pub sysvar_instructions: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct BurnAndWithdraw<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -316,15 +353,18 @@ pub mod locked_sol_pnft {
         }
         .instruction(CreateMetadataAccountV3InstructionArgs {
             data: DataV2 {
-                name: "Locked SOL Collection".to_string(),
+                name: "Locked SOL NFT".to_string(),
                 symbol: "LSOL".to_string(),
                 uri,
                 seller_fee_basis_points: 0,
                 creators: None,
-                collection: None,
+                collection: Some(Collection {
+                    verified: false,
+                    key: ctx.accounts.edition_state.master_mint,
+                }),
                 uses: None,
             },
-            is_mutable: false,
+            is_mutable: true,
             collection_details: None,
         });
 
@@ -557,20 +597,6 @@ pub mod locked_sol_pnft {
             ]],
         )?;
 
-        // Revoke mint authority
-        token::set_authority(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                token::SetAuthority {
-                    current_authority: ctx.accounts.mint_authority.to_account_info(),
-                    account_or_mint: ctx.accounts.mint.to_account_info(),
-                },
-                mint_authority_signer,
-            ),
-            token::spl_token::instruction::AuthorityType::MintTokens,
-            None,
-        )?;
-
         // Increment total minted count
         ctx.accounts.edition_state.total_minted = ctx
             .accounts
@@ -578,6 +604,58 @@ pub mod locked_sol_pnft {
             .total_minted
             .checked_add(1)
             .ok_or(CustomError::Overflow)?;
+
+        Ok(())
+    }
+
+    pub fn update_metadata(
+        ctx: Context<UpdateMetadata>,
+        new_uri: String,
+        new_name: Option<String>,
+    ) -> Result<()> {
+        // Verify token ownership
+        let token_amount = token::accessor::amount(&ctx.accounts.token_account)?;
+        require_eq!(token_amount, 1, CustomError::InvalidTokenAmount);
+
+        let token_owner = token::accessor::authority(&ctx.accounts.token_account)?;
+        require_eq!(
+            token_owner,
+            ctx.accounts.owner.key(),
+            CustomError::InvalidTokenAccount
+        );
+
+        // Update metadata
+        let update_metadata_ix = mpl_token_metadata::instructions::UpdateMetadataAccountV2 {
+            metadata: ctx.accounts.metadata.key(),
+            update_authority: ctx.accounts.owner.key(),
+        }
+        .instruction(
+            mpl_token_metadata::instructions::UpdateMetadataAccountV2InstructionArgs {
+                data: Some(DataV2 {
+                    name: new_name.unwrap_or("Locked SOL NFT".to_string()),
+                    symbol: "LSOL".to_string(),
+                    uri: new_uri,
+                    seller_fee_basis_points: 0,
+                    creators: None,
+                    collection: Some(Collection {
+                        verified: true,
+                        key: ctx.accounts.vault.mint,
+                    }),
+                    uses: None,
+                }),
+                new_update_authority: Some(ctx.accounts.owner.key()), // Fixed field name
+                primary_sale_happened: None,
+                is_mutable: Some(true), // Fixed Option<bool>
+            },
+        );
+
+        anchor_lang::solana_program::program::invoke(
+            &update_metadata_ix,
+            &[
+                ctx.accounts.metadata.to_account_info(),
+                ctx.accounts.owner.to_account_info(),
+            ],
+        )?;
 
         Ok(())
     }
