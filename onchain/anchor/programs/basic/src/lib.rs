@@ -22,6 +22,11 @@ pub enum CustomError {
     InvalidTokenAccountOwner,
     AlreadyWithdrawn,
     InvalidMetadataUri,
+    InsufficientBalance,
+    InvalidProgramOwner,
+    InvalidMintAccount,
+    InvalidTokenAccount,
+    InvalidMetadataAccount,
 }
 
 #[event]
@@ -29,6 +34,7 @@ pub struct MintPNFTEvent {
     owner: Pubkey,
     mint: Pubkey,
     metadata_uri: String,
+    vault: Pubkey,
     timestamp: i64,
 }
 
@@ -36,18 +42,33 @@ pub struct MintPNFTEvent {
 pub struct BurnAndWithdrawEvent {
     owner: Pubkey,
     mint: Pubkey,
+    vault: Pubkey,
     amount: u64,
     timestamp: i64,
 }
+
+const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL in lamports
 
 #[program]
 pub mod locked_sol_pnft {
     use super::*;
 
     pub fn mint_pnft(ctx: Context<MintPNFT>, metadata_uri: String) -> Result<()> {
-        require!(!metadata_uri.is_empty(), CustomError::InvalidMetadataUri);
+        // Check payer has sufficient balance
+        require_gte!(
+            ctx.accounts.payer.lamports(),
+            VAULT_AMOUNT + 10_000_000, // Amount + rent + gas estimate
+            CustomError::InsufficientBalance
+        );
 
-        // Transfer 1 SOL to the vault
+        // Verify program ownership of accounts
+        require_eq!(
+            ctx.accounts.mint.owner,
+            &system_program::ID,
+            CustomError::InvalidProgramOwner
+        );
+
+        // Transfer SOL to the vault
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
@@ -56,16 +77,23 @@ pub mod locked_sol_pnft {
                     to: ctx.accounts.vault.to_account_info(),
                 },
             ),
-            1_000_000_000, // 1 SOL in lamports
+            VAULT_AMOUNT,
         )?;
 
-        // Initialize vault account data
+        // Initialize vault account data with version control
         ctx.accounts.vault.owner = ctx.accounts.payer.key();
-        ctx.accounts.vault.amount = 1_000_000_000;
+        ctx.accounts.vault.amount = VAULT_AMOUNT;
         ctx.accounts.vault.withdrawn = false;
+        ctx.accounts.vault.version = 1;
+        ctx.accounts.vault.mint = ctx.accounts.mint.key();
 
-        // Initialize mint
-        let mint_authority_seeds = &[b"mint_authority".as_ref(), &[ctx.bumps.mint_authority]];
+        // Initialize mint with unique PDA seeds
+        let mint_key = ctx.accounts.mint.key();
+        let mint_authority_seeds = &[
+            b"mint_authority".as_ref(),
+            mint_key.as_ref(),
+            &[ctx.bumps.mint_authority],
+        ];
         let mint_authority_signer = &[&mint_authority_seeds[..]];
 
         let rent = Rent::get()?;
@@ -97,7 +125,7 @@ pub mod locked_sol_pnft {
             Some(&ctx.accounts.mint_authority.key()),
         )?;
 
-        // Create associated token account
+        // Create and verify associated token account
         anchor_spl::associated_token::create(CpiContext::new(
             ctx.accounts.associated_token_program.to_account_info(),
             anchor_spl::associated_token::Create {
@@ -110,7 +138,14 @@ pub mod locked_sol_pnft {
             },
         ))?;
 
-        // Mint 1 token
+        // Verify token account
+        require_eq!(
+            *ctx.accounts.token_account.owner,
+            token::ID,
+            CustomError::InvalidTokenAccount
+        );
+
+        // Mint token
         token::mint_to(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -124,7 +159,7 @@ pub mod locked_sol_pnft {
             1,
         )?;
 
-        // Create metadata
+        // Create metadata with additional checks
         let create_metadata_ix = CreateMetadataAccountV3 {
             metadata: ctx.accounts.metadata.key(),
             mint: ctx.accounts.mint.key(),
@@ -144,7 +179,7 @@ pub mod locked_sol_pnft {
                 collection: None,
                 uses: None,
             },
-            is_mutable: false, // Set to false for immutable metadata
+            is_mutable: false,
             collection_details: None,
         });
 
@@ -161,7 +196,7 @@ pub mod locked_sol_pnft {
             mint_authority_signer,
         )?;
 
-        // Create master edition
+        // Create master edition with additional validation
         let create_master_edition_ix = CreateMasterEditionV3 {
             edition: ctx.accounts.master_edition.key(),
             mint: ctx.accounts.mint.key(),
@@ -174,7 +209,7 @@ pub mod locked_sol_pnft {
             rent: Some(ctx.accounts.rent.key()),
         }
         .instruction(CreateMasterEditionV3InstructionArgs {
-            max_supply: Some(0), // Non-printable NFT
+            max_supply: Some(0),
         });
 
         anchor_lang::solana_program::program::invoke_signed(
@@ -192,7 +227,7 @@ pub mod locked_sol_pnft {
             mint_authority_signer,
         )?;
 
-        // Revoke mint and freeze authority
+        // Revoke authorities
         token::set_authority(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -219,11 +254,11 @@ pub mod locked_sol_pnft {
             None,
         )?;
 
-        // Emit mint event
         emit!(MintPNFTEvent {
             owner: ctx.accounts.payer.key(),
             mint: ctx.accounts.mint.key(),
             metadata_uri,
+            vault: ctx.accounts.vault.key(),
             timestamp: Clock::get()?.unix_timestamp,
         });
 
@@ -231,11 +266,23 @@ pub mod locked_sol_pnft {
     }
 
     pub fn burn_and_withdraw(ctx: Context<BurnAndWithdraw>) -> Result<()> {
-        // Verify token amount using CPI accessor
+        // Additional validation checks
+        require_eq!(
+            ctx.accounts.mint.owner,
+            &token::ID,
+            CustomError::InvalidProgramOwner
+        );
+
+        require_eq!(
+            *ctx.accounts.token_account.owner,
+            token::ID,
+            CustomError::InvalidTokenAccount
+        );
+
+        // Verify token amount and owner
         let token_amount = token::accessor::amount(&ctx.accounts.token_account)?;
         require_eq!(token_amount, 1, CustomError::InvalidTokenAmount);
 
-        // Verify token account owner using CPI accessor
         let token_owner = token::accessor::authority(&ctx.accounts.token_account)?;
         require_eq!(
             token_owner,
@@ -243,10 +290,20 @@ pub mod locked_sol_pnft {
             CustomError::InvalidTokenAccountOwner
         );
 
-        // 3. Verify vault hasn't been withdrawn
-        require!(!ctx.accounts.vault.withdrawn, CustomError::AlreadyWithdrawn);
+        // Verify vault state
+        require_eq!(
+            ctx.accounts.vault.mint,
+            ctx.accounts.mint.key(),
+            CustomError::InvalidMintAccount
+        );
 
-        // 4. Burn the NFT token
+        require_eq!(
+            ctx.accounts.vault.version,
+            1,
+            CustomError::InvalidVaultBalance
+        );
+
+        // Burn NFT
         token::burn(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
@@ -259,7 +316,7 @@ pub mod locked_sol_pnft {
             1,
         )?;
 
-        // 5. Close the token account
+        // Close token account
         token::close_account(CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             token::CloseAccount {
@@ -269,8 +326,14 @@ pub mod locked_sol_pnft {
             },
         ))?;
 
-        // 6. Transfer SOL
+        // Transfer SOL with additional checks
         let vault_balance = ctx.accounts.vault.amount;
+        require_eq!(
+            vault_balance,
+            VAULT_AMOUNT,
+            CustomError::InvalidVaultBalance
+        );
+
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
@@ -282,19 +345,20 @@ pub mod locked_sol_pnft {
             vault_balance,
         )?;
 
-        // 7. Mark vault as withdrawn
+        // Update vault state
         ctx.accounts.vault.withdrawn = true;
         ctx.accounts.vault.amount = 0;
+        ctx.accounts.vault.version = 2;
 
-        // 8. Emit withdrawal event
         emit!(BurnAndWithdrawEvent {
             owner: ctx.accounts.owner.key(),
             mint: ctx.accounts.mint.key(),
+            vault: ctx.accounts.vault.key(),
             amount: vault_balance,
             timestamp: Clock::get()?.unix_timestamp,
         });
 
-        // 9. Close the vault account and return rent
+        // Close vault and return rent
         let vault_starting_lamports = ctx.accounts.vault.to_account_info().lamports();
         **ctx.accounts.vault.to_account_info().lamports.borrow_mut() = 0;
         **ctx.accounts.owner.to_account_info().lamports.borrow_mut() += vault_starting_lamports;
@@ -311,18 +375,28 @@ pub struct MintPNFT<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + 32 + 8 + 1, // Added space for withdrawn bool
-        seeds = ["vault".as_bytes()],
+        space = 8 + 32 + 8 + 1 + 1 + 32, // Added space for version and mint
+        seeds = ["vault".as_bytes(), mint.key().as_ref()],
         bump
     )]
     pub vault: Account<'info, TokenVault>,
 
     /// CHECK: Metadata account created via CPI
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
     pub metadata: UncheckedAccount<'info>,
 
     /// CHECK: Master Edition account created via CPI
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = ["metadata".as_bytes(), mint.key().as_ref(), "edition".as_bytes()],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
     pub master_edition: UncheckedAccount<'info>,
 
     /// CHECK: Will be initialized in the instruction
@@ -331,13 +405,16 @@ pub struct MintPNFT<'info> {
 
     /// CHECK: Mint authority PDA
     #[account(
-        seeds = ["mint_authority".as_bytes()],
+        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
         bump
     )]
     pub mint_authority: UncheckedAccount<'info>,
 
     /// CHECK: Will be initialized in the instruction
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = token_account.owner == &system_program::ID @ CustomError::InvalidTokenAccount
+    )]
     pub token_account: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
@@ -353,11 +430,13 @@ pub struct BurnAndWithdraw<'info> {
 
     #[account(
         mut,
-        seeds = ["vault".as_bytes()],
+        seeds = ["vault".as_bytes(), mint.key().as_ref()],
         bump,
         has_one = owner,
+        has_one = mint,
         constraint = !vault.withdrawn @ CustomError::AlreadyWithdrawn,
-        constraint = vault.amount > 0 @ CustomError::InvalidVaultBalance,
+        constraint = vault.amount == VAULT_AMOUNT @ CustomError::InvalidVaultBalance,
+        constraint = vault.version == 1 @ CustomError::InvalidVaultBalance,
         close = owner
     )]
     pub vault: Account<'info, TokenVault>,
@@ -372,11 +451,17 @@ pub struct BurnAndWithdraw<'info> {
     pub metadata: UncheckedAccount<'info>,
 
     /// CHECK: Token account validated in instruction
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = token_account.owner == &token::ID @ CustomError::InvalidTokenAccount
+    )]
     pub token_account: AccountInfo<'info>,
 
     /// CHECK: Mint account validated in instruction
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = mint.owner == &token::ID @ CustomError::InvalidProgramOwner
+    )]
     pub mint: AccountInfo<'info>,
 
     /// CHECK: Account validated by address
@@ -387,8 +472,11 @@ pub struct BurnAndWithdraw<'info> {
 }
 
 #[account]
+#[derive(Default)]
 pub struct TokenVault {
-    owner: Pubkey,
-    amount: u64,
-    withdrawn: bool,
+    pub owner: Pubkey,   // 32
+    pub amount: u64,     // 8
+    pub withdrawn: bool, // 1
+    pub version: u8,     // 1
+    pub mint: Pubkey,    // 32
 }
