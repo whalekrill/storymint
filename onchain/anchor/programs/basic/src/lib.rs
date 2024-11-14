@@ -7,9 +7,9 @@ use anchor_spl::{
 };
 use mpl_token_metadata::instructions::{
     Burn, BurnInstructionArgs, CreateMasterEditionV3, CreateMasterEditionV3InstructionArgs,
-    CreateMetadataAccountV3, CreateMetadataAccountV3InstructionArgs, Delegate, VerifyCollection,
+    CreateMetadataAccountV3, CreateMetadataAccountV3InstructionArgs, VerifyCollection,
 };
-use mpl_token_metadata::types::{BurnArgs, Collection, DataV2, DelegateArgs};
+use mpl_token_metadata::types::{BurnArgs, Collection, DataV2};
 use mpl_token_metadata::{accounts::Metadata, ID as METADATA_PROGRAM_ID};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -40,7 +40,13 @@ pub struct InitializeMasterEdition<'info> {
     pub edition_state: Account<'info, EditionState>,
 
     /// CHECK: Will be initialized
-    #[account(mut)]
+    #[account(
+        init,                            
+        payer = authority,              
+        seeds = ["master_mint".as_bytes()],
+        bump,
+        space = 82,
+    )]
     pub master_mint: AccountInfo<'info>,
 
     /// CHECK: Metadata account for master edition
@@ -151,31 +157,12 @@ pub struct MintPNFT<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-
-    /// CHECK: Token Record with explicit checks
-    #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), token_program.key().as_ref(), mint.key().as_ref(), "token_record".as_bytes()],
-        bump,
-        seeds::program = mpl_token_metadata::ID
-    )]
-    pub token_record: UncheckedAccount<'info>,
-
-    /// CHECK: Rule Set with program ownership verification
-    #[account(
-        owner = mpl_token_metadata::ID @ CustomError::InvalidProgramId
-    )]
-    pub rule_set: UncheckedAccount<'info>,
-
-    /// CHECK: Instructions Sysvar
-    #[account(address = anchor_lang::solana_program::sysvar::instructions::ID)]
-    pub sysvar_instructions: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateMetadata<'info> {
-    /// CHECK: Server authority must sign for metadata updates
-    #[account(signer)]
+    /// CHECK: Server authority
+    #[account(mut, signer, constraint = server_authority.key() == edition_state.authority @ CustomError::UnauthorizedUpdate)]
     pub server_authority: AccountInfo<'info>,
 
     #[account(
@@ -191,11 +178,7 @@ pub struct UpdateMetadata<'info> {
         mut,
         seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
         bump,
-        seeds::program = METADATA_PROGRAM_ID,
-        constraint = {
-            let metadata = Metadata::safe_deserialize(&metadata.data.borrow())?;
-            metadata.update_authority == server_authority.key()
-        } @ CustomError::InvalidUpdateAuthority
+        seeds::program = METADATA_PROGRAM_ID
     )]
     pub metadata: UncheckedAccount<'info>,
 
@@ -205,13 +188,8 @@ pub struct UpdateMetadata<'info> {
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 
-    /// CHECK: Required by token metadata program for CPI
-    pub sysvar_instructions: AccountInfo<'info>,
-
-    #[account(
-        constraint = edition_state.authority == server_authority.key() 
-            @ CustomError::UnauthorizedAdmin
-    )]
+    // Removed sysvar_instructions (unused)
+    #[account(mut, seeds = ["edition_state".as_bytes(), edition_state.master_mint.as_ref()], bump)]
     pub edition_state: Account<'info, EditionState>,
 }
 
@@ -298,6 +276,7 @@ pub struct TokenVault {
 pub enum CustomError {
     InvalidTokenAmount,
     InvalidVaultBalance,
+    UnauthorizedUpdate,
     InvalidTokenAccount,
     TokenAccountNotClosed,
     MaxSupplyReached,
@@ -404,12 +383,6 @@ pub mod vault_utils {
             CustomError::BalanceOverflow
         );
 
-        Ok(())
-    }
-
-    // Helper for checking if SOL transfer would succeed
-    pub fn validate_transfer_amount(from: &AccountInfo, amount: u64) -> Result<()> {
-        require_gte!(from.lamports(), amount, CustomError::InsufficientBalance);
         Ok(())
     }
 }
@@ -534,23 +507,6 @@ pub mod locked_sol_pnft {
             ctx.accounts.edition_state.total_minted < MAX_SUPPLY,
             CustomError::MaxSupplyReached
         );
-
-        // Validate PDA derivations
-
-        validate_pda_derivation(
-            &ctx.accounts.master_authority.key(),
-            &[
-                b"master_authority",
-                ctx.accounts.edition_state.master_mint.as_ref(),
-            ],
-            ctx.bumps.master_authority,
-        )?;
-
-        validate_pda_derivation(
-            &ctx.accounts.mint_authority.key(),
-            &[b"mint_authority", ctx.accounts.mint.key().as_ref()],
-            ctx.bumps.mint_authority,
-        )?;
 
         vault_utils::validate_account_balances(
             &ctx.accounts.payer.to_account_info(),
@@ -699,48 +655,12 @@ pub mod locked_sol_pnft {
             ]],
         )?;
 
-        // Delegate
-        let delegate_ix = Delegate {
-            delegate: ctx.accounts.vault.key(),
-            metadata: ctx.accounts.metadata.key(),
-            master_edition: Some(ctx.accounts.edition_marker.key()),
-            token_record: Some(ctx.accounts.token_record.key()),
-            mint: ctx.accounts.mint.key(),
-            token: Some(ctx.accounts.token_account.key()),
-            authority: ctx.accounts.payer.key(),
-            payer: ctx.accounts.payer.key(),
-            system_program: ctx.accounts.system_program.key(),
-            sysvar_instructions: ctx.accounts.sysvar_instructions.key(),
-            spl_token_program: Some(ctx.accounts.token_program.key()),
-            authorization_rules_program: None,
-            authorization_rules: None,
-            delegate_record: None,
-        }
-        .instruction(mpl_token_metadata::instructions::DelegateInstructionArgs {
-            delegate_args: DelegateArgs::StandardV1 { amount: 1 },
-        });
-
-        anchor_lang::solana_program::program::invoke(
-            &delegate_ix,
-            &[
-                ctx.accounts.metadata.to_account_info(),
-                ctx.accounts.vault.to_account_info(),
-                ctx.accounts.token_account.to_account_info(),
-                ctx.accounts.mint.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-                ctx.accounts.sysvar_instructions.to_account_info(),
-                ctx.accounts.token_program.to_account_info(),
-                ctx.accounts.edition_marker.to_account_info(),
-            ],
-        )?;
-
         // Verify collection
         let verify_collection_ix = VerifyCollection {
             collection_authority: ctx.accounts.master_authority.key(),
             payer: ctx.accounts.payer.key(),
             metadata: ctx.accounts.metadata.key(),
-            collection_mint: ctx.accounts.edition_state.master_mint, // Added missing field
+            collection_mint: ctx.accounts.edition_state.master_mint,
             collection: ctx.accounts.collection_metadata.key(),
             collection_master_edition_account: ctx.accounts.collection_master_edition.key(),
             collection_authority_record: None,
@@ -862,7 +782,7 @@ pub mod locked_sol_pnft {
         )?;
 
         // Close metadata account
-        Burn {
+        let burn_ix = Burn {
             authority: ctx.accounts.owner.key(),
             collection_metadata: None,
             metadata: ctx.accounts.metadata.key(),
@@ -872,7 +792,7 @@ pub mod locked_sol_pnft {
             master_edition: None,
             master_edition_mint: None,
             master_edition_token: None,
-            edition_marker: None,
+            edition_marker: Some(ctx.accounts.edition_marker.key()),
             token_record: None,
             system_program: ctx.accounts.system_program.key(),
             sysvar_instructions: ctx.accounts.sysvar_instructions.key(),
@@ -881,6 +801,21 @@ pub mod locked_sol_pnft {
         .instruction(BurnInstructionArgs {
             burn_args: BurnArgs::V1 { amount: 1 },
         });
+
+        anchor_lang::solana_program::program::invoke_signed(
+            &burn_ix,
+            &[
+                ctx.accounts.owner.to_account_info(),
+                ctx.accounts.metadata.to_account_info(),
+                ctx.accounts.mint.to_account_info(),
+                ctx.accounts.token_account.to_account_info(),
+                ctx.accounts.edition_marker.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.sysvar_instructions.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+            ],
+            &[],
+        )?;
 
         // Close token account
         token::close_account(CpiContext::new(
