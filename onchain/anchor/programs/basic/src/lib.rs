@@ -18,6 +18,7 @@ const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL in lamports
 const MAX_SUPPLY: u64 = 10_000; // Max NFTs in master edition
 
 #[derive(Accounts)]
+#[instruction(uri: String)]
 pub struct InitializeMasterEdition<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -32,7 +33,7 @@ pub struct InitializeMasterEdition<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 1 + 32 + 32 + 8, // discriminator + is_initialized + authority + master_mint + total_minted
+        space = 8 + 1 + 32 + 32 + 8,
         seeds = ["edition_state".as_bytes(), master_mint.key().as_ref()],
         bump
     )]
@@ -139,6 +140,9 @@ pub struct MintPNFT<'info> {
     )]
     pub mint_authority: UncheckedAccount<'info>,
 
+    /// CHECK: Server authority for metadata updates
+    pub server_authority: AccountInfo<'info>,
+
     /// CHECK: Token account to be initialized
     #[account(mut)]
     pub token_account: AccountInfo<'info>,
@@ -170,8 +174,9 @@ pub struct MintPNFT<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateMetadata<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
+    /// CHECK: Server authority must sign for metadata updates
+    #[account(signer)]
+    pub server_authority: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -181,33 +186,32 @@ pub struct UpdateMetadata<'info> {
     )]
     pub vault: Account<'info, TokenVault>,
 
-    /// CHECK: Token Metadata Program
-    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
-    pub token_metadata_program: AccountInfo<'info>,
-
-    /// CHECK: Token account verified by constraints
-    #[account(mut)]
-    pub token_account: AccountInfo<'info>,
-
-    /// CHECK: Metadata account verified by seeds
+    /// CHECK: Metadata account with explicit program check
     #[account(
         mut,
         seeds = ["metadata".as_bytes(), mint.key().as_ref(), token_program.key().as_ref()],
         bump,
-        seeds::program = METADATA_PROGRAM_ID
+        seeds::program = METADATA_PROGRAM_ID,
+        constraint = {
+            let metadata = Metadata::safe_deserialize(&metadata.data.borrow())?;
+            metadata.update_authority == server_authority.key()
+        } @ CustomError::InvalidUpdateAuthority
     )]
     pub metadata: UncheckedAccount<'info>,
 
-    /// CHECK: Mint account
+    /// CHECK: Mint account verified through constraints
     pub mint: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 
-    /// CHECK: Required by token metadata program
+    /// CHECK: Required by token metadata program for CPI
     pub sysvar_instructions: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(
+        constraint = edition_state.authority == server_authority.key() 
+            @ CustomError::UnauthorizedAdmin
+    )]
     pub edition_state: Account<'info, EditionState>,
 }
 
@@ -299,6 +303,7 @@ pub enum CustomError {
     MaxSupplyReached,
     Overflow,
     NotInitialized,
+    UnauthorizedAdmin,
     InsufficientBalance,
     BalanceOverflow,
     InvalidCollection,
@@ -311,6 +316,10 @@ pub enum CustomError {
     AccountAlreadyInitialized,
     #[msg("Invalid account derivation")]
     InvalidDerivation,
+    #[msg("Invalid update authority")]
+    InvalidUpdateAuthority,
+    #[msg("Math overflow")]
+    MathOverflow,
 }
 
 pub fn validate_pda_derivation(pda: &Pubkey, seeds: &[&[u8]], bump: u8) -> Result<()> {
@@ -448,7 +457,7 @@ pub mod locked_sol_pnft {
             mint: ctx.accounts.master_mint.key(),
             mint_authority: ctx.accounts.master_authority.key(),
             payer: ctx.accounts.authority.key(),
-            update_authority: (ctx.accounts.master_authority.key(), true), // Fixed: Using tuple
+            update_authority: (ctx.accounts.master_authority.key(), true),
             system_program: ctx.accounts.system_program.key(),
             rent: None,
         }
@@ -617,7 +626,7 @@ pub mod locked_sol_pnft {
             mint: ctx.accounts.mint.key(),
             mint_authority: ctx.accounts.mint_authority.key(),
             payer: ctx.accounts.payer.key(),
-            update_authority: (ctx.accounts.mint_authority.key(), true), // Fixed: Using tuple
+            update_authority: (ctx.accounts.master_authority.key(), true),
             system_program: ctx.accounts.system_program.key(),
             rent: None,
         }
@@ -770,10 +779,14 @@ pub mod locked_sol_pnft {
         new_uri: String,
         new_name: Option<String>,
     ) -> Result<()> {
-        // Update metadata
+        require!(
+            ctx.accounts.server_authority.is_signer,
+            CustomError::InvalidUpdateAuthority
+        );
+
         let update_metadata_ix = mpl_token_metadata::instructions::UpdateMetadataAccountV2 {
             metadata: ctx.accounts.metadata.key(),
-            update_authority: ctx.accounts.owner.key(),
+            update_authority: ctx.accounts.server_authority.key(),
         }
         .instruction(
             mpl_token_metadata::instructions::UpdateMetadataAccountV2InstructionArgs {
@@ -789,18 +802,19 @@ pub mod locked_sol_pnft {
                     }),
                     uses: None,
                 }),
-                new_update_authority: Some(ctx.accounts.owner.key()),
+                new_update_authority: Some(ctx.accounts.server_authority.key()),
                 primary_sale_happened: None,
                 is_mutable: Some(true),
             },
         );
 
-        anchor_lang::solana_program::program::invoke(
+        anchor_lang::solana_program::program::invoke_signed(
             &update_metadata_ix,
             &[
                 ctx.accounts.metadata.to_account_info(),
-                ctx.accounts.owner.to_account_info(),
+                ctx.accounts.server_authority.to_account_info(),
             ],
+            &[],
         )?;
 
         Ok(())
