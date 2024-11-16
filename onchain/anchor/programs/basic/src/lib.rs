@@ -14,13 +14,18 @@ use mpl_token_metadata::{accounts::Metadata, ID as METADATA_PROGRAM_ID};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
-const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL in lamports
-const MAX_SUPPLY: u64 = 10_000; // Max NFTs in master edition
-pub const METADATA_SIZE: usize = 679; // Fixed size for Metadata account
+pub const NAME: &str = "Locked SOL NFT";
+pub const SYMBOL: &str = "LSOL";
+pub const URI: &str = "https://api.locked-sol.com/metadata/initial.json";
+pub const SELLER_FEE_BASIS_POINTS: u16 = 0;
+
+const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL
+const MAX_SUPPLY: u64 = 10_000;
+pub const METADATA_SIZE: usize = 679;
+
 pub const SERVER_UPDATE_AUTHORITY: Pubkey = pubkey!("DJ4xnt8cNHFXehsHFQqyNB2KjXHjYyYBX5565wKAhRaR");
 
 #[derive(Accounts)]
-#[instruction(uri: String)]
 pub struct InitializeMasterEdition<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -312,10 +317,7 @@ pub enum CustomError {
 pub mod locked_sol_pnft {
     use super::*;
 
-    pub fn initialize_master_edition(
-        ctx: Context<InitializeMasterEdition>,
-        uri: String,
-    ) -> Result<()> {
+    pub fn initialize_master_edition(ctx: Context<InitializeMasterEdition>) -> Result<()> {
         let master_state = &mut ctx.accounts.master_state;
         master_state.master_mint = ctx.accounts.master_mint.key();
         master_state.total_minted = 0;
@@ -327,13 +329,13 @@ pub mod locked_sol_pnft {
         let auth_signer = &[&auth_seeds[..]];
 
         initialize_token_mint_for_master(&ctx)?;
-        create_metadata_for_master(&ctx, uri, "Locked SOL NFT".to_string(), None, auth_signer)?;
+        create_metadata_for_master(&ctx, get_initial_metadata(None), auth_signer)?;
         create_master_edition_for_master(&ctx, Some(MAX_SUPPLY), auth_signer)?;
 
         Ok(())
     }
 
-    pub fn mint_pnft(ctx: Context<MintPNFT>, metadata_uri: String) -> Result<()> {
+    pub fn mint_pnft(ctx: Context<MintPNFT>) -> Result<()> {
         let rent_costs = utils::calculate_rent(&ctx.accounts.rent, true);
         let total_required = rent_costs.vault + rent_costs.mint + rent_costs.metadata;
 
@@ -359,6 +361,11 @@ pub mod locked_sol_pnft {
         create_associated_token(&ctx)?;
         mint_token(&ctx, &[&mint_authority_seeds])?;
 
+        let collection = Some(Collection {
+            verified: false,
+            key: ctx.accounts.master_state.master_mint,
+        });
+
         // Single metadata creation
         create_metadata(
             &ctx.accounts.payer,
@@ -367,12 +374,7 @@ pub mod locked_sol_pnft {
             &ctx.accounts.mint_authority,
             &ctx.accounts.system_program,
             &ctx.accounts.rent,
-            metadata_uri,
-            "Locked SOL NFT".to_string(),
-            Some(Collection {
-                verified: false,
-                key: ctx.accounts.master_state.master_mint,
-            }),
+            get_initial_metadata(collection),
             &[&mint_authority_seeds],
         )?;
 
@@ -528,6 +530,18 @@ mod utils {
     }
 }
 
+fn get_initial_metadata(collection: Option<Collection>) -> DataV2 {
+    DataV2 {
+        name: NAME.to_string(),
+        symbol: SYMBOL.to_string(),
+        uri: URI.to_string(),
+        seller_fee_basis_points: SELLER_FEE_BASIS_POINTS,
+        creators: None,
+        collection,
+        uses: None,
+    }
+}
+
 fn create_metadata<'info>(
     payer: &AccountInfo<'info>,
     metadata: &AccountInfo<'info>,
@@ -535,9 +549,7 @@ fn create_metadata<'info>(
     mint_authority: &AccountInfo<'info>,
     system_program: &AccountInfo<'info>,
     rent: &Sysvar<'info, Rent>,
-    uri: String,
-    name: String,
-    collection: Option<Collection>,
+    metadata_data: DataV2,
     signing_seeds: &[&[&[u8]]],
 ) -> Result<()> {
     let create_metadata_ix = CreateMetadataAccountV3 {
@@ -550,15 +562,7 @@ fn create_metadata<'info>(
         rent: None,
     }
     .instruction(CreateMetadataAccountV3InstructionArgs {
-        data: DataV2 {
-            name,
-            symbol: "LSOL".to_string(),
-            uri,
-            seller_fee_basis_points: 0,
-            creators: None,
-            collection,
-            uses: None,
-        },
+        data: metadata_data,
         is_mutable: true,
         collection_details: None,
     });
@@ -609,9 +613,7 @@ fn mint_token<'info>(ctx: &Context<MintPNFT>, signer_seeds: &[&[&[u8]]]) -> Resu
 
 fn create_metadata_for_master(
     ctx: &Context<InitializeMasterEdition>,
-    uri: String,
-    name: String,
-    collection: Option<Collection>,
+    metadata_data: DataV2,
     signing_seeds: &[&[&[u8]]],
 ) -> Result<()> {
     let create_metadata_ix = CreateMetadataAccountV3 {
@@ -624,15 +626,7 @@ fn create_metadata_for_master(
         rent: None,
     }
     .instruction(CreateMetadataAccountV3InstructionArgs {
-        data: DataV2 {
-            name,
-            symbol: "LSOL".to_string(),
-            uri,
-            seller_fee_basis_points: 0,
-            creators: None,
-            collection,
-            uses: None,
-        },
+        data: metadata_data,
         is_mutable: true,
         collection_details: None,
     });
