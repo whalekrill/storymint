@@ -23,6 +23,10 @@ startup_wait = 5000
 shutdown_wait = 2000
 upgradeable = false
 
+[[migrations]]
+name = "initialize_master"
+script = "migrations/01_initialize_master.ts"
+
 [test.validator]
 bind_address = "127.0.0.1"
 ledger = ".anchor/test-ledger"
