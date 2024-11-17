@@ -12,7 +12,13 @@ use mpl_token_metadata::instructions::{
 use mpl_token_metadata::types::{BurnArgs, Collection, DataV2};
 use mpl_token_metadata::{accounts::Metadata, ID as METADATA_PROGRAM_ID};
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
+
+#[cfg(not(feature = "mainnet"))]
+pub const SERVER_AUTHORITY: Pubkey = pubkey!("EiLANmnffXVXczyimnGEKSZpzwQ4TyuQXVAviqBji8TF");
+
+#[cfg(feature = "mainnet")]
+pub const SERVER_AUTHORITY: Pubkey = pubkey!("ToDo44444444444444444444444444444444444444"); // TODO: Update with real mainnet address
 
 pub const NAME: &str = "Locked SOL NFT";
 pub const SYMBOL: &str = "LSOL";
@@ -22,8 +28,6 @@ pub const SELLER_FEE_BASIS_POINTS: u16 = 0;
 const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL
 const MAX_SUPPLY: u64 = 10_000;
 pub const METADATA_SIZE: usize = 679;
-
-pub const SERVER_UPDATE_AUTHORITY: Pubkey = pubkey!("DJ4xnt8cNHFXehsHFQqyNB2KjXHjYyYBX5565wKAhRaR");
 
 #[derive(Accounts)]
 pub struct InitializeMasterEdition<'info> {
@@ -45,10 +49,11 @@ pub struct InitializeMasterEdition<'info> {
         payer = payer,              
         seeds = ["master_mint".as_bytes()],
         bump,
-        space = 82,
+        space = utils::MINT_SPACE,
+        owner = token_program.key(),
     )]
-    /// CHECK: Will be initialized
-    pub master_mint: AccountInfo<'info>,
+    /// CHECK: Initialized as mint in instruction
+    pub master_mint: UncheckedAccount<'info>,
 
     /// CHECK: Metadata account for master edition
     #[account(
@@ -67,6 +72,12 @@ pub struct InitializeMasterEdition<'info> {
         seeds::program = METADATA_PROGRAM_ID
     )]
     pub master_edition: UncheckedAccount<'info>,
+
+    /// CHECK: Server authority for metadata updates
+    #[account(
+        constraint = update_authority.key() == SERVER_AUTHORITY @ CustomError::InvalidUpdateAuthority
+    )]
+    pub update_authority: AccountInfo<'info>,
 
     /// CHECK: Verified statically using constraint
     #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
@@ -125,9 +136,14 @@ pub struct MintPNFT<'info> {
     )]
     pub edition_marker: UncheckedAccount<'info>,
 
-    /// CHECK: Mint account to be initialized
-    #[account(mut)]
-    pub mint: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = payer,
+        space = utils::MINT_SPACE,
+        owner = token_program.key(),
+    )]
+    /// CHECK: Initialized as mint in instruction
+    pub mint: UncheckedAccount<'info>,
 
     /// CHECK: Mint authority PDA with explicit derivation
     #[account(
@@ -154,7 +170,7 @@ pub struct UpdateMetadata<'info> {
     #[account(
         mut, 
         signer,
-        constraint = server_authority.key() == SERVER_UPDATE_AUTHORITY @ CustomError::UnauthorizedUpdate
+        constraint = server_authority.key() == SERVER_AUTHORITY @ CustomError::UnauthorizedUpdate
     )]
     /// CHECK: Server authority against constant
     pub server_authority: AccountInfo<'info>,
@@ -370,7 +386,7 @@ pub mod locked_sol_pnft {
         create_metadata(
             &ctx.accounts.payer,
             &ctx.accounts.metadata,
-            &ctx.accounts.mint,
+            &ctx.accounts.mint.to_account_info(),
             &ctx.accounts.mint_authority,
             &ctx.accounts.system_program,
             &ctx.accounts.rent,
@@ -557,7 +573,7 @@ fn create_metadata<'info>(
         mint: mint.key(),
         mint_authority: mint_authority.key(),
         payer: payer.key(),
-        update_authority: (SERVER_UPDATE_AUTHORITY, true),
+        update_authority: (SERVER_AUTHORITY, true),
         system_program: system_program.key(),
         rent: None,
     }
@@ -621,7 +637,7 @@ fn create_metadata_for_master(
         mint: ctx.accounts.master_mint.key(),
         mint_authority: ctx.accounts.master_state.key(),
         payer: ctx.accounts.payer.key(),
-        update_authority: (SERVER_UPDATE_AUTHORITY, true),
+        update_authority: (SERVER_AUTHORITY, false),
         system_program: ctx.accounts.system_program.key(),
         rent: None,
     }
@@ -638,6 +654,7 @@ fn create_metadata_for_master(
             ctx.accounts.master_mint.to_account_info(),
             ctx.accounts.master_state.to_account_info(),
             ctx.accounts.payer.to_account_info(),
+            ctx.accounts.update_authority.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
             ctx.accounts.rent.to_account_info(),
         ],
@@ -717,18 +734,6 @@ fn create_master_edition_for_mint(
 }
 
 fn initialize_token_mint_for_master(ctx: &Context<InitializeMasterEdition>) -> Result<()> {
-    let mint_rent = ctx.accounts.rent.minimum_balance(82);
-    system_program::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.payer.to_account_info(), // Changed from authority to payer
-                to: ctx.accounts.master_mint.to_account_info(),
-            },
-        ),
-        mint_rent,
-    )?;
-
     token::initialize_mint(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),

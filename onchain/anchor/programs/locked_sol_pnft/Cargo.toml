@@ -1,12 +1,12 @@
 [package]
-name = "basic"
+name = "LockedSOLPNFT"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "basic"
+name = "locked_sol_pnft"
 
 [features]
 no-entrypoint = []
@@ -15,6 +15,7 @@ no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 idl-build = ["anchor-lang/idl-build"]
+mainnet = []
 
 [dependencies]
 anchor-lang = "0.30.1"
@@ -23,5 +24,5 @@ mpl-token-metadata = "5.1.0"
 
 [package.metadata.solana]
 version = "0.1.1"
-default-program-authority = ["../keys/update-authority.json"]
+default-program-authority = ["../../../../keys/devnet.json"]
 upgradeable = true
