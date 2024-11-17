@@ -156,7 +156,7 @@ describe('locked-sol-pnft', () => {
             masterMint: masterMintPubkey,
             masterMetadata: masterMetadataPubkey,
             masterEdition: masterEditionPubkey,
-            updateAuthority: serverAuthorityKeypair.publicKey,
+            updateAuthority: UPDATE_AUTHORITY_PUBKEY,
             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,

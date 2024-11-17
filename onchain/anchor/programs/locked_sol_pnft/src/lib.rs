@@ -5,12 +5,13 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Token},
 };
+use mpl_token_metadata::accounts::Metadata;
 use mpl_token_metadata::instructions::{
     Burn, BurnInstructionArgs, CreateMasterEditionV3, CreateMasterEditionV3InstructionArgs,
     CreateMetadataAccountV3, CreateMetadataAccountV3InstructionArgs, VerifyCollection,
 };
 use mpl_token_metadata::types::{BurnArgs, Collection, DataV2};
-use mpl_token_metadata::{accounts::Metadata, ID as METADATA_PROGRAM_ID};
+use mpl_token_metadata::ID as METADATA_PROGRAM_ID;
 
 declare_id!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
 
@@ -44,48 +45,58 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub master_state: Account<'info, MasterState>,
 
+    /// CHECK: Master mint account
     #[account(
-        init,                            
-        payer = payer,              
+        init,
+        payer = payer,
         seeds = ["master_mint".as_bytes()],
         bump,
-        space = utils::MINT_SPACE,
-        owner = token_program.key(),
+        space = anchor_spl::token::Mint::LEN
     )]
-    /// CHECK: Initialized as mint in instruction
-    pub master_mint: UncheckedAccount<'info>,
+    pub master_mint: AccountInfo<'info>,
 
     /// CHECK: Metadata account for master edition
     #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), master_mint.key().as_ref(), token_program.key().as_ref()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
+    init,
+    payer = payer,
+    space = METADATA_SIZE, // Ensure this constant matches
+    seeds = [
+        "metadata".as_bytes(),
+        METADATA_PROGRAM_ID.as_ref(),
+        master_mint.key().as_ref(),
+    ],
+    bump,
+)]
     pub master_metadata: UncheckedAccount<'info>,
 
     /// CHECK: Master edition account
     #[account(
-        mut,
-        seeds = ["metadata".as_bytes(), master_mint.key().as_ref(), "edition".as_bytes()],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
+    init,
+    payer = payer,
+    space = 1152,
+    seeds = [
+        "metadata".as_bytes(),
+        METADATA_PROGRAM_ID.as_ref(),
+        master_mint.key().as_ref(),
+        "edition".as_bytes(), // Ensure this matches Metaplex expectations
+    ],
+    bump,
+)]
     pub master_edition: UncheckedAccount<'info>,
 
     /// CHECK: Server authority for metadata updates
     #[account(
         constraint = update_authority.key() == SERVER_AUTHORITY @ CustomError::InvalidUpdateAuthority
     )]
-    pub update_authority: AccountInfo<'info>,
-
-    /// CHECK: Verified statically using constraint
-    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
-    pub token_metadata_program: UncheckedAccount<'info>,
+    pub update_authority: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
+
+    /// CHECK: This is the Metaplex Token Metadata program
+    #[account(address = METADATA_PROGRAM_ID)]
+    pub token_metadata_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -143,7 +154,7 @@ pub struct MintPNFT<'info> {
         owner = token_program.key(),
     )]
     /// CHECK: Initialized as mint in instruction
-    pub mint: UncheckedAccount<'info>,
+    pub mint: AccountInfo<'info>,
 
     /// CHECK: Mint authority PDA with explicit derivation
     #[account(
@@ -345,7 +356,7 @@ pub mod locked_sol_pnft {
         let auth_signer = &[&auth_seeds[..]];
 
         initialize_token_mint_for_master(&ctx)?;
-        create_metadata_for_master(&ctx, get_initial_metadata(None), auth_signer)?;
+        create_metadata_for_master(&ctx, get_initial_metadata(None))?;
         create_master_edition_for_master(&ctx, Some(MAX_SUPPLY), auth_signer)?;
 
         Ok(())
@@ -630,20 +641,19 @@ fn mint_token<'info>(ctx: &Context<MintPNFT>, signer_seeds: &[&[&[u8]]]) -> Resu
 fn create_metadata_for_master(
     ctx: &Context<InitializeMasterEdition>,
     metadata_data: DataV2,
-    signing_seeds: &[&[&[u8]]],
 ) -> Result<()> {
     let create_metadata_ix = CreateMetadataAccountV3 {
         metadata: ctx.accounts.master_metadata.key(),
         mint: ctx.accounts.master_mint.key(),
         mint_authority: ctx.accounts.master_state.key(),
         payer: ctx.accounts.payer.key(),
-        update_authority: (SERVER_AUTHORITY, false),
+        update_authority: (ctx.accounts.update_authority.key(), false),
         system_program: ctx.accounts.system_program.key(),
         rent: None,
     }
     .instruction(CreateMetadataAccountV3InstructionArgs {
         data: metadata_data,
-        is_mutable: true,
+        is_mutable: false,
         collection_details: None,
     });
 
@@ -654,11 +664,11 @@ fn create_metadata_for_master(
             ctx.accounts.master_mint.to_account_info(),
             ctx.accounts.master_state.to_account_info(),
             ctx.accounts.payer.to_account_info(),
-            ctx.accounts.update_authority.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
             ctx.accounts.rent.to_account_info(),
+            ctx.accounts.token_metadata_program.to_account_info(),
         ],
-        signing_seeds,
+        &[&[]],
     )
     .map_err(Into::into)
 }
@@ -671,10 +681,10 @@ fn create_master_edition_for_master(
     let create_master_edition_ix = CreateMasterEditionV3 {
         edition: ctx.accounts.master_edition.key(),
         mint: ctx.accounts.master_mint.key(),
-        update_authority: ctx.accounts.master_state.key(),
+        update_authority: ctx.accounts.update_authority.key(),
         mint_authority: ctx.accounts.master_state.key(),
         metadata: ctx.accounts.master_metadata.key(),
-        payer: ctx.accounts.payer.key(), // Changed from authority to payer
+        payer: ctx.accounts.payer.key(),
         token_program: ctx.accounts.token_program.key(),
         system_program: ctx.accounts.system_program.key(),
         rent: None,
@@ -686,12 +696,14 @@ fn create_master_edition_for_master(
         &[
             ctx.accounts.master_edition.to_account_info(),
             ctx.accounts.master_mint.to_account_info(),
+            ctx.accounts.update_authority.to_account_info(),
             ctx.accounts.master_state.to_account_info(),
-            ctx.accounts.payer.to_account_info(), // Changed from authority to payer
+            ctx.accounts.payer.to_account_info(),
             ctx.accounts.master_metadata.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
             ctx.accounts.rent.to_account_info(),
+            ctx.accounts.token_metadata_program.to_account_info(),
         ],
         signing_seeds,
     )
