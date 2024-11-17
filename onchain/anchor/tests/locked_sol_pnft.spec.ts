@@ -1,6 +1,8 @@
 import * as anchor from '@coral-xyz/anchor'
 import { Program } from '@coral-xyz/anchor'
 import { LockedSolPnft } from '../target/types/locked_sol_pnft'
+import { publicKey } from '@metaplex-foundation/umi'
+import { publicKey as publicKeySerializer, string } from '@metaplex-foundation/umi/serializers'
 import {
   PublicKey,
   SystemProgram,
@@ -17,12 +19,19 @@ import * as path from 'path'
 
 const findAndLog = (seeds: (Buffer | Uint8Array)[], programId: PublicKey, name: string): PublicKey => {
   const [publicKey, bump] = PublicKey.findProgramAddressSync(seeds, programId)
-  console.log(
-    `${name} Seeds:`,
-    seeds.map((s) => s.toString('hex')),
-  )
-  console.log(`${name} Address (calculated):`, publicKey.toBase58())
-  console.log(`${name} Bump:`, bump)
+  console.log(`\n=== ${name} PDA Derivation ===`)
+  console.log('Program ID:', programId.toBase58())
+  console.log('Seeds:')
+  seeds.forEach((seed, index) => {
+    console.log(`  Seed ${index}:`, {
+      hex: seed.toString('hex'),
+      utf8: Buffer.from(seed).toString('utf8'),
+      length: seed.length,
+    })
+  })
+  console.log('Derived Address:', publicKey.toBase58())
+  console.log('Bump:', bump)
+  console.log('===================\n')
   return publicKey
 }
 
@@ -66,13 +75,13 @@ const getMasterEditionAddress = (mint: PublicKey): PublicKey => {
   )
 }
 
-const getEditionMarkerAddress = (mint: PublicKey): PublicKey => {
-  return findAndLog(
-    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer(), Buffer.from('edition')],
-    TOKEN_METADATA_PROGRAM_ID,
-    'Edition Marker',
-  )
-}
+async function getEditionMarker(provider, walletKeypair, mint) {
+  const tokenMetadataProgramId = publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
+  const metadata = umi.eddsa.findPda(tokenMetadataProgramId, [
+    string({ size: 'variable' }).serialize('metadata'),
+    publicKeySerializer().serialize(tokenMetadataProgramId),
+    publicKeySerializer().serialize(mint),
+  ]);
 
 describe('locked-sol-pnft', () => {
   const serverAuthorityKeypair = Keypair.fromSecretKey(
@@ -201,14 +210,21 @@ describe('locked-sol-pnft', () => {
   })
 
   beforeEach(async () => {
+    console.log('\n=== Starting new test iteration ===')
     mint = Keypair.generate()
+    console.log('Generated new mint:', mint.publicKey.toBase58())
 
-    const [vault, mintAuthority, metadata, editionMarker] = await Promise.all([
+    // Modify this section to handle the async getEditionMarkerAddress
+    const [vault, mintAuthority, metadata] = await Promise.all([
       getVaultAddress(mint.publicKey, program),
       getMintAuthorityAddress(mint.publicKey, program),
       getMetadataAddress(mint.publicKey),
-      getEditionMarkerAddress(mint.publicKey),
     ])
+
+    const metaplex = Metaplex.make(provider.connection).use(keypairIdentity(walletKeypair))
+
+    const nft = await metaplex.nfts().findByMint({ mintAddress: mint })
+    const editionMarker = nft.edition.address
 
     vaultPubkey = vault
     mintAuthorityPubkey = mintAuthority
@@ -216,6 +232,7 @@ describe('locked-sol-pnft', () => {
     editionPubkey = editionMarker
     tokenAccountPubkey = await getAssociatedTokenAddress(mint.publicKey, provider.wallet.publicKey)
 
+    console.log('About to mint PNFT...')
     await program.methods
       .mintPnft()
       .accountsStrict({
@@ -237,6 +254,8 @@ describe('locked-sol-pnft', () => {
       })
       .signers([mint])
       .rpc()
+
+    console.log('PNFT minted successfully')
 
     const vaultAccount = await program.account.tokenVault.fetch(vaultPubkey)
     expect(vaultAccount.mint).toEqual(mint.publicKey)

@@ -128,9 +128,15 @@ pub struct MintPNFT<'info> {
     /// CHECK: Edition marker account with explicit derivation
     #[account(
         mut,
-        seeds = ["metadata".as_bytes(), mint.key().as_ref(), "edition".as_bytes()],
+        seeds = [
+            b"metadata", 
+            METADATA_PROGRAM_ID.as_ref(),
+            mint.key().as_ref(),
+            b"edition",
+            token_program.key().as_ref()
+        ],
         bump,
-        seeds::program = mpl_token_metadata::ID
+        seeds::program = METADATA_PROGRAM_ID
     )]
     pub edition_marker: UncheckedAccount<'info>,
 
@@ -260,7 +266,13 @@ pub struct BurnAndWithdraw<'info> {
     /// CHECK: Edition marker account for burning
     #[account(
         mut,
-        seeds = ["metadata".as_bytes(), mint.key().as_ref(), "edition".as_bytes()],
+        seeds = [
+            b"metadata", 
+            METADATA_PROGRAM_ID.as_ref(),
+            mint.key().as_ref(),
+            b"edition",
+            token_program.key().as_ref()
+        ],
         bump,
         seeds::program = METADATA_PROGRAM_ID
     )]
@@ -669,8 +681,8 @@ fn create_master_edition_for_master(
     let create_master_edition_ix = CreateMasterEditionV3 {
         edition: ctx.accounts.master_edition.key(),
         mint: ctx.accounts.master_mint.key(),
-        update_authority: ctx.accounts.master_state.key(),
-        mint_authority: ctx.accounts.master_state.key(),
+        update_authority: ctx.accounts.update_authority.key(),
+        mint_authority: ctx.accounts.update_authority.key(),
         metadata: ctx.accounts.master_metadata.key(),
         payer: ctx.accounts.payer.key(),
         token_program: ctx.accounts.token_program.key(),
@@ -684,8 +696,8 @@ fn create_master_edition_for_master(
         &[
             ctx.accounts.master_edition.to_account_info(),
             ctx.accounts.master_mint.to_account_info(),
-            ctx.accounts.master_state.to_account_info(),
-            ctx.accounts.master_state.to_account_info(),
+            ctx.accounts.update_authority.to_account_info(),
+            ctx.accounts.update_authority.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.master_metadata.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
