@@ -49,49 +49,36 @@ pub struct InitializeMasterEdition<'info> {
     #[account(
         init,
         payer = payer,
+        space = anchor_spl::token::Mint::LEN,
         seeds = ["master_mint".as_bytes()],
         bump,
-        space = anchor_spl::token::Mint::LEN
+        owner = token_program.key()
     )]
     pub master_mint: AccountInfo<'info>,
 
     /// CHECK: Metadata account for master edition
-    #[account(
-    init,
-    payer = payer,
-    space = METADATA_SIZE, // Ensure this constant matches
-    seeds = [
-        "metadata".as_bytes(),
-        METADATA_PROGRAM_ID.as_ref(),
-        master_mint.key().as_ref(),
-    ],
-    bump,
-)]
+    #[account(mut)]
     pub master_metadata: UncheckedAccount<'info>,
 
     /// CHECK: Master edition account
-    #[account(
-    init,
-    payer = payer,
-    space = 1152,
-    seeds = [
-        "metadata".as_bytes(),
-        METADATA_PROGRAM_ID.as_ref(),
-        master_mint.key().as_ref(),
-        "edition".as_bytes(), // Ensure this matches Metaplex expectations
-    ],
-    bump,
-)]
+    #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
 
     /// CHECK: Server authority for metadata updates
     #[account(
+        mut,
+        signer,
         constraint = update_authority.key() == SERVER_AUTHORITY @ CustomError::InvalidUpdateAuthority
     )]
-    pub update_authority: UncheckedAccount<'info>,
+    pub update_authority: Signer<'info>,
+
+    /// CHECK: Token account for the server authority
+    #[account(mut)]
+    pub authority_token: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub rent: Sysvar<'info, Rent>,
 
     /// CHECK: This is the Metaplex Token Metadata program
@@ -349,15 +336,61 @@ pub mod locked_sol_pnft {
         master_state.master_mint = ctx.accounts.master_mint.key();
         master_state.total_minted = 0;
 
-        let master_mint_key = ctx.accounts.master_mint.key();
-        let mut bump_arr = [0u8; 1];
-        let auth_seeds =
-            utils::get_master_seeds(&master_mint_key, ctx.bumps.master_state, &mut bump_arr);
-        let auth_signer = &[&auth_seeds[..]];
+        // Initialize mint with server authority
+        token::initialize_mint(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::InitializeMint {
+                    mint: ctx.accounts.master_mint.to_account_info(),
+                    rent: ctx.accounts.rent.to_account_info(),
+                },
+            ),
+            0,
+            &ctx.accounts.update_authority.key(), // Server authority as mint authority
+            Some(&ctx.accounts.update_authority.key()), // And freeze authority
+        )?;
 
-        initialize_token_mint_for_master(&ctx)?;
-        create_metadata_for_master(&ctx, get_initial_metadata(None))?;
-        create_master_edition_for_master(&ctx, Some(MAX_SUPPLY), auth_signer)?;
+        // Create ATA for server authority
+        anchor_spl::associated_token::create(CpiContext::new(
+            ctx.accounts.associated_token_program.to_account_info(),
+            anchor_spl::associated_token::Create {
+                payer: ctx.accounts.payer.to_account_info(),
+                associated_token: ctx.accounts.authority_token.to_account_info(),
+                authority: ctx.accounts.update_authority.to_account_info(),
+                mint: ctx.accounts.master_mint.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                token_program: ctx.accounts.token_program.to_account_info(),
+            },
+        ))?;
+
+        // Create metadata
+        let metadata_data = get_initial_metadata(None);
+        create_metadata(
+            &ctx.accounts.payer,
+            &ctx.accounts.master_metadata,
+            &ctx.accounts.master_mint,
+            &ctx.accounts.update_authority,
+            &ctx.accounts.system_program,
+            &ctx.accounts.rent,
+            metadata_data,
+            &[], // No signing seeds needed
+        )?;
+
+        // Mint token directly as server authority
+        token::mint_to(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::MintTo {
+                    mint: ctx.accounts.master_mint.to_account_info(),
+                    to: ctx.accounts.authority_token.to_account_info(),
+                    authority: ctx.accounts.update_authority.to_account_info(),
+                },
+            ),
+            1,
+        )?;
+
+        // Create master edition
+        create_master_edition_for_master(&ctx, Some(MAX_SUPPLY), &[])?;
 
         Ok(())
     }
@@ -536,16 +569,6 @@ mod utils {
         }
     }
 
-    pub fn get_master_seeds<'a>(
-        master_mint: &'a Pubkey,
-        bump: u8,
-        bump_arr: &'a mut [u8; 1],
-    ) -> [&'a [u8]; 3] {
-        const PREFIX: &[u8] = b"master";
-        bump_arr[0] = bump;
-        [PREFIX, master_mint.as_ref(), &bump_arr[..]]
-    }
-
     pub fn get_mint_authority_seeds<'a>(
         mint: &'a Pubkey,
         bump: u8,
@@ -638,41 +661,6 @@ fn mint_token<'info>(ctx: &Context<MintPNFT>, signer_seeds: &[&[&[u8]]]) -> Resu
     )
 }
 
-fn create_metadata_for_master(
-    ctx: &Context<InitializeMasterEdition>,
-    metadata_data: DataV2,
-) -> Result<()> {
-    let create_metadata_ix = CreateMetadataAccountV3 {
-        metadata: ctx.accounts.master_metadata.key(),
-        mint: ctx.accounts.master_mint.key(),
-        mint_authority: ctx.accounts.master_state.key(),
-        payer: ctx.accounts.payer.key(),
-        update_authority: (ctx.accounts.update_authority.key(), false),
-        system_program: ctx.accounts.system_program.key(),
-        rent: None,
-    }
-    .instruction(CreateMetadataAccountV3InstructionArgs {
-        data: metadata_data,
-        is_mutable: false,
-        collection_details: None,
-    });
-
-    invoke_signed(
-        &create_metadata_ix,
-        &[
-            ctx.accounts.master_metadata.to_account_info(),
-            ctx.accounts.master_mint.to_account_info(),
-            ctx.accounts.master_state.to_account_info(),
-            ctx.accounts.payer.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-            ctx.accounts.rent.to_account_info(),
-            ctx.accounts.token_metadata_program.to_account_info(),
-        ],
-        &[&[]],
-    )
-    .map_err(Into::into)
-}
-
 fn create_master_edition_for_master(
     ctx: &Context<InitializeMasterEdition>,
     max_supply: Option<u64>,
@@ -681,7 +669,7 @@ fn create_master_edition_for_master(
     let create_master_edition_ix = CreateMasterEditionV3 {
         edition: ctx.accounts.master_edition.key(),
         mint: ctx.accounts.master_mint.key(),
-        update_authority: ctx.accounts.update_authority.key(),
+        update_authority: ctx.accounts.master_state.key(),
         mint_authority: ctx.accounts.master_state.key(),
         metadata: ctx.accounts.master_metadata.key(),
         payer: ctx.accounts.payer.key(),
@@ -696,7 +684,7 @@ fn create_master_edition_for_master(
         &[
             ctx.accounts.master_edition.to_account_info(),
             ctx.accounts.master_mint.to_account_info(),
-            ctx.accounts.update_authority.to_account_info(),
+            ctx.accounts.master_state.to_account_info(),
             ctx.accounts.master_state.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.master_metadata.to_account_info(),
@@ -743,21 +731,6 @@ fn create_master_edition_for_mint(
         signing_seeds,
     )
     .map_err(Into::into)
-}
-
-fn initialize_token_mint_for_master(ctx: &Context<InitializeMasterEdition>) -> Result<()> {
-    token::initialize_mint(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            token::InitializeMint {
-                mint: ctx.accounts.master_mint.to_account_info(),
-                rent: ctx.accounts.rent.to_account_info(),
-            },
-        ),
-        0,
-        &ctx.accounts.master_state.key(),
-        Some(&ctx.accounts.master_state.key()),
-    )
 }
 
 fn initialize_token_mint_for_mint(ctx: &Context<MintPNFT>) -> Result<()> {

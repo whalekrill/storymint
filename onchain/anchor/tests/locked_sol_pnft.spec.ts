@@ -1,6 +1,5 @@
 import * as anchor from '@coral-xyz/anchor'
 import { Program } from '@coral-xyz/anchor'
-import { SendTransactionError } from '@solana/web3.js'
 import { LockedSolPnft } from '../target/types/locked_sol_pnft'
 import {
   PublicKey,
@@ -8,72 +7,78 @@ import {
   SYSVAR_RENT_PUBKEY,
   SYSVAR_INSTRUCTIONS_PUBKEY,
   Keypair,
+  SendTransactionError,
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js'
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token'
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress } from '@solana/spl-token'
 import { Metadata, PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata'
 import * as fs from 'fs'
 import * as path from 'path'
 
-const getMasterStateAddress = async (masterMint: PublicKey, program: Program<LockedSolPnft>): Promise<PublicKey> => {
-  return (await PublicKey.findProgramAddress([Buffer.from('master'), masterMint.toBuffer()], program.programId))[0]
+const findAndLog = (seeds: (Buffer | Uint8Array)[], programId: PublicKey, name: string): PublicKey => {
+  const [publicKey, bump] = PublicKey.findProgramAddressSync(seeds, programId)
+  console.log(
+    `${name} Seeds:`,
+    seeds.map((s) => s.toString('hex')),
+  )
+  console.log(`${name} Address (calculated):`, publicKey.toBase58())
+  console.log(`${name} Bump:`, bump)
+  return publicKey
 }
 
-const getMasterMintAddress = async (program: Program<LockedSolPnft>): Promise<PublicKey> => {
-  return (await PublicKey.findProgramAddress([Buffer.from('master_mint')], program.programId))[0]
+const getMasterStateAddress = (masterMint: PublicKey, program: Program<LockedSolPnft>): PublicKey => {
+  return findAndLog([Buffer.from('master'), masterMint.toBuffer()], program.programId, 'Master State')
 }
 
-const getVaultAddress = async (mint: PublicKey, program: Program<LockedSolPnft>): Promise<PublicKey> => {
-  return (await PublicKey.findProgramAddress([Buffer.from('vault'), mint.toBuffer()], program.programId))[0]
+const getMasterMintAddress = (program: Program<LockedSolPnft>): PublicKey => {
+  return findAndLog([Buffer.from('master_mint')], program.programId, 'Master Mint')
 }
 
-const getMintAuthorityAddress = async (mint: PublicKey, program: Program<LockedSolPnft>): Promise<PublicKey> => {
-  return (await PublicKey.findProgramAddress([Buffer.from('mint_authority'), mint.toBuffer()], program.programId))[0]
+const getVaultAddress = (mint: PublicKey, program: Program<LockedSolPnft>): PublicKey => {
+  return findAndLog([Buffer.from('vault'), mint.toBuffer()], program.programId, 'Vault')
 }
 
-const getMetadataAddress = async (mint: PublicKey): Promise<PublicKey> => {
-  return (
-    await PublicKey.findProgramAddress(
-      [Buffer.from('metadata'), mint.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
-      TOKEN_METADATA_PROGRAM_ID,
-    )
-  )[0]
+const getMintAuthorityAddress = (mint: PublicKey, program: Program<LockedSolPnft>): PublicKey => {
+  return findAndLog([Buffer.from('mint_authority'), mint.toBuffer()], program.programId, 'Mint Authority')
 }
 
-const getMasterMetadataAddress = async (masterMint: PublicKey): Promise<PublicKey> => {
-  return (
-    await PublicKey.findProgramAddress(
-      [Buffer.from('metadata'), masterMint.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
-      TOKEN_METADATA_PROGRAM_ID,
-    )
-  )[0]
+const getMetadataAddress = (mint: PublicKey): PublicKey => {
+  return findAndLog(
+    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    TOKEN_METADATA_PROGRAM_ID,
+    'Metadata',
+  )
 }
 
-const getMasterEditionAddress = async (mint: PublicKey): Promise<PublicKey> => {
-  return (
-    await PublicKey.findProgramAddress(
-      [Buffer.from('metadata'), mint.toBuffer(), Buffer.from('edition')],
-      TOKEN_METADATA_PROGRAM_ID,
-    )
-  )[0]
+const getMasterMetadataAddress = (masterMint: PublicKey): PublicKey => {
+  return findAndLog(
+    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), masterMint.toBuffer()],
+    TOKEN_METADATA_PROGRAM_ID,
+    'Master Metadata',
+  )
 }
 
-const getEditionMarkerAddress = async (mint: PublicKey): Promise<PublicKey> => {
-  return (
-    await PublicKey.findProgramAddress(
-      [Buffer.from('metadata'), mint.toBuffer(), Buffer.from('edition')],
-      TOKEN_METADATA_PROGRAM_ID,
-    )
-  )[0]
+const getMasterEditionAddress = (mint: PublicKey): PublicKey => {
+  return findAndLog(
+    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer(), Buffer.from('edition')],
+    TOKEN_METADATA_PROGRAM_ID,
+    'Master Edition',
+  )
+}
+
+const getEditionMarkerAddress = (mint: PublicKey): PublicKey => {
+  return findAndLog(
+    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer(), Buffer.from('edition')],
+    TOKEN_METADATA_PROGRAM_ID,
+    'Edition Marker',
+  )
 }
 
 describe('locked-sol-pnft', () => {
   const serverAuthorityKeypair = Keypair.fromSecretKey(
-    Uint8Array.from([
-      74, 235, 218, 204, 165, 249, 251, 252, 37, 204, 109, 249, 38, 87, 204, 248, 146, 22, 17, 96, 195, 210, 85, 28,
-      153, 179, 176, 0, 17, 63, 130, 49, 203, 190, 104, 203, 128, 153, 190, 207, 232, 27, 224, 77, 215, 94, 23, 146, 12,
-      111, 140, 15, 14, 222, 232, 215, 149, 202, 162, 75, 17, 180, 152, 182,
-    ]),
+    Buffer.from(
+      JSON.parse(fs.readFileSync(path.join(__dirname, '../../../keys/update-authority-devnet.json'), 'utf-8')),
+    ),
   )
 
   console.log('Server Authority Pubkey:', serverAuthorityKeypair.publicKey.toBase58())
@@ -112,7 +117,6 @@ describe('locked-sol-pnft', () => {
       if (balance < LAMPORTS_PER_SOL) {
         console.log('Funding server authority account...')
         const signature = await provider.connection.requestAirdrop(UPDATE_AUTHORITY_PUBKEY, 2 * LAMPORTS_PER_SOL)
-
         const latestBlockHash = await provider.connection.getLatestBlockhash()
         await provider.connection.confirmTransaction({
           signature,
@@ -129,18 +133,12 @@ describe('locked-sol-pnft', () => {
       }
 
       // Get master mint and related addresses
-      masterMintPubkey = await getMasterMintAddress(program)
+      masterMintPubkey = getMasterMintAddress(program)
       console.log('Master Mint Address:', masterMintPubkey.toBase58())
 
-      const [masterState, masterMetadata, masterEdition] = await Promise.all([
-        getMasterStateAddress(masterMintPubkey, program),
-        getMasterMetadataAddress(masterMintPubkey),
-        getMasterEditionAddress(masterMintPubkey),
-      ])
-
-      masterStatePubkey = masterState
-      masterMetadataPubkey = masterMetadata
-      masterEditionPubkey = masterEdition
+      masterStatePubkey = getMasterStateAddress(masterMintPubkey, program)
+      masterMetadataPubkey = getMasterMetadataAddress(masterMintPubkey)
+      masterEditionPubkey = getMasterEditionAddress(masterMintPubkey)
 
       // Check if master edition exists
       const masterEditionAccount = await provider.connection.getAccountInfo(masterEditionPubkey)
@@ -148,6 +146,8 @@ describe('locked-sol-pnft', () => {
       if (!masterEditionAccount) {
         console.log('Initializing master edition...')
         // Initialize master edition if it doesn't exist
+        const authorityATA = await getAssociatedTokenAddress(masterMintPubkey, serverAuthorityKeypair.publicKey)
+
         await program.methods
           .initializeMasterEdition()
           .accountsStrict({
@@ -156,14 +156,20 @@ describe('locked-sol-pnft', () => {
             masterMint: masterMintPubkey,
             masterMetadata: masterMetadataPubkey,
             masterEdition: masterEditionPubkey,
-            updateAuthority: UPDATE_AUTHORITY_PUBKEY,
-            tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+            updateAuthority: serverAuthorityKeypair.publicKey,
+            authorityToken: authorityATA, // Now this is a PublicKey, not a Promise
             systemProgram: SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
             rent: SYSVAR_RENT_PUBKEY,
+            tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
           })
-          .signers([walletKeypair])
+          .signers([serverAuthorityKeypair])
           .rpc()
+
+        // Verify the token was minted to the authority
+        const authorityTokenAccount = await getAccount(provider.connection, authorityATA)
+        expect(authorityTokenAccount.amount.toString()).toBe('1')
 
         // Verify initialization
         const masterStateAccount = await program.account.masterState.fetch(masterStatePubkey)
@@ -181,7 +187,7 @@ describe('locked-sol-pnft', () => {
         })
       }
 
-      // Verify the state - move this inside the try block
+      // Verify the state
       const masterStateAccount = await program.account.masterState.fetch(masterStatePubkey)
       expect(masterStateAccount.masterMint).toEqual(masterMintPubkey)
       expect(masterStateAccount.totalMinted.toString()).toBe('0')
