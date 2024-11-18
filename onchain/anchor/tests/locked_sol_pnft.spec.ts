@@ -2,6 +2,8 @@ import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
 import { createSignerFromKeypair, keypairIdentity, sol, publicKey, generateSigner } from '@metaplex-foundation/umi'
 import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
 import { Keypair } from '@solana/web3.js'
+import { PublicKey as web3PublicKey } from '@solana/web3.js'
+import { getAssociatedTokenAddress, AccountLayout } from '@solana/spl-token'
 import { initializeMasterEdition } from '../../clients/generated/umi/src/instructions'
 import fs from 'fs'
 import * as path from 'path'
@@ -22,7 +24,6 @@ describe('initializeMasterEdition Instruction', () => {
 
   const programId = publicKey('3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr')
   const metadataProgramId = publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
-  const tokenProgramId = publicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
 
   it('should create a master edition successfully', async () => {
     await umi.rpc.airdrop(payer.publicKey, sol(1))
@@ -53,12 +54,13 @@ describe('initializeMasterEdition Instruction', () => {
       Buffer.from('edition'),
     ])
 
-    // Derive authority token account
-    const [authorityToken] = umi.eddsa.findPda(tokenProgramId, [
-      publicKeySerializer().serialize(updateAuthority.publicKey),
-      publicKeySerializer().serialize(tokenProgramId),
-      publicKeySerializer().serialize(masterMint),
-    ])
+    const associatedTokenAccount = await getAssociatedTokenAddress(
+      new web3PublicKey(masterMint.toString()),
+      new web3PublicKey(updateAuthority.publicKey.toString()),
+      true,
+    )
+
+    const authorityToken = publicKey(associatedTokenAccount.toString())
 
     console.log('\nAccount Details:')
     console.log('Program ID:', programId.toString())
@@ -80,6 +82,20 @@ describe('initializeMasterEdition Instruction', () => {
       }).sendAndConfirm(umi)
 
       console.log('Successfully initialized master edition')
+
+      const tokenAccountInfo = await umi.rpc.getAccount(publicKey(associatedTokenAccount.toString()))
+      expect(tokenAccountInfo).toBeTruthy()
+      console.log('Token Account Info:', tokenAccountInfo)
+
+      if (!tokenAccountInfo.exists) {
+        throw new Error('Token account does not exist')
+      }
+
+      const decodedAccount = AccountLayout.decode(tokenAccountInfo.data)
+      const balance = BigInt(decodedAccount.amount.toString()) // Convert balance to BigInt
+
+      console.log('Decoded Token Balance (web3.js):', balance.toString())
+      expect(balance).toBe(BigInt(1))
     } catch (error) {
       if (error instanceof Error) {
         console.error('\nError Details:')

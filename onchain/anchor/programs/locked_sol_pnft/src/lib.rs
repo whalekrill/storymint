@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::system_program;
 use anchor_spl::{
-    associated_token::AssociatedToken,
+    associated_token::{self, AssociatedToken, Create},
     token::{self, Token},
 };
 
@@ -49,6 +48,7 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub master_state: Account<'info, MasterState>,
 
+    /// CHECK: Mint account with explicit program check
     #[account(
         init,
         payer = payer,
@@ -59,9 +59,11 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub master_mint: AccountInfo<'info>,
 
+    /// CHECK: Metadata account with explicit program check
     #[account(mut)]
     pub master_metadata: UncheckedAccount<'info>,
 
+    /// CHECK: Master edition account with explicit program check
     #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
 
@@ -81,6 +83,7 @@ pub struct InitializeMasterEdition<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub rent: Sysvar<'info, Rent>,
 
+    /// CHECK: Required by token metadata program
     #[account(address = METADATA_PROGRAM_ID)]
     pub token_metadata_program: AccountInfo<'info>,
 }
@@ -364,26 +367,21 @@ pub mod locked_sol_pnft {
         )?;
 
         // Create update authority's ATA
-        let create_token_account_ix =
-            anchor_spl::associated_token::create_associated_token_account_instruction(
-                ctx.accounts.payer.key(),
-                ctx.accounts.update_authority.key(),
-                ctx.accounts.master_mint.key(),
-                ctx.accounts.token_program.key(),
-            );
+        let cpi_accounts = Create {
+            payer: ctx.accounts.payer.to_account_info(),
+            associated_token: ctx.accounts.update_authority_token.to_account_info(),
+            authority: ctx.accounts.update_authority.to_account_info(),
+            mint: ctx.accounts.master_mint.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            token_program: ctx.accounts.token_program.to_account_info(),
+        };
 
-        invoke(
-            &create_token_account_ix,
-            &[
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.update_authority_token.to_account_info(),
-                ctx.accounts.update_authority.to_account_info(),
-                ctx.accounts.master_mint.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-                ctx.accounts.token_program.to_account_info(),
-                ctx.accounts.associated_token_program.to_account_info(),
-            ],
-        )?;
+        let cpi_context = CpiContext::new(
+            ctx.accounts.associated_token_program.to_account_info(),
+            cpi_accounts,
+        );
+
+        associated_token::create(cpi_context)?;
 
         // Mint one token to update authority's ATA
         token::mint_to(
