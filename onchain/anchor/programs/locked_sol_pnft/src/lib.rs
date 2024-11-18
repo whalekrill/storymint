@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::system_program;
 use anchor_spl::{
@@ -39,7 +40,6 @@ pub struct InitializeMasterEdition<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// CHECK: Master state account
     #[account(
         init,
         payer = payer,
@@ -49,7 +49,6 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub master_state: Account<'info, MasterState>,
 
-    /// CHECK: Master mint account
     #[account(
         init,
         payer = payer,
@@ -60,15 +59,12 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub master_mint: AccountInfo<'info>,
 
-    /// CHECK: Metadata account for master edition
     #[account(mut)]
     pub master_metadata: UncheckedAccount<'info>,
 
-    /// CHECK: Master edition account
     #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
 
-    /// CHECK: Server authority for metadata updates
     #[account(
         mut,
         signer,
@@ -76,16 +72,15 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub update_authority: Signer<'info>,
 
-    /// CHECK: Token account for the server authority
+    /// CHECK: Token account for the update authority
     #[account(mut)]
-    pub authority_token: AccountInfo<'info>,
+    pub update_authority_token: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub rent: Sysvar<'info, Rent>,
 
-    /// CHECK: This is the Metaplex Token Metadata program
     #[account(address = METADATA_PROGRAM_ID)]
     pub token_metadata_program: AccountInfo<'info>,
 }
@@ -368,7 +363,42 @@ pub mod locked_sol_pnft {
             Some(&ctx.accounts.update_authority.key()),
         )?;
 
-        // Build and invoke CreateMetadataAccountV3 instruction
+        // Create update authority's ATA
+        let create_token_account_ix =
+            anchor_spl::associated_token::create_associated_token_account_instruction(
+                ctx.accounts.payer.key(),
+                ctx.accounts.update_authority.key(),
+                ctx.accounts.master_mint.key(),
+                ctx.accounts.token_program.key(),
+            );
+
+        invoke(
+            &create_token_account_ix,
+            &[
+                ctx.accounts.payer.to_account_info(),
+                ctx.accounts.update_authority_token.to_account_info(),
+                ctx.accounts.update_authority.to_account_info(),
+                ctx.accounts.master_mint.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.associated_token_program.to_account_info(),
+            ],
+        )?;
+
+        // Mint one token to update authority's ATA
+        token::mint_to(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::MintTo {
+                    mint: ctx.accounts.master_mint.to_account_info(),
+                    to: ctx.accounts.update_authority_token.to_account_info(),
+                    authority: ctx.accounts.update_authority.to_account_info(),
+                },
+            ),
+            1,
+        )?;
+
+        // Create metadata
         let metadata_data = DataV2 {
             name: NAME.to_string(),
             symbol: SYMBOL.to_string(),
@@ -396,13 +426,12 @@ pub mod locked_sol_pnft {
                 ctx.accounts.master_mint.to_account_info(),
                 ctx.accounts.update_authority.to_account_info(),
                 ctx.accounts.payer.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
                 ctx.accounts.token_metadata_program.to_account_info(),
             ],
             &[],
         )?;
 
-        // Build and invoke CreateMasterEditionV3 instruction
+        // Create master edition
         let create_master_edition_ix = CreateMasterEditionV3Builder::new()
             .edition(ctx.accounts.master_edition.key())
             .mint(ctx.accounts.master_mint.key())
@@ -410,6 +439,7 @@ pub mod locked_sol_pnft {
             .mint_authority(ctx.accounts.update_authority.key())
             .metadata(ctx.accounts.master_metadata.key())
             .payer(ctx.accounts.payer.key())
+            .max_supply(0)
             .instruction();
 
         invoke_signed(
@@ -419,7 +449,7 @@ pub mod locked_sol_pnft {
                 ctx.accounts.master_mint.to_account_info(),
                 ctx.accounts.update_authority.to_account_info(),
                 ctx.accounts.payer.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.master_metadata.to_account_info(),
                 ctx.accounts.token_metadata_program.to_account_info(),
             ],
             &[],
