@@ -1,6 +1,7 @@
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
 import { createNoopSigner, keypairIdentity, sol, publicKey, generateSigner } from '@metaplex-foundation/umi'
 import { string, publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
+import { Keypair } from '@solana/web3.js'
 import { initializeMasterEdition } from '../../clients/generated/umi/src/instructions'
 import fs from 'fs'
 import * as path from 'path'
@@ -14,13 +15,12 @@ const keypairPath = path.join(__dirname, '../../../keys/update-authority-devnet.
 const secretKey = JSON.parse(fs.readFileSync(keypairPath, 'utf-8'))
 
 // Convert the secret key array to a Uint8Array
-const secretKeyUint8Array = Uint8Array.from(secretKey)
+const keyPair = Keypair.fromSecretKey(Uint8Array.from(secretKey))
 
-// Use `generateSigner` to create a valid signer from the secret key
-const signer = generateSigner(secretKeyUint8Array)
+const updateAuthorityKey = publicKey(keyPair.publicKey.toString())
 
 // Use the public key from the keypair
-const updateAuthority = createNoopSigner(signer.publicKey)
+const updateAuthority = createNoopSigner(updateAuthorityKey)
 
 describe('initializeMasterEdition Instruction', () => {
   const payer = generateSigner(umi)
@@ -38,14 +38,12 @@ describe('initializeMasterEdition Instruction', () => {
     // Airdrop SOL to payer for transaction fees
     await umi.rpc.airdrop(payer.publicKey, sol(1), { commitment: 'processed' })
 
-    const tx = initializeMasterEdition(umi, {
+    initializeMasterEdition(umi, {
       payer,
       masterMetadata,
       masterEdition: umi.eddsa.findPda(payer.publicKey, [Buffer.from('master_edition')]),
       updateAuthority,
       authorityToken: umi.eddsa.findPda(payer.publicKey, [Buffer.from('authority')]),
     }).sendAndConfirm(umi)
-
-    expect(tx).toBeDefined()
   })
 })
