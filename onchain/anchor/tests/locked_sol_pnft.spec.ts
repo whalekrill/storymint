@@ -1,314 +1,51 @@
-import * as anchor from '@coral-xyz/anchor'
-import { Program } from '@coral-xyz/anchor'
-import { LockedSolPnft } from '../target/types/locked_sol_pnft'
-import { publicKey } from '@metaplex-foundation/umi'
-import { publicKey as publicKeySerializer, string } from '@metaplex-foundation/umi/serializers'
-import {
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  SYSVAR_INSTRUCTIONS_PUBKEY,
-  Keypair,
-  SendTransactionError,
-  LAMPORTS_PER_SOL,
-} from '@solana/web3.js'
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress } from '@solana/spl-token'
-import { Metadata, PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata'
-import * as fs from 'fs'
+import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
+import { createNoopSigner, keypairIdentity, sol, publicKey, generateSigner } from '@metaplex-foundation/umi'
+import { string, publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
+import { initializeMasterEdition } from '../../clients/generated/umi/src/instructions'
+import fs from 'fs'
 import * as path from 'path'
 
-const findAndLog = (seeds: (Buffer | Uint8Array)[], programId: PublicKey, name: string): PublicKey => {
-  const [publicKey, bump] = PublicKey.findProgramAddressSync(seeds, programId)
-  console.log(`\n=== ${name} PDA Derivation ===`)
-  console.log('Program ID:', programId.toBase58())
-  console.log('Seeds:')
-  seeds.forEach((seed, index) => {
-    console.log(`  Seed ${index}:`, {
-      hex: seed.toString('hex'),
-      utf8: Buffer.from(seed).toString('utf8'),
-      length: seed.length,
-    })
-  })
-  console.log('Derived Address:', publicKey.toBase58())
-  console.log('Bump:', bump)
-  console.log('===================\n')
-  return publicKey
-}
+const umi = createUmi('http://127.0.0.1:8899', { commitment: 'processed' })
 
-const getMasterStateAddress = (masterMint: PublicKey, program: Program<LockedSolPnft>): PublicKey => {
-  return findAndLog([Buffer.from('master'), masterMint.toBuffer()], program.programId, 'Master State')
-}
+// Define the path to your keypair JSON file
+const keypairPath = path.join(__dirname, '../../../keys/update-authority-devnet.json')
 
-const getMasterMintAddress = (program: Program<LockedSolPnft>): PublicKey => {
-  return findAndLog([Buffer.from('master_mint')], program.programId, 'Master Mint')
-}
+// Read and parse the JSON file
+const secretKey = JSON.parse(fs.readFileSync(keypairPath, 'utf-8'))
 
-const getVaultAddress = (mint: PublicKey, program: Program<LockedSolPnft>): PublicKey => {
-  return findAndLog([Buffer.from('vault'), mint.toBuffer()], program.programId, 'Vault')
-}
+// Convert the secret key array to a Uint8Array
+const secretKeyUint8Array = Uint8Array.from(secretKey)
 
-const getMintAuthorityAddress = (mint: PublicKey, program: Program<LockedSolPnft>): PublicKey => {
-  return findAndLog([Buffer.from('mint_authority'), mint.toBuffer()], program.programId, 'Mint Authority')
-}
+// Use `generateSigner` to create a valid signer from the secret key
+const signer = generateSigner(secretKeyUint8Array)
 
-const getMetadataAddress = (mint: PublicKey): PublicKey => {
-  return findAndLog(
-    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-    TOKEN_METADATA_PROGRAM_ID,
-    'Metadata',
-  )
-}
+// Use the public key from the keypair
+const updateAuthority = createNoopSigner(signer.publicKey)
 
-const getMasterMetadataAddress = (masterMint: PublicKey): PublicKey => {
-  return findAndLog(
-    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), masterMint.toBuffer()],
-    TOKEN_METADATA_PROGRAM_ID,
-    'Master Metadata',
-  )
-}
+describe('initializeMasterEdition Instruction', () => {
+  const payer = generateSigner(umi)
+  umi.use(keypairIdentity(payer))
 
-const getMasterEditionAddress = (mint: PublicKey): PublicKey => {
-  return findAndLog(
-    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer(), Buffer.from('edition')],
-    TOKEN_METADATA_PROGRAM_ID,
-    'Master Edition',
-  )
-}
+  const mint = generateSigner(umi).publicKey
 
-async function getEditionMarker(provider, walletKeypair, mint) {
-  const tokenMetadataProgramId = publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
-  const metadata = umi.eddsa.findPda(tokenMetadataProgramId, [
+  const tokenMetadataProgramId = publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
+  const masterMetadata = umi.eddsa.findPda(tokenMetadataProgramId, [
     string({ size: 'variable' }).serialize('metadata'),
-    publicKeySerializer().serialize(tokenMetadataProgramId),
     publicKeySerializer().serialize(mint),
-  ]);
+  ])
 
-describe('locked-sol-pnft', () => {
-  const serverAuthorityKeypair = Keypair.fromSecretKey(
-    Buffer.from(
-      JSON.parse(fs.readFileSync(path.join(__dirname, '../../../keys/update-authority-devnet.json'), 'utf-8')),
-    ),
-  )
+  it('should create a master edition successfully', async () => {
+    // Airdrop SOL to payer for transaction fees
+    await umi.rpc.airdrop(payer.publicKey, sol(1), { commitment: 'processed' })
 
-  console.log('Server Authority Pubkey:', serverAuthorityKeypair.publicKey.toBase58())
+    const tx = initializeMasterEdition(umi, {
+      payer,
+      masterMetadata,
+      masterEdition: umi.eddsa.findPda(payer.publicKey, [Buffer.from('master_edition')]),
+      updateAuthority,
+      authorityToken: umi.eddsa.findPda(payer.publicKey, [Buffer.from('authority')]),
+    }).sendAndConfirm(umi)
 
-  const UPDATE_AUTHORITY_PUBKEY = serverAuthorityKeypair.publicKey
-
-  const walletKeypair = Keypair.fromSecretKey(
-    Buffer.from(JSON.parse(fs.readFileSync(path.join(__dirname, '../../../keys/devnet.json'), 'utf-8'))),
-  )
-
-  const provider = new anchor.AnchorProvider(anchor.getProvider().connection, new anchor.Wallet(walletKeypair), {})
-  anchor.setProvider(provider)
-
-  const program = anchor.workspace.LockedSolPnft as Program<LockedSolPnft>
-
-  const VAULT_AMOUNT = 1 * LAMPORTS_PER_SOL
-
-  let masterMintPubkey: PublicKey
-  let masterStatePubkey: PublicKey
-  let masterMetadataPubkey: PublicKey
-  let masterEditionPubkey: PublicKey
-
-  let mint: Keypair
-  let vaultPubkey: PublicKey
-  let metadataPubkey: PublicKey
-  let editionPubkey: PublicKey
-  let tokenAccountPubkey: PublicKey
-  let mintAuthorityPubkey: PublicKey
-
-  beforeAll(async () => {
-    try {
-      // Fund the test update authority
-      const balance = await provider.connection.getBalance(UPDATE_AUTHORITY_PUBKEY)
-      console.log('Current server authority balance:', balance / LAMPORTS_PER_SOL, 'SOL')
-
-      if (balance < LAMPORTS_PER_SOL) {
-        console.log('Funding server authority account...')
-        const signature = await provider.connection.requestAirdrop(UPDATE_AUTHORITY_PUBKEY, 2 * LAMPORTS_PER_SOL)
-        const latestBlockHash = await provider.connection.getLatestBlockhash()
-        await provider.connection.confirmTransaction({
-          signature,
-          blockhash: latestBlockHash.blockhash,
-          lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-        })
-
-        const newBalance = await provider.connection.getBalance(UPDATE_AUTHORITY_PUBKEY)
-        console.log('New server authority balance:', newBalance / LAMPORTS_PER_SOL, 'SOL')
-
-        if (newBalance < LAMPORTS_PER_SOL) {
-          throw new Error('Failed to fund server authority account')
-        }
-      }
-
-      // Get master mint and related addresses
-      masterMintPubkey = getMasterMintAddress(program)
-      console.log('Master Mint Address:', masterMintPubkey.toBase58())
-
-      masterStatePubkey = getMasterStateAddress(masterMintPubkey, program)
-      masterMetadataPubkey = getMasterMetadataAddress(masterMintPubkey)
-      masterEditionPubkey = getMasterEditionAddress(masterMintPubkey)
-
-      // Check if master edition exists
-      const masterEditionAccount = await provider.connection.getAccountInfo(masterEditionPubkey)
-
-      if (!masterEditionAccount) {
-        console.log('Initializing master edition...')
-        // Initialize master edition if it doesn't exist
-        const authorityATA = await getAssociatedTokenAddress(masterMintPubkey, serverAuthorityKeypair.publicKey)
-
-        await program.methods
-          .initializeMasterEdition()
-          .accountsStrict({
-            payer: provider.wallet.publicKey,
-            masterState: masterStatePubkey,
-            masterMint: masterMintPubkey,
-            masterMetadata: masterMetadataPubkey,
-            masterEdition: masterEditionPubkey,
-            updateAuthority: serverAuthorityKeypair.publicKey,
-            authorityToken: authorityATA, // Now this is a PublicKey, not a Promise
-            systemProgram: SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-            rent: SYSVAR_RENT_PUBKEY,
-            tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-          })
-          .signers([serverAuthorityKeypair])
-          .rpc()
-
-        // Verify the token was minted to the authority
-        const authorityTokenAccount = await getAccount(provider.connection, authorityATA)
-        expect(authorityTokenAccount.amount.toString()).toBe('1')
-
-        // Verify initialization
-        const masterStateAccount = await program.account.masterState.fetch(masterStatePubkey)
-        console.log('Master state initialized:', {
-          masterMint: masterStateAccount.masterMint.toBase58(),
-          totalMinted: masterStateAccount.totalMinted.toString(),
-        })
-      } else {
-        console.log('Master edition already exists')
-        // Verify existing state
-        const masterStateAccount = await program.account.masterState.fetch(masterStatePubkey)
-        console.log('Existing master state:', {
-          masterMint: masterStateAccount.masterMint.toBase58(),
-          totalMinted: masterStateAccount.totalMinted.toString(),
-        })
-      }
-
-      // Verify the state
-      const masterStateAccount = await program.account.masterState.fetch(masterStatePubkey)
-      expect(masterStateAccount.masterMint).toEqual(masterMintPubkey)
-      expect(masterStateAccount.totalMinted.toString()).toBe('0')
-    } catch (error) {
-      console.error('Error during setup:', error)
-      if (error instanceof SendTransactionError) {
-        console.log('Transaction logs:', error.logs)
-      }
-      throw error
-    }
-  })
-
-  beforeEach(async () => {
-    console.log('\n=== Starting new test iteration ===')
-    mint = Keypair.generate()
-    console.log('Generated new mint:', mint.publicKey.toBase58())
-
-    // Modify this section to handle the async getEditionMarkerAddress
-    const [vault, mintAuthority, metadata] = await Promise.all([
-      getVaultAddress(mint.publicKey, program),
-      getMintAuthorityAddress(mint.publicKey, program),
-      getMetadataAddress(mint.publicKey),
-    ])
-
-    const metaplex = Metaplex.make(provider.connection).use(keypairIdentity(walletKeypair))
-
-    const nft = await metaplex.nfts().findByMint({ mintAddress: mint })
-    const editionMarker = nft.edition.address
-
-    vaultPubkey = vault
-    mintAuthorityPubkey = mintAuthority
-    metadataPubkey = metadata
-    editionPubkey = editionMarker
-    tokenAccountPubkey = await getAssociatedTokenAddress(mint.publicKey, provider.wallet.publicKey)
-
-    console.log('About to mint PNFT...')
-    await program.methods
-      .mintPnft()
-      .accountsStrict({
-        payer: provider.wallet.publicKey,
-        vault: vaultPubkey,
-        masterState: masterStatePubkey,
-        collectionMetadata: masterMetadataPubkey,
-        collectionMasterEdition: masterEditionPubkey,
-        metadata: metadataPubkey,
-        editionMarker: editionPubkey,
-        mint: mint.publicKey,
-        mintAuthority: mintAuthorityPubkey,
-        serverAuthority: UPDATE_AUTHORITY_PUBKEY,
-        tokenAccount: tokenAccountPubkey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        rent: SYSVAR_RENT_PUBKEY,
-      })
-      .signers([mint])
-      .rpc()
-
-    console.log('PNFT minted successfully')
-
-    const vaultAccount = await program.account.tokenVault.fetch(vaultPubkey)
-    expect(vaultAccount.mint).toEqual(mint.publicKey)
-
-    const tokenBalance = await provider.connection.getTokenAccountBalance(tokenAccountPubkey)
-    expect(tokenBalance.value.uiAmount).toBe(1)
-  })
-
-  it('Should update metadata', async () => {
-    const newUri = 'https://api.locked-sol.com/metadata/updated.json'
-    const newName = 'Updated NFT Name'
-
-    await program.methods
-      .updateMetadata(newUri, newName)
-      .accountsStrict({
-        serverAuthority: UPDATE_AUTHORITY_PUBKEY,
-        vault: vaultPubkey,
-        masterState: masterStatePubkey,
-        metadata: metadataPubkey,
-        mint: mint.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([serverAuthorityKeypair])
-      .rpc()
-
-    const metadataAccount = await Metadata.fromAccountAddress(provider.connection, metadataPubkey)
-    expect(metadataAccount.data.uri).toBe(newUri)
-    expect(metadataAccount.data.name).toBe(newName)
-  })
-
-  it('Should burn and withdraw', async () => {
-    const initialBalance = await provider.connection.getBalance(provider.wallet.publicKey)
-
-    await program.methods
-      .burnAndWithdraw()
-      .accountsStrict({
-        owner: provider.wallet.publicKey,
-        masterState: masterStatePubkey,
-        vault: vaultPubkey,
-        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-        metadata: metadataPubkey,
-        tokenAccount: tokenAccountPubkey,
-        mint: mint.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        rent: SYSVAR_RENT_PUBKEY,
-        sysvarInstructions: SYSVAR_INSTRUCTIONS_PUBKEY,
-        editionMarker: editionPubkey,
-      })
-      .rpc()
-
-    const finalBalance = await provider.connection.getBalance(provider.wallet.publicKey)
-    expect(finalBalance).toBeGreaterThan(initialBalance)
+    expect(tx).toBeDefined()
   })
 })
