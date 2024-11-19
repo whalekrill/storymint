@@ -56,6 +56,30 @@ async function setupInitializeMasterEdition() {
 }
 
 describe('initializeMasterEdition Instruction', () => {
+  it('should fail to create a master edition with unauthorized update authority', async () => {
+    await umi.rpc.airdrop(payer.publicKey, sol(1))
+
+    const { masterMint, masterMetadata, masterEdition, authorityToken } = await setupInitializeMasterEdition()
+
+    const unauthorizedAuthority = generateSigner(umi)
+    try {
+      await initializeMasterEdition(umi, {
+        payer,
+        masterMint,
+        masterMetadata,
+        masterEdition,
+        updateAuthority: unauthorizedAuthority,
+        authorityToken,
+      }).sendAndConfirm(umi)
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        expect(error.message).toContain('Invalid update authority')
+      } else {
+        throw error
+      }
+    }
+  })
+
   it('should create a master edition, and associated account with balance 1', async () => {
     await umi.rpc.airdrop(payer.publicKey, sol(1))
 
