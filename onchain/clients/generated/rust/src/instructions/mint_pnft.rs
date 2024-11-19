@@ -21,6 +21,9 @@ pub struct MintPnft {
           pub master_state: solana_program::pubkey::Pubkey,
           
               
+          pub master_mint: solana_program::pubkey::Pubkey,
+          
+              
           pub collection_metadata: solana_program::pubkey::Pubkey,
           
               
@@ -40,6 +43,12 @@ pub struct MintPnft {
           
               
           pub token_account: solana_program::pubkey::Pubkey,
+          
+              
+          pub collection_authority_record: solana_program::pubkey::Pubkey,
+          
+              
+          pub delegate_authority: solana_program::pubkey::Pubkey,
           
               
           pub token_program: solana_program::pubkey::Pubkey,
@@ -63,7 +72,7 @@ impl MintPnft {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(15 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(18 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer,
             true
@@ -74,6 +83,10 @@ impl MintPnft {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.master_state,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.master_mint,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
@@ -102,6 +115,14 @@ impl MintPnft {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.token_account,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.collection_authority_record,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.delegate_authority,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -163,23 +184,27 @@ impl Default for MintPnftInstructionData {
                       ///   0. `[writable, signer]` payer
                 ///   1. `[writable]` vault
                 ///   2. `[writable]` master_state
-                ///   3. `[writable]` collection_metadata
-          ///   4. `[]` collection_master_edition
-                ///   5. `[writable]` metadata
-                ///   6. `[writable]` master_edition
-                      ///   7. `[writable, signer]` mint
-          ///   8. `[]` mint_authority
-                ///   9. `[writable]` token_account
-                ///   10. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-                ///   11. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-                ///   12. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   13. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
-                ///   14. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
+          ///   3. `[]` master_mint
+                ///   4. `[writable]` collection_metadata
+          ///   5. `[]` collection_master_edition
+                ///   6. `[writable]` metadata
+                ///   7. `[writable]` master_edition
+                      ///   8. `[writable, signer]` mint
+          ///   9. `[]` mint_authority
+                ///   10. `[writable]` token_account
+                ///   11. `[writable]` collection_authority_record
+          ///   12. `[]` delegate_authority
+                ///   13. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+                ///   14. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
+                ///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   16. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
+                ///   17. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
 #[derive(Clone, Debug, Default)]
 pub struct MintPnftBuilder {
             payer: Option<solana_program::pubkey::Pubkey>,
                 vault: Option<solana_program::pubkey::Pubkey>,
                 master_state: Option<solana_program::pubkey::Pubkey>,
+                master_mint: Option<solana_program::pubkey::Pubkey>,
                 collection_metadata: Option<solana_program::pubkey::Pubkey>,
                 collection_master_edition: Option<solana_program::pubkey::Pubkey>,
                 metadata: Option<solana_program::pubkey::Pubkey>,
@@ -187,6 +212,8 @@ pub struct MintPnftBuilder {
                 mint: Option<solana_program::pubkey::Pubkey>,
                 mint_authority: Option<solana_program::pubkey::Pubkey>,
                 token_account: Option<solana_program::pubkey::Pubkey>,
+                collection_authority_record: Option<solana_program::pubkey::Pubkey>,
+                delegate_authority: Option<solana_program::pubkey::Pubkey>,
                 token_program: Option<solana_program::pubkey::Pubkey>,
                 associated_token_program: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
@@ -212,6 +239,11 @@ impl MintPnftBuilder {
             #[inline(always)]
     pub fn master_state(&mut self, master_state: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.master_state = Some(master_state);
+                    self
+    }
+            #[inline(always)]
+    pub fn master_mint(&mut self, master_mint: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.master_mint = Some(master_mint);
                     self
     }
             #[inline(always)]
@@ -247,6 +279,16 @@ impl MintPnftBuilder {
             #[inline(always)]
     pub fn token_account(&mut self, token_account: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.token_account = Some(token_account);
+                    self
+    }
+            #[inline(always)]
+    pub fn collection_authority_record(&mut self, collection_authority_record: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.collection_authority_record = Some(collection_authority_record);
+                    self
+    }
+            #[inline(always)]
+    pub fn delegate_authority(&mut self, delegate_authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.delegate_authority = Some(delegate_authority);
                     self
     }
             /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
@@ -297,6 +339,7 @@ impl MintPnftBuilder {
                               payer: self.payer.expect("payer is not set"),
                                         vault: self.vault.expect("vault is not set"),
                                         master_state: self.master_state.expect("master_state is not set"),
+                                        master_mint: self.master_mint.expect("master_mint is not set"),
                                         collection_metadata: self.collection_metadata.expect("collection_metadata is not set"),
                                         collection_master_edition: self.collection_master_edition.expect("collection_master_edition is not set"),
                                         metadata: self.metadata.expect("metadata is not set"),
@@ -304,6 +347,8 @@ impl MintPnftBuilder {
                                         mint: self.mint.expect("mint is not set"),
                                         mint_authority: self.mint_authority.expect("mint_authority is not set"),
                                         token_account: self.token_account.expect("token_account is not set"),
+                                        collection_authority_record: self.collection_authority_record.expect("collection_authority_record is not set"),
+                                        delegate_authority: self.delegate_authority.expect("delegate_authority is not set"),
                                         token_program: self.token_program.unwrap_or(solana_program::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")),
                                         associated_token_program: self.associated_token_program.unwrap_or(solana_program::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -328,6 +373,9 @@ impl MintPnftBuilder {
               pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
+              pub master_mint: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
               pub collection_metadata: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
@@ -347,6 +395,12 @@ impl MintPnftBuilder {
                 
                     
               pub token_account: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub collection_authority_record: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub delegate_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -379,6 +433,9 @@ pub struct MintPnftCpi<'a, 'b> {
           pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
           
               
+          pub master_mint: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
           pub collection_metadata: &'b solana_program::account_info::AccountInfo<'a>,
           
               
@@ -398,6 +455,12 @@ pub struct MintPnftCpi<'a, 'b> {
           
               
           pub token_account: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
+          pub collection_authority_record: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
+          pub delegate_authority: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -425,6 +488,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
               payer: accounts.payer,
               vault: accounts.vault,
               master_state: accounts.master_state,
+              master_mint: accounts.master_mint,
               collection_metadata: accounts.collection_metadata,
               collection_master_edition: accounts.collection_master_edition,
               metadata: accounts.metadata,
@@ -432,6 +496,8 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
               mint: accounts.mint,
               mint_authority: accounts.mint_authority,
               token_account: accounts.token_account,
+              collection_authority_record: accounts.collection_authority_record,
+              delegate_authority: accounts.delegate_authority,
               token_program: accounts.token_program,
               associated_token_program: accounts.associated_token_program,
               system_program: accounts.system_program,
@@ -458,7 +524,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(15 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(18 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true
@@ -469,6 +535,10 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.master_state.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.master_mint.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
@@ -497,6 +567,14 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.token_account.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.collection_authority_record.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.delegate_authority.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -533,11 +611,12 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(15 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(18 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.payer.clone());
                         account_infos.push(self.vault.clone());
                         account_infos.push(self.master_state.clone());
+                        account_infos.push(self.master_mint.clone());
                         account_infos.push(self.collection_metadata.clone());
                         account_infos.push(self.collection_master_edition.clone());
                         account_infos.push(self.metadata.clone());
@@ -545,6 +624,8 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
                         account_infos.push(self.mint.clone());
                         account_infos.push(self.mint_authority.clone());
                         account_infos.push(self.token_account.clone());
+                        account_infos.push(self.collection_authority_record.clone());
+                        account_infos.push(self.delegate_authority.clone());
                         account_infos.push(self.token_program.clone());
                         account_infos.push(self.associated_token_program.clone());
                         account_infos.push(self.system_program.clone());
@@ -567,18 +648,21 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
                       ///   0. `[writable, signer]` payer
                 ///   1. `[writable]` vault
                 ///   2. `[writable]` master_state
-                ///   3. `[writable]` collection_metadata
-          ///   4. `[]` collection_master_edition
-                ///   5. `[writable]` metadata
-                ///   6. `[writable]` master_edition
-                      ///   7. `[writable, signer]` mint
-          ///   8. `[]` mint_authority
-                ///   9. `[writable]` token_account
-          ///   10. `[]` token_program
-          ///   11. `[]` associated_token_program
-          ///   12. `[]` system_program
-          ///   13. `[]` rent
-          ///   14. `[]` token_metadata_program
+          ///   3. `[]` master_mint
+                ///   4. `[writable]` collection_metadata
+          ///   5. `[]` collection_master_edition
+                ///   6. `[writable]` metadata
+                ///   7. `[writable]` master_edition
+                      ///   8. `[writable, signer]` mint
+          ///   9. `[]` mint_authority
+                ///   10. `[writable]` token_account
+                ///   11. `[writable]` collection_authority_record
+          ///   12. `[]` delegate_authority
+          ///   13. `[]` token_program
+          ///   14. `[]` associated_token_program
+          ///   15. `[]` system_program
+          ///   16. `[]` rent
+          ///   17. `[]` token_metadata_program
 #[derive(Clone, Debug)]
 pub struct MintPnftCpiBuilder<'a, 'b> {
   instruction: Box<MintPnftCpiBuilderInstruction<'a, 'b>>,
@@ -591,6 +675,7 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
               payer: None,
               vault: None,
               master_state: None,
+              master_mint: None,
               collection_metadata: None,
               collection_master_edition: None,
               metadata: None,
@@ -598,6 +683,8 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
               mint: None,
               mint_authority: None,
               token_account: None,
+              collection_authority_record: None,
+              delegate_authority: None,
               token_program: None,
               associated_token_program: None,
               system_program: None,
@@ -620,6 +707,11 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn master_state(&mut self, master_state: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.master_state = Some(master_state);
+                    self
+    }
+      #[inline(always)]
+    pub fn master_mint(&mut self, master_mint: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.master_mint = Some(master_mint);
                     self
     }
       #[inline(always)]
@@ -655,6 +747,16 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn token_account(&mut self, token_account: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.token_account = Some(token_account);
+                    self
+    }
+      #[inline(always)]
+    pub fn collection_authority_record(&mut self, collection_authority_record: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.collection_authority_record = Some(collection_authority_record);
+                    self
+    }
+      #[inline(always)]
+    pub fn delegate_authority(&mut self, delegate_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.delegate_authority = Some(delegate_authority);
                     self
     }
       #[inline(always)]
@@ -713,6 +815,8 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
                   
           master_state: self.instruction.master_state.expect("master_state is not set"),
                   
+          master_mint: self.instruction.master_mint.expect("master_mint is not set"),
+                  
           collection_metadata: self.instruction.collection_metadata.expect("collection_metadata is not set"),
                   
           collection_master_edition: self.instruction.collection_master_edition.expect("collection_master_edition is not set"),
@@ -726,6 +830,10 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
           mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
                   
           token_account: self.instruction.token_account.expect("token_account is not set"),
+                  
+          collection_authority_record: self.instruction.collection_authority_record.expect("collection_authority_record is not set"),
+                  
+          delegate_authority: self.instruction.delegate_authority.expect("delegate_authority is not set"),
                   
           token_program: self.instruction.token_program.expect("token_program is not set"),
                   
@@ -747,6 +855,7 @@ struct MintPnftCpiBuilderInstruction<'a, 'b> {
             payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                master_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 collection_metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 collection_master_edition: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
@@ -754,6 +863,8 @@ struct MintPnftCpiBuilderInstruction<'a, 'b> {
                 mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                collection_authority_record: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                delegate_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 associated_token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

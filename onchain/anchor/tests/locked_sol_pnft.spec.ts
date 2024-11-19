@@ -39,7 +39,14 @@ async function setupInitializeMasterEdition() {
   const program = anchor.workspace.LockedSolPnft as Program<LockedSolPnft>
   const metadataProgramId = umi.programs.getPublicKey('mplTokenMetadata')
 
+  // Get master mint PDA first since we need it for master_state
   const [masterMint] = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('master_mint')])
+
+  // Get master state PDA using correct seeds from Rust code
+  const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
+    Buffer.from('master'),
+    publicKeySerializer().serialize(masterMint),
+  ])
 
   const [masterMetadata] = umi.eddsa.findPda(metadataProgramId, [
     Buffer.from('metadata'),
@@ -54,6 +61,21 @@ async function setupInitializeMasterEdition() {
     Buffer.from('edition'),
   ])
 
+  // Get delegate authority PDA
+  const [delegateAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
+    Buffer.from('collection_delegate'),
+    publicKeySerializer().serialize(masterMint),
+  ])
+
+  // Get collection authority record PDA
+  const [collectionAuthorityRecord] = umi.eddsa.findPda(metadataProgramId, [
+    Buffer.from('metadata'),
+    publicKeySerializer().serialize(metadataProgramId),
+    publicKeySerializer().serialize(masterMint),
+    Buffer.from('collection_authority'),
+    publicKeySerializer().serialize(delegateAuthority),
+  ])
+
   const associatedTokenAccount = await getAssociatedTokenAddress(
     new web3PublicKey(masterMint.toString()),
     new web3PublicKey(updateAuthority.publicKey.toString()),
@@ -61,7 +83,24 @@ async function setupInitializeMasterEdition() {
   )
 
   const authorityToken = publicKey(associatedTokenAccount.toString())
-  return { masterMint, masterMetadata, masterEdition, associatedTokenAccount, authorityToken }
+
+  console.log('\nDerived Program PDAs:')
+  console.log('Master Mint:', masterMint.toString())
+  console.log('Master State:', masterState.toString(), '(derived from ["master", master_mint])')
+  console.log('Master Metadata:', masterMetadata.toString())
+  console.log('Master Edition:', masterEdition.toString())
+  console.log('Authority Token:', authorityToken.toString())
+  console.log('Collection Authority Record:', collectionAuthorityRecord.toString())
+
+  return {
+    masterMint,
+    masterState,
+    masterMetadata,
+    masterEdition,
+    authorityToken,
+    collectionAuthorityRecord,
+    delegateAuthority,
+  }
 }
 
 async function setupMintPnft() {
@@ -79,6 +118,21 @@ async function setupMintPnft() {
   const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
     Buffer.from('master'),
     publicKeySerializer().serialize(masterMint),
+  ])
+
+  // Get delegate authority PDA
+  const [delegateAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
+    Buffer.from('collection_delegate'),
+    publicKeySerializer().serialize(masterMint),
+  ])
+
+  // Get collection authority record PDA
+  const [collectionAuthorityRecord] = umi.eddsa.findPda(metadataProgramId, [
+    Buffer.from('metadata'),
+    publicKeySerializer().serialize(metadataProgramId),
+    publicKeySerializer().serialize(masterMint),
+    Buffer.from('collection_authority'),
+    publicKeySerializer().serialize(delegateAuthority),
   ])
 
   // Get collection metadata PDA
@@ -117,27 +171,17 @@ async function setupMintPnft() {
     new web3PublicKey(payer.publicKey.toString()),
   )
 
-  // Log all PDAs for verification
-  console.log('\nAccount Setup:')
-  console.log('Master Mint:', masterMint.toString())
-  console.log('Master State:', masterState.toString())
-  console.log('Collection Metadata:', collectionMetadata.toString())
-  console.log('Collection Master Edition:', collectionMasterEdition.toString())
-  console.log('NFT Metadata:', metadata.toString())
-  console.log('NFT Master Edition:', masterEdition.toString())
-  console.log('Token Account:', tokenAccount.toString())
-
-  // Return only the accounts required by the instruction
-  // The UMI client will handle deriving the rest
   return {
     payer,
     masterState,
+    masterMint,
     collectionMetadata,
     collectionMasterEdition,
     metadata,
     masterEdition,
     mint,
-    masterMint,
+    delegateAuthority,
+    collectionAuthorityRecord,
     tokenAccount: publicKey(tokenAccount.toString()),
   }
 }
@@ -234,17 +278,56 @@ describe('mintPnft Instruction', () => {
     await umi.rpc.airdrop(payer.publicKey, sol(2))
     await umi.rpc.airdrop(updateAuthority.publicKey, sol(2))
 
-    const { masterMint, masterMetadata, masterEdition, authorityToken } = await setupInitializeMasterEdition()
-
-    console.log('Initializing master edition...')
-    await initializeMasterEdition(umi, {
-      payer,
+    const {
       masterMint,
+      masterState,
       masterMetadata,
       masterEdition,
-      updateAuthority,
-      updateAuthorityToken: authorityToken,
-    }).sendAndConfirm(umi)
+      authorityToken,
+      collectionAuthorityRecord,
+      delegateAuthority,
+    } = await setupInitializeMasterEdition()
+
+    console.log('Initializing master edition...')
+
+    console.log('Initializing master edition...')
+    console.log('Master Mint:', masterMint.toString())
+    console.log('Master Metadata:', masterMetadata.toString())
+    console.log('Master Edition:', masterEdition.toString())
+    console.log('Authority Token:', authorityToken.toString())
+    console.log('Collection Authority Record:', collectionAuthorityRecord.toString())
+
+    // Create the master edition transaction with exactly the accounts the UMI client expects
+    const tx = transactionBuilder()
+      .add(setComputeUnitLimit(umi, { units: 400_000 }))
+      .add(
+        initializeMasterEdition(umi, {
+          payer,
+          masterState,
+          masterMint,
+          masterMetadata,
+          masterEdition,
+          updateAuthority,
+          updateAuthorityToken: authorityToken,
+          collectionAuthorityRecord,
+          delegateAuthority,
+        }),
+      )
+
+    try {
+      await tx.sendAndConfirm(umi)
+    } catch (error) {
+      console.error('Error during initialization:', error)
+      const accounts = {
+        masterMint: await umi.rpc.getAccount(masterMint),
+        masterMetadata: await umi.rpc.getAccount(masterMetadata),
+        masterEdition: await umi.rpc.getAccount(masterEdition),
+        authorityToken: await umi.rpc.getAccount(authorityToken),
+        collectionAuthorityRecord: await umi.rpc.getAccount(collectionAuthorityRecord),
+      }
+      console.log('Account states:', accounts)
+      throw error
+    }
 
     // Verify all required accounts exist
     console.log('Verifying master mint account...')
@@ -281,12 +364,14 @@ describe('mintPnft Instruction', () => {
 
     const {
       masterState,
+      masterMint,
       collectionMetadata,
       collectionMasterEdition,
       metadata,
       masterEdition,
       mint,
-      masterMint,
+      delegateAuthority,
+      collectionAuthorityRecord,
       tokenAccount,
     } = await setupMintPnft()
 
@@ -330,6 +415,8 @@ describe('mintPnft Instruction', () => {
       metadata,
       masterEdition,
       mint,
+      delegateAuthority,
+      collectionAuthorityRecord,
       tokenAccount,
     })
 

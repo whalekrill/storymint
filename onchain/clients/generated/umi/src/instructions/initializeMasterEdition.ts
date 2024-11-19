@@ -37,6 +37,8 @@ export type InitializeMasterEditionInstructionAccounts = {
   masterEdition: PublicKey | Pda;
   updateAuthority: Signer;
   updateAuthorityToken: PublicKey | Pda;
+  collectionAuthorityRecord: PublicKey | Pda;
+  delegateAuthority: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
   tokenProgram?: PublicKey | Pda;
   associatedTokenProgram?: PublicKey | Pda;
@@ -122,28 +124,38 @@ export function initializeMasterEdition(
       isWritable: true as boolean,
       value: input.updateAuthorityToken ?? null,
     },
-    systemProgram: {
+    collectionAuthorityRecord: {
       index: 7,
+      isWritable: true as boolean,
+      value: input.collectionAuthorityRecord ?? null,
+    },
+    delegateAuthority: {
+      index: 8,
+      isWritable: true as boolean,
+      value: input.delegateAuthority ?? null,
+    },
+    systemProgram: {
+      index: 9,
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
     tokenProgram: {
-      index: 8,
+      index: 10,
       isWritable: false as boolean,
       value: input.tokenProgram ?? null,
     },
     associatedTokenProgram: {
-      index: 9,
+      index: 11,
       isWritable: false as boolean,
       value: input.associatedTokenProgram ?? null,
     },
     rent: {
-      index: 10,
+      index: 12,
       isWritable: false as boolean,
       value: input.rent ?? null,
     },
     tokenMetadataProgram: {
-      index: 11,
+      index: 13,
       isWritable: false as boolean,
       value: input.tokenMetadataProgram ?? null,
     },

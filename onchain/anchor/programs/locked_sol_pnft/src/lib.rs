@@ -78,9 +78,21 @@ pub struct InitializeMasterEdition<'info> {
     #[account(mut)]
     pub update_authority_token: AccountInfo<'info>,
 
+    /// CHECK: Collection authority record PDA
+    #[account(mut)]
+    pub collection_authority_record: UncheckedAccount<'info>,
+
+    /// CHECK: Delegate authority from master state  
+    #[account(mut)]
+    pub delegate_authority: UncheckedAccount<'info>,
+
+    #[account(address = system_program::ID)]
     pub system_program: Program<'info, System>,
+
     pub token_program: Program<'info, Token>,
+
     pub associated_token_program: Program<'info, AssociatedToken>,
+
     pub rent: Sysvar<'info, Rent>,
 
     /// CHECK: Required by token metadata program
@@ -104,6 +116,8 @@ pub struct MintPNFT<'info> {
 
     #[account(
         mut,
+        seeds = ["master".as_bytes(), master_state.master_mint.as_ref()],
+        bump,
         constraint = master_state.total_minted < MAX_SUPPLY @ CustomError::MaxSupplyReached,
         has_one = master_mint @ CustomError::InvalidCollection
     )]
@@ -155,6 +169,20 @@ pub struct MintPNFT<'info> {
     /// CHECK: Token account to be initialized
     #[account(mut)]
     pub token_account: AccountInfo<'info>,
+
+    /// CHECK: Collection authority record from master state
+    #[account(
+        mut,
+        address = master_state.collection_authority_record
+    )]
+    pub collection_authority_record: UncheckedAccount<'info>,
+
+    /// CHECK: Delegate authority from master state  
+    #[account(
+        seeds = ["collection_delegate".as_bytes(), master_mint.key().as_ref()],
+        bump,  
+    )]
+    pub delegate_authority: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -288,10 +316,12 @@ pub struct BurnAndWithdraw<'info> {
 pub struct MasterState {
     pub master_mint: Pubkey,
     pub total_minted: u64,
+    pub collection_delegate: Pubkey,
+    pub collection_authority_record: Pubkey,
 }
 
 impl MasterState {
-    pub const SPACE: usize = 8 + 32 + 8; // discriminator + master_mint + total_minted
+    pub const SPACE: usize = 8 + 32 + 8 + 32 + 32; // discriminator + master_mint + total_minted + delegate + authority_record
 }
 
 #[account]
@@ -349,6 +379,36 @@ pub mod locked_sol_pnft {
     use super::*;
 
     pub fn initialize_master_edition(ctx: Context<InitializeMasterEdition>) -> Result<()> {
+        msg!("Program derived PDAs:");
+        msg!(
+            "Collection Authority Record expected: {}",
+            ctx.accounts.collection_authority_record.key()
+        );
+
+        let (delegate_authority, _) = Pubkey::find_program_address(
+            &[
+                b"collection_delegate",
+                ctx.accounts.master_mint.key().as_ref(),
+            ],
+            ctx.program_id,
+        );
+        msg!("Derived delegate authority: {}", delegate_authority);
+
+        let (collection_authority_record, _) = Pubkey::find_program_address(
+            &[
+                b"metadata",
+                METADATA_PROGRAM_ID.as_ref(),
+                ctx.accounts.master_mint.key().as_ref(),
+                b"collection_authority",
+                delegate_authority.as_ref(),
+            ],
+            &METADATA_PROGRAM_ID,
+        );
+        msg!(
+            "Derived collection authority record: {}",
+            collection_authority_record
+        );
+
         let master_state = &mut ctx.accounts.master_state;
         master_state.master_mint = ctx.accounts.master_mint.key();
         master_state.total_minted = 0;
@@ -454,6 +514,52 @@ pub mod locked_sol_pnft {
             &[],
         )?;
 
+        // Setup collection authority delegate
+        let (delegate_authority, _) = Pubkey::find_program_address(
+            &[
+                b"collection_delegate",
+                ctx.accounts.master_mint.key().as_ref(),
+            ],
+            ctx.program_id,
+        );
+
+        let (collection_authority_record, _) = Pubkey::find_program_address(
+            &[
+                b"metadata",
+                METADATA_PROGRAM_ID.as_ref(),
+                ctx.accounts.master_mint.key().as_ref(),
+                b"collection_authority",
+                delegate_authority.as_ref(),
+            ],
+            &METADATA_PROGRAM_ID,
+        );
+
+        master_state.collection_delegate = delegate_authority;
+        master_state.collection_authority_record = collection_authority_record;
+
+        let approve_collection_authority_ix =
+            mpl_token_metadata::instructions::ApproveCollectionAuthorityBuilder::new()
+                .collection_authority_record(collection_authority_record)
+                .new_collection_authority(delegate_authority)
+                .update_authority(ctx.accounts.update_authority.key())
+                .payer(ctx.accounts.payer.key())
+                .metadata(ctx.accounts.master_metadata.key())
+                .mint(ctx.accounts.master_mint.key())
+                .instruction();
+
+        invoke_signed(
+            &approve_collection_authority_ix,
+            &[
+                ctx.accounts.master_metadata.to_account_info(),
+                ctx.accounts.update_authority.to_account_info(),
+                ctx.accounts.collection_authority_record.to_account_info(),
+                ctx.accounts.payer.to_account_info(),
+                ctx.accounts.master_mint.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            &[],
+        )?;
+
         Ok(())
     }
 
@@ -487,7 +593,6 @@ pub mod locked_sol_pnft {
             ctx.accounts.token_metadata_program.key()
         );
 
-        let master_mint = ctx.accounts.master_state.master_mint;
         let rent_costs = utils::calculate_rent(&ctx.accounts.rent, true);
         let total_required = rent_costs.vault + rent_costs.mint + rent_costs.metadata;
 
@@ -526,15 +631,7 @@ pub mod locked_sol_pnft {
         )?;
 
         // Verify collection
-        let master_mint_key = ctx.accounts.master_state.master_mint;
-        verify_collection(
-            &ctx,
-            &[&[
-                b"master".as_ref(),
-                master_mint_key.as_ref(),
-                &[ctx.bumps.master_state],
-            ]],
-        )?;
+        verify_collection(&ctx)?;
 
         ctx.accounts.master_state.total_minted = ctx
             .accounts
@@ -752,15 +849,19 @@ fn initialize_token_mint_for_mint(ctx: &Context<MintPNFT>) -> Result<()> {
     )
 }
 
-fn verify_collection<'info>(
-    ctx: &Context<'_, '_, '_, 'info, MintPNFT>,
-    signing_seeds: &[&[&[u8]]],
-) -> Result<()> {
+fn verify_collection<'info>(ctx: &Context<'_, '_, '_, 'info, MintPNFT>) -> Result<()> {
+    let master_mint_key = ctx.accounts.master_mint.key();
+    let delegate_seeds = &[
+        b"collection_delegate",
+        master_mint_key.as_ref(),
+        &[ctx.bumps.delegate_authority],
+    ];
+
     let verify_collection_ix = VerifyCollectionBuilder::new()
-        .collection_authority(ctx.accounts.master_state.key())
-        .payer(ctx.accounts.payer.key())
         .metadata(ctx.accounts.metadata.key())
-        .collection_mint(ctx.accounts.master_state.master_mint)
+        .collection_authority(ctx.accounts.delegate_authority.key())
+        .payer(ctx.accounts.payer.key())
+        .collection_mint(ctx.accounts.master_mint.key())
         .collection(ctx.accounts.collection_metadata.key())
         .collection_master_edition_account(ctx.accounts.collection_master_edition.key())
         .instruction();
@@ -769,14 +870,16 @@ fn verify_collection<'info>(
         &verify_collection_ix,
         &[
             ctx.accounts.metadata.to_account_info(),
-            ctx.accounts.master_state.to_account_info(),
+            ctx.accounts.master_mint.to_account_info(),
+            ctx.accounts.delegate_authority.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.collection_metadata.to_account_info(),
             ctx.accounts.collection_master_edition.to_account_info(),
         ],
-        signing_seeds,
-    )
-    .map_err(Into::into)
+        &[delegate_seeds],
+    )?;
+
+    Ok(())
 }
 
 fn burn_nft(ctx: &Context<BurnAndWithdraw>) -> Result<()> {

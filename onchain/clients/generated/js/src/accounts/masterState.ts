@@ -51,11 +51,15 @@ export type MasterState = {
   discriminator: ReadonlyUint8Array;
   masterMint: Address;
   totalMinted: bigint;
+  collectionDelegate: Address;
+  collectionAuthorityRecord: Address;
 };
 
 export type MasterStateArgs = {
   masterMint: Address;
   totalMinted: number | bigint;
+  collectionDelegate: Address;
+  collectionAuthorityRecord: Address;
 };
 
 export function getMasterStateEncoder(): Encoder<MasterStateArgs> {
@@ -64,6 +68,8 @@ export function getMasterStateEncoder(): Encoder<MasterStateArgs> {
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['masterMint', getAddressEncoder()],
       ['totalMinted', getU64Encoder()],
+      ['collectionDelegate', getAddressEncoder()],
+      ['collectionAuthorityRecord', getAddressEncoder()],
     ]),
     (value) => ({ ...value, discriminator: MASTER_STATE_DISCRIMINATOR })
   );
@@ -74,6 +80,8 @@ export function getMasterStateDecoder(): Decoder<MasterState> {
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['masterMint', getAddressDecoder()],
     ['totalMinted', getU64Decoder()],
+    ['collectionDelegate', getAddressDecoder()],
+    ['collectionAuthorityRecord', getAddressDecoder()],
   ]);
 }
 

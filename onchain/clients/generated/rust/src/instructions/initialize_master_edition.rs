@@ -33,6 +33,12 @@ pub struct InitializeMasterEdition {
           pub update_authority_token: solana_program::pubkey::Pubkey,
           
               
+          pub collection_authority_record: solana_program::pubkey::Pubkey,
+          
+              
+          pub delegate_authority: solana_program::pubkey::Pubkey,
+          
+              
           pub system_program: solana_program::pubkey::Pubkey,
           
               
@@ -54,7 +60,7 @@ impl InitializeMasterEdition {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(14 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer,
             true
@@ -81,6 +87,14 @@ impl InitializeMasterEdition {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.update_authority_token,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.collection_authority_record,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.delegate_authority,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -146,11 +160,13 @@ impl Default for InitializeMasterEditionInstructionData {
                 ///   4. `[writable]` master_edition
                       ///   5. `[writable, signer]` update_authority
                 ///   6. `[writable]` update_authority_token
-                ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   8. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-                ///   9. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-                ///   10. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
-                ///   11. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
+                ///   7. `[writable]` collection_authority_record
+                ///   8. `[writable]` delegate_authority
+                ///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   10. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+                ///   11. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
+                ///   12. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
+                ///   13. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeMasterEditionBuilder {
             payer: Option<solana_program::pubkey::Pubkey>,
@@ -160,6 +176,8 @@ pub struct InitializeMasterEditionBuilder {
                 master_edition: Option<solana_program::pubkey::Pubkey>,
                 update_authority: Option<solana_program::pubkey::Pubkey>,
                 update_authority_token: Option<solana_program::pubkey::Pubkey>,
+                collection_authority_record: Option<solana_program::pubkey::Pubkey>,
+                delegate_authority: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 token_program: Option<solana_program::pubkey::Pubkey>,
                 associated_token_program: Option<solana_program::pubkey::Pubkey>,
@@ -205,6 +223,16 @@ impl InitializeMasterEditionBuilder {
             #[inline(always)]
     pub fn update_authority_token(&mut self, update_authority_token: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.update_authority_token = Some(update_authority_token);
+                    self
+    }
+            #[inline(always)]
+    pub fn collection_authority_record(&mut self, collection_authority_record: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.collection_authority_record = Some(collection_authority_record);
+                    self
+    }
+            #[inline(always)]
+    pub fn delegate_authority(&mut self, delegate_authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.delegate_authority = Some(delegate_authority);
                     self
     }
             /// `[optional account, default to '11111111111111111111111111111111']`
@@ -259,6 +287,8 @@ impl InitializeMasterEditionBuilder {
                                         master_edition: self.master_edition.expect("master_edition is not set"),
                                         update_authority: self.update_authority.expect("update_authority is not set"),
                                         update_authority_token: self.update_authority_token.expect("update_authority_token is not set"),
+                                        collection_authority_record: self.collection_authority_record.expect("collection_authority_record is not set"),
+                                        delegate_authority: self.delegate_authority.expect("delegate_authority is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         token_program: self.token_program.unwrap_or(solana_program::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")),
                                         associated_token_program: self.associated_token_program.unwrap_or(solana_program::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")),
@@ -293,6 +323,12 @@ impl InitializeMasterEditionBuilder {
                 
                     
               pub update_authority_token: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub collection_authority_record: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub delegate_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -337,6 +373,12 @@ pub struct InitializeMasterEditionCpi<'a, 'b> {
           pub update_authority_token: &'b solana_program::account_info::AccountInfo<'a>,
           
               
+          pub collection_authority_record: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
+          pub delegate_authority: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
@@ -366,6 +408,8 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
               master_edition: accounts.master_edition,
               update_authority: accounts.update_authority,
               update_authority_token: accounts.update_authority_token,
+              collection_authority_record: accounts.collection_authority_record,
+              delegate_authority: accounts.delegate_authority,
               system_program: accounts.system_program,
               token_program: accounts.token_program,
               associated_token_program: accounts.associated_token_program,
@@ -392,7 +436,7 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(14 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true
@@ -419,6 +463,14 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.update_authority_token.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.collection_authority_record.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.delegate_authority.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -455,7 +507,7 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(12 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(14 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.payer.clone());
                         account_infos.push(self.master_state.clone());
@@ -464,6 +516,8 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
                         account_infos.push(self.master_edition.clone());
                         account_infos.push(self.update_authority.clone());
                         account_infos.push(self.update_authority_token.clone());
+                        account_infos.push(self.collection_authority_record.clone());
+                        account_infos.push(self.delegate_authority.clone());
                         account_infos.push(self.system_program.clone());
                         account_infos.push(self.token_program.clone());
                         account_infos.push(self.associated_token_program.clone());
@@ -490,11 +544,13 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
                 ///   4. `[writable]` master_edition
                       ///   5. `[writable, signer]` update_authority
                 ///   6. `[writable]` update_authority_token
-          ///   7. `[]` system_program
-          ///   8. `[]` token_program
-          ///   9. `[]` associated_token_program
-          ///   10. `[]` rent
-          ///   11. `[]` token_metadata_program
+                ///   7. `[writable]` collection_authority_record
+                ///   8. `[writable]` delegate_authority
+          ///   9. `[]` system_program
+          ///   10. `[]` token_program
+          ///   11. `[]` associated_token_program
+          ///   12. `[]` rent
+          ///   13. `[]` token_metadata_program
 #[derive(Clone, Debug)]
 pub struct InitializeMasterEditionCpiBuilder<'a, 'b> {
   instruction: Box<InitializeMasterEditionCpiBuilderInstruction<'a, 'b>>,
@@ -511,6 +567,8 @@ impl<'a, 'b> InitializeMasterEditionCpiBuilder<'a, 'b> {
               master_edition: None,
               update_authority: None,
               update_authority_token: None,
+              collection_authority_record: None,
+              delegate_authority: None,
               system_program: None,
               token_program: None,
               associated_token_program: None,
@@ -553,6 +611,16 @@ impl<'a, 'b> InitializeMasterEditionCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn update_authority_token(&mut self, update_authority_token: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.update_authority_token = Some(update_authority_token);
+                    self
+    }
+      #[inline(always)]
+    pub fn collection_authority_record(&mut self, collection_authority_record: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.collection_authority_record = Some(collection_authority_record);
+                    self
+    }
+      #[inline(always)]
+    pub fn delegate_authority(&mut self, delegate_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.delegate_authority = Some(delegate_authority);
                     self
     }
       #[inline(always)]
@@ -619,6 +687,10 @@ impl<'a, 'b> InitializeMasterEditionCpiBuilder<'a, 'b> {
                   
           update_authority_token: self.instruction.update_authority_token.expect("update_authority_token is not set"),
                   
+          collection_authority_record: self.instruction.collection_authority_record.expect("collection_authority_record is not set"),
+                  
+          delegate_authority: self.instruction.delegate_authority.expect("delegate_authority is not set"),
+                  
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
           token_program: self.instruction.token_program.expect("token_program is not set"),
@@ -643,6 +715,8 @@ struct InitializeMasterEditionCpiBuilderInstruction<'a, 'b> {
                 master_edition: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 update_authority_token: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                collection_authority_record: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                delegate_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 associated_token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

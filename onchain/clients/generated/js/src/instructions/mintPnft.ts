@@ -52,6 +52,7 @@ export type MintPnftInstruction<
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
   TAccountMasterState extends string | IAccountMeta<string> = string,
+  TAccountMasterMint extends string | IAccountMeta<string> = string,
   TAccountCollectionMetadata extends string | IAccountMeta<string> = string,
   TAccountCollectionMasterEdition extends
     | string
@@ -61,6 +62,10 @@ export type MintPnftInstruction<
   TAccountMint extends string | IAccountMeta<string> = string,
   TAccountMintAuthority extends string | IAccountMeta<string> = string,
   TAccountTokenAccount extends string | IAccountMeta<string> = string,
+  TAccountCollectionAuthorityRecord extends
+    | string
+    | IAccountMeta<string> = string,
+  TAccountDelegateAuthority extends string | IAccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
     | IAccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -91,6 +96,9 @@ export type MintPnftInstruction<
       TAccountMasterState extends string
         ? WritableAccount<TAccountMasterState>
         : TAccountMasterState,
+      TAccountMasterMint extends string
+        ? ReadonlyAccount<TAccountMasterMint>
+        : TAccountMasterMint,
       TAccountCollectionMetadata extends string
         ? WritableAccount<TAccountCollectionMetadata>
         : TAccountCollectionMetadata,
@@ -112,6 +120,12 @@ export type MintPnftInstruction<
       TAccountTokenAccount extends string
         ? WritableAccount<TAccountTokenAccount>
         : TAccountTokenAccount,
+      TAccountCollectionAuthorityRecord extends string
+        ? WritableAccount<TAccountCollectionAuthorityRecord>
+        : TAccountCollectionAuthorityRecord,
+      TAccountDelegateAuthority extends string
+        ? ReadonlyAccount<TAccountDelegateAuthority>
+        : TAccountDelegateAuthority,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -162,6 +176,7 @@ export type MintPnftAsyncInput<
   TAccountPayer extends string = string,
   TAccountVault extends string = string,
   TAccountMasterState extends string = string,
+  TAccountMasterMint extends string = string,
   TAccountCollectionMetadata extends string = string,
   TAccountCollectionMasterEdition extends string = string,
   TAccountMetadata extends string = string,
@@ -169,6 +184,8 @@ export type MintPnftAsyncInput<
   TAccountMint extends string = string,
   TAccountMintAuthority extends string = string,
   TAccountTokenAccount extends string = string,
+  TAccountCollectionAuthorityRecord extends string = string,
+  TAccountDelegateAuthority extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountAssociatedTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
@@ -178,6 +195,7 @@ export type MintPnftAsyncInput<
   payer: TransactionSigner<TAccountPayer>;
   vault?: Address<TAccountVault>;
   masterState: Address<TAccountMasterState>;
+  masterMint: Address<TAccountMasterMint>;
   collectionMetadata: Address<TAccountCollectionMetadata>;
   collectionMasterEdition: Address<TAccountCollectionMasterEdition>;
   metadata: Address<TAccountMetadata>;
@@ -185,6 +203,8 @@ export type MintPnftAsyncInput<
   mint: TransactionSigner<TAccountMint>;
   mintAuthority?: Address<TAccountMintAuthority>;
   tokenAccount: Address<TAccountTokenAccount>;
+  collectionAuthorityRecord: Address<TAccountCollectionAuthorityRecord>;
+  delegateAuthority?: Address<TAccountDelegateAuthority>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
@@ -196,6 +216,7 @@ export async function getMintPnftInstructionAsync<
   TAccountPayer extends string,
   TAccountVault extends string,
   TAccountMasterState extends string,
+  TAccountMasterMint extends string,
   TAccountCollectionMetadata extends string,
   TAccountCollectionMasterEdition extends string,
   TAccountMetadata extends string,
@@ -203,6 +224,8 @@ export async function getMintPnftInstructionAsync<
   TAccountMint extends string,
   TAccountMintAuthority extends string,
   TAccountTokenAccount extends string,
+  TAccountCollectionAuthorityRecord extends string,
+  TAccountDelegateAuthority extends string,
   TAccountTokenProgram extends string,
   TAccountAssociatedTokenProgram extends string,
   TAccountSystemProgram extends string,
@@ -214,6 +237,7 @@ export async function getMintPnftInstructionAsync<
     TAccountPayer,
     TAccountVault,
     TAccountMasterState,
+    TAccountMasterMint,
     TAccountCollectionMetadata,
     TAccountCollectionMasterEdition,
     TAccountMetadata,
@@ -221,6 +245,8 @@ export async function getMintPnftInstructionAsync<
     TAccountMint,
     TAccountMintAuthority,
     TAccountTokenAccount,
+    TAccountCollectionAuthorityRecord,
+    TAccountDelegateAuthority,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
@@ -234,6 +260,7 @@ export async function getMintPnftInstructionAsync<
     TAccountPayer,
     TAccountVault,
     TAccountMasterState,
+    TAccountMasterMint,
     TAccountCollectionMetadata,
     TAccountCollectionMasterEdition,
     TAccountMetadata,
@@ -241,6 +268,8 @@ export async function getMintPnftInstructionAsync<
     TAccountMint,
     TAccountMintAuthority,
     TAccountTokenAccount,
+    TAccountCollectionAuthorityRecord,
+    TAccountDelegateAuthority,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
@@ -257,6 +286,7 @@ export async function getMintPnftInstructionAsync<
     payer: { value: input.payer ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
+    masterMint: { value: input.masterMint ?? null, isWritable: false },
     collectionMetadata: {
       value: input.collectionMetadata ?? null,
       isWritable: true,
@@ -270,6 +300,14 @@ export async function getMintPnftInstructionAsync<
     mint: { value: input.mint ?? null, isWritable: true },
     mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     tokenAccount: { value: input.tokenAccount ?? null, isWritable: true },
+    collectionAuthorityRecord: {
+      value: input.collectionAuthorityRecord ?? null,
+      isWritable: true,
+    },
+    delegateAuthority: {
+      value: input.delegateAuthority ?? null,
+      isWritable: false,
+    },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     associatedTokenProgram: {
       value: input.associatedTokenProgram ?? null,
@@ -310,6 +348,20 @@ export async function getMintPnftInstructionAsync<
       ],
     });
   }
+  if (!accounts.delegateAuthority.value) {
+    accounts.delegateAuthority.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            99, 111, 108, 108, 101, 99, 116, 105, 111, 110, 95, 100, 101, 108,
+            101, 103, 97, 116, 101,
+          ])
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.masterMint.value)),
+      ],
+    });
+  }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
@@ -337,6 +389,7 @@ export async function getMintPnftInstructionAsync<
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.masterState),
+      getAccountMeta(accounts.masterMint),
       getAccountMeta(accounts.collectionMetadata),
       getAccountMeta(accounts.collectionMasterEdition),
       getAccountMeta(accounts.metadata),
@@ -344,6 +397,8 @@ export async function getMintPnftInstructionAsync<
       getAccountMeta(accounts.mint),
       getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.tokenAccount),
+      getAccountMeta(accounts.collectionAuthorityRecord),
+      getAccountMeta(accounts.delegateAuthority),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.associatedTokenProgram),
       getAccountMeta(accounts.systemProgram),
@@ -357,6 +412,7 @@ export async function getMintPnftInstructionAsync<
     TAccountPayer,
     TAccountVault,
     TAccountMasterState,
+    TAccountMasterMint,
     TAccountCollectionMetadata,
     TAccountCollectionMasterEdition,
     TAccountMetadata,
@@ -364,6 +420,8 @@ export async function getMintPnftInstructionAsync<
     TAccountMint,
     TAccountMintAuthority,
     TAccountTokenAccount,
+    TAccountCollectionAuthorityRecord,
+    TAccountDelegateAuthority,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
@@ -378,6 +436,7 @@ export type MintPnftInput<
   TAccountPayer extends string = string,
   TAccountVault extends string = string,
   TAccountMasterState extends string = string,
+  TAccountMasterMint extends string = string,
   TAccountCollectionMetadata extends string = string,
   TAccountCollectionMasterEdition extends string = string,
   TAccountMetadata extends string = string,
@@ -385,6 +444,8 @@ export type MintPnftInput<
   TAccountMint extends string = string,
   TAccountMintAuthority extends string = string,
   TAccountTokenAccount extends string = string,
+  TAccountCollectionAuthorityRecord extends string = string,
+  TAccountDelegateAuthority extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountAssociatedTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
@@ -394,6 +455,7 @@ export type MintPnftInput<
   payer: TransactionSigner<TAccountPayer>;
   vault: Address<TAccountVault>;
   masterState: Address<TAccountMasterState>;
+  masterMint: Address<TAccountMasterMint>;
   collectionMetadata: Address<TAccountCollectionMetadata>;
   collectionMasterEdition: Address<TAccountCollectionMasterEdition>;
   metadata: Address<TAccountMetadata>;
@@ -401,6 +463,8 @@ export type MintPnftInput<
   mint: TransactionSigner<TAccountMint>;
   mintAuthority: Address<TAccountMintAuthority>;
   tokenAccount: Address<TAccountTokenAccount>;
+  collectionAuthorityRecord: Address<TAccountCollectionAuthorityRecord>;
+  delegateAuthority: Address<TAccountDelegateAuthority>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
@@ -412,6 +476,7 @@ export function getMintPnftInstruction<
   TAccountPayer extends string,
   TAccountVault extends string,
   TAccountMasterState extends string,
+  TAccountMasterMint extends string,
   TAccountCollectionMetadata extends string,
   TAccountCollectionMasterEdition extends string,
   TAccountMetadata extends string,
@@ -419,6 +484,8 @@ export function getMintPnftInstruction<
   TAccountMint extends string,
   TAccountMintAuthority extends string,
   TAccountTokenAccount extends string,
+  TAccountCollectionAuthorityRecord extends string,
+  TAccountDelegateAuthority extends string,
   TAccountTokenProgram extends string,
   TAccountAssociatedTokenProgram extends string,
   TAccountSystemProgram extends string,
@@ -430,6 +497,7 @@ export function getMintPnftInstruction<
     TAccountPayer,
     TAccountVault,
     TAccountMasterState,
+    TAccountMasterMint,
     TAccountCollectionMetadata,
     TAccountCollectionMasterEdition,
     TAccountMetadata,
@@ -437,6 +505,8 @@ export function getMintPnftInstruction<
     TAccountMint,
     TAccountMintAuthority,
     TAccountTokenAccount,
+    TAccountCollectionAuthorityRecord,
+    TAccountDelegateAuthority,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
@@ -449,6 +519,7 @@ export function getMintPnftInstruction<
   TAccountPayer,
   TAccountVault,
   TAccountMasterState,
+  TAccountMasterMint,
   TAccountCollectionMetadata,
   TAccountCollectionMasterEdition,
   TAccountMetadata,
@@ -456,6 +527,8 @@ export function getMintPnftInstruction<
   TAccountMint,
   TAccountMintAuthority,
   TAccountTokenAccount,
+  TAccountCollectionAuthorityRecord,
+  TAccountDelegateAuthority,
   TAccountTokenProgram,
   TAccountAssociatedTokenProgram,
   TAccountSystemProgram,
@@ -471,6 +544,7 @@ export function getMintPnftInstruction<
     payer: { value: input.payer ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
+    masterMint: { value: input.masterMint ?? null, isWritable: false },
     collectionMetadata: {
       value: input.collectionMetadata ?? null,
       isWritable: true,
@@ -484,6 +558,14 @@ export function getMintPnftInstruction<
     mint: { value: input.mint ?? null, isWritable: true },
     mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     tokenAccount: { value: input.tokenAccount ?? null, isWritable: true },
+    collectionAuthorityRecord: {
+      value: input.collectionAuthorityRecord ?? null,
+      isWritable: true,
+    },
+    delegateAuthority: {
+      value: input.delegateAuthority ?? null,
+      isWritable: false,
+    },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     associatedTokenProgram: {
       value: input.associatedTokenProgram ?? null,
@@ -529,6 +611,7 @@ export function getMintPnftInstruction<
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.masterState),
+      getAccountMeta(accounts.masterMint),
       getAccountMeta(accounts.collectionMetadata),
       getAccountMeta(accounts.collectionMasterEdition),
       getAccountMeta(accounts.metadata),
@@ -536,6 +619,8 @@ export function getMintPnftInstruction<
       getAccountMeta(accounts.mint),
       getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.tokenAccount),
+      getAccountMeta(accounts.collectionAuthorityRecord),
+      getAccountMeta(accounts.delegateAuthority),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.associatedTokenProgram),
       getAccountMeta(accounts.systemProgram),
@@ -549,6 +634,7 @@ export function getMintPnftInstruction<
     TAccountPayer,
     TAccountVault,
     TAccountMasterState,
+    TAccountMasterMint,
     TAccountCollectionMetadata,
     TAccountCollectionMasterEdition,
     TAccountMetadata,
@@ -556,6 +642,8 @@ export function getMintPnftInstruction<
     TAccountMint,
     TAccountMintAuthority,
     TAccountTokenAccount,
+    TAccountCollectionAuthorityRecord,
+    TAccountDelegateAuthority,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
@@ -575,18 +663,21 @@ export type ParsedMintPnftInstruction<
     payer: TAccountMetas[0];
     vault: TAccountMetas[1];
     masterState: TAccountMetas[2];
-    collectionMetadata: TAccountMetas[3];
-    collectionMasterEdition: TAccountMetas[4];
-    metadata: TAccountMetas[5];
-    masterEdition: TAccountMetas[6];
-    mint: TAccountMetas[7];
-    mintAuthority: TAccountMetas[8];
-    tokenAccount: TAccountMetas[9];
-    tokenProgram: TAccountMetas[10];
-    associatedTokenProgram: TAccountMetas[11];
-    systemProgram: TAccountMetas[12];
-    rent: TAccountMetas[13];
-    tokenMetadataProgram: TAccountMetas[14];
+    masterMint: TAccountMetas[3];
+    collectionMetadata: TAccountMetas[4];
+    collectionMasterEdition: TAccountMetas[5];
+    metadata: TAccountMetas[6];
+    masterEdition: TAccountMetas[7];
+    mint: TAccountMetas[8];
+    mintAuthority: TAccountMetas[9];
+    tokenAccount: TAccountMetas[10];
+    collectionAuthorityRecord: TAccountMetas[11];
+    delegateAuthority: TAccountMetas[12];
+    tokenProgram: TAccountMetas[13];
+    associatedTokenProgram: TAccountMetas[14];
+    systemProgram: TAccountMetas[15];
+    rent: TAccountMetas[16];
+    tokenMetadataProgram: TAccountMetas[17];
   };
   data: MintPnftInstructionData;
 };
@@ -599,7 +690,7 @@ export function parseMintPnftInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedMintPnftInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 15) {
+  if (instruction.accounts.length < 18) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -615,6 +706,7 @@ export function parseMintPnftInstruction<
       payer: getNextAccount(),
       vault: getNextAccount(),
       masterState: getNextAccount(),
+      masterMint: getNextAccount(),
       collectionMetadata: getNextAccount(),
       collectionMasterEdition: getNextAccount(),
       metadata: getNextAccount(),
@@ -622,6 +714,8 @@ export function parseMintPnftInstruction<
       mint: getNextAccount(),
       mintAuthority: getNextAccount(),
       tokenAccount: getNextAccount(),
+      collectionAuthorityRecord: getNextAccount(),
+      delegateAuthority: getNextAccount(),
       tokenProgram: getNextAccount(),
       associatedTokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),

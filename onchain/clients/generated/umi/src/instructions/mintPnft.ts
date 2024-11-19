@@ -33,6 +33,7 @@ export type MintPnftInstructionAccounts = {
   payer: Signer;
   vault?: PublicKey | Pda;
   masterState: PublicKey | Pda;
+  masterMint: PublicKey | Pda;
   collectionMetadata: PublicKey | Pda;
   collectionMasterEdition: PublicKey | Pda;
   metadata: PublicKey | Pda;
@@ -40,6 +41,8 @@ export type MintPnftInstructionAccounts = {
   mint: Signer;
   mintAuthority?: PublicKey | Pda;
   tokenAccount: PublicKey | Pda;
+  collectionAuthorityRecord: PublicKey | Pda;
+  delegateAuthority?: PublicKey | Pda;
   tokenProgram?: PublicKey | Pda;
   associatedTokenProgram?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
@@ -99,59 +102,74 @@ export function mintPnft(
       isWritable: true as boolean,
       value: input.masterState ?? null,
     },
-    collectionMetadata: {
+    masterMint: {
       index: 3,
+      isWritable: false as boolean,
+      value: input.masterMint ?? null,
+    },
+    collectionMetadata: {
+      index: 4,
       isWritable: true as boolean,
       value: input.collectionMetadata ?? null,
     },
     collectionMasterEdition: {
-      index: 4,
+      index: 5,
       isWritable: false as boolean,
       value: input.collectionMasterEdition ?? null,
     },
     metadata: {
-      index: 5,
+      index: 6,
       isWritable: true as boolean,
       value: input.metadata ?? null,
     },
     masterEdition: {
-      index: 6,
+      index: 7,
       isWritable: true as boolean,
       value: input.masterEdition ?? null,
     },
-    mint: { index: 7, isWritable: true as boolean, value: input.mint ?? null },
+    mint: { index: 8, isWritable: true as boolean, value: input.mint ?? null },
     mintAuthority: {
-      index: 8,
+      index: 9,
       isWritable: false as boolean,
       value: input.mintAuthority ?? null,
     },
     tokenAccount: {
-      index: 9,
+      index: 10,
       isWritable: true as boolean,
       value: input.tokenAccount ?? null,
     },
+    collectionAuthorityRecord: {
+      index: 11,
+      isWritable: true as boolean,
+      value: input.collectionAuthorityRecord ?? null,
+    },
+    delegateAuthority: {
+      index: 12,
+      isWritable: false as boolean,
+      value: input.delegateAuthority ?? null,
+    },
     tokenProgram: {
-      index: 10,
+      index: 13,
       isWritable: false as boolean,
       value: input.tokenProgram ?? null,
     },
     associatedTokenProgram: {
-      index: 11,
+      index: 14,
       isWritable: false as boolean,
       value: input.associatedTokenProgram ?? null,
     },
     systemProgram: {
-      index: 12,
+      index: 15,
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
     rent: {
-      index: 13,
+      index: 16,
       isWritable: false as boolean,
       value: input.rent ?? null,
     },
     tokenMetadataProgram: {
-      index: 14,
+      index: 17,
       isWritable: false as boolean,
       value: input.tokenMetadataProgram ?? null,
     },
@@ -177,6 +195,22 @@ export function mintPnft(
         expectPublicKey(resolvedAccounts.mint.value)
       ),
     ]);
+  }
+  if (!resolvedAccounts.delegateAuthority.value) {
+    resolvedAccounts.delegateAuthority.value = context.eddsa.findPda(
+      programId,
+      [
+        bytes().serialize(
+          new Uint8Array([
+            99, 111, 108, 108, 101, 99, 116, 105, 111, 110, 95, 100, 101, 108,
+            101, 103, 97, 116, 101,
+          ])
+        ),
+        publicKeySerializer().serialize(
+          expectPublicKey(resolvedAccounts.masterMint.value)
+        ),
+      ]
+    );
   }
   if (!resolvedAccounts.tokenProgram.value) {
     resolvedAccounts.tokenProgram.value = context.programs.getPublicKey(
