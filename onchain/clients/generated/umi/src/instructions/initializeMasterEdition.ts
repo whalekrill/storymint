@@ -36,7 +36,7 @@ export type InitializeMasterEditionInstructionAccounts = {
   masterMetadata: PublicKey | Pda;
   masterEdition: PublicKey | Pda;
   updateAuthority: Signer;
-  authorityToken: PublicKey | Pda;
+  updateAuthorityToken: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
   tokenProgram?: PublicKey | Pda;
   associatedTokenProgram?: PublicKey | Pda;
@@ -117,10 +117,10 @@ export function initializeMasterEdition(
       isWritable: true as boolean,
       value: input.updateAuthority ?? null,
     },
-    authorityToken: {
+    updateAuthorityToken: {
       index: 6,
       isWritable: true as boolean,
-      value: input.authorityToken ?? null,
+      value: input.updateAuthorityToken ?? null,
     },
     systemProgram: {
       index: 7,

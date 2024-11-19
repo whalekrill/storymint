@@ -104,11 +104,16 @@ pub struct MintPNFT<'info> {
 
     #[account(
         mut,
-        seeds = ["master".as_bytes(), master_state.master_mint.as_ref()], 
-        bump,
         constraint = master_state.total_minted < MAX_SUPPLY @ CustomError::MaxSupplyReached,
+        has_one = master_mint @ CustomError::InvalidCollection
     )]
     pub master_state: Account<'info, MasterState>,
+
+    /// CHECK: Collection mint account required by Metaplex verify_collection
+    #[account(
+        constraint = master_mint.owner == &token::ID @ CustomError::InvalidProgramId
+    )]
+    pub master_mint: AccountInfo<'info>,
 
     /// CHECK: Collection metadata with explicit program check
     #[account(
@@ -155,10 +160,6 @@ pub struct MintPNFT<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-
-    /// CHECK: Server authority for metadata updates
-    #[account(constraint = server_authority.key() == SERVER_AUTHORITY @ CustomError::InvalidUpdateAuthority)]
-    pub server_authority: Signer<'info>,
 
     /// CHECK: Required by token metadata program
     #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
@@ -457,6 +458,36 @@ pub mod locked_sol_pnft {
     }
 
     pub fn mint_pnft(ctx: Context<MintPNFT>) -> Result<()> {
+        msg!("Starting mint_pnft instruction");
+        msg!("Payer: {}", ctx.accounts.payer.key());
+        msg!("Vault: {}", ctx.accounts.vault.key());
+        msg!("Master State: {}", ctx.accounts.master_state.key());
+        msg!(
+            "Collection Metadata: {}",
+            ctx.accounts.collection_metadata.key()
+        );
+        msg!(
+            "Collection Master Edition: {}",
+            ctx.accounts.collection_master_edition.key()
+        );
+        msg!("Metadata: {}", ctx.accounts.metadata.key());
+        msg!("Master Edition: {}", ctx.accounts.master_edition.key());
+        msg!("Mint: {}", ctx.accounts.mint.key());
+        msg!("Mint Authority: {}", ctx.accounts.mint_authority.key());
+        msg!("Token Account: {}", ctx.accounts.token_account.key());
+        msg!("Token Program: {}", ctx.accounts.token_program.key());
+        msg!(
+            "Associated Token Program: {}",
+            ctx.accounts.associated_token_program.key()
+        );
+        msg!("System Program: {}", ctx.accounts.system_program.key());
+        msg!("Rent: {}", ctx.accounts.rent.key());
+        msg!(
+            "Token Metadata Program: {}",
+            ctx.accounts.token_metadata_program.key()
+        );
+
+        let master_mint = ctx.accounts.master_state.master_mint;
         let rent_costs = utils::calculate_rent(&ctx.accounts.rent, true);
         let total_required = rent_costs.vault + rent_costs.mint + rent_costs.metadata;
 
@@ -492,18 +523,6 @@ pub mod locked_sol_pnft {
             &ctx,
             get_initial_metadata(collection),
             &[&mint_authority_seeds],
-        )?;
-
-        create_master_edition(
-            &ctx.accounts.master_edition, // UncheckedAccount<'info> for master edition
-            &ctx.accounts.mint,           // AccountInfo<'info> for the mint
-            &ctx.accounts.server_authority,
-            &ctx.accounts.metadata, // UncheckedAccount<'info> for metadata
-            &ctx.accounts.payer,    // Signer<'info> for the payer
-            &ctx.accounts.system_program, // Program<'info, System> for system program
-            &ctx.accounts.token_metadata_program, // AccountInfo<'info> for token metadata program
-            Some(0),                // max_supply: Option<u64>
-            &[&mint_authority_seeds], // signing_seeds: &[&[&[u8]]]
         )?;
 
         // Verify collection
@@ -669,7 +688,7 @@ fn create_metadata<'info>(
         .mint(ctx.accounts.mint.key())
         .mint_authority(ctx.accounts.mint_authority.key())
         .payer(ctx.accounts.payer.key())
-        .update_authority(ctx.accounts.server_authority.key(), true)
+        .update_authority(ctx.accounts.mint_authority.key(), true)
         .data(metadata_data)
         .is_mutable(true)
         .instruction();
@@ -716,42 +735,6 @@ fn mint_token<'info>(ctx: &Context<MintPNFT>, signer_seeds: &[&[&[u8]]]) -> Resu
         ),
         1,
     )
-}
-
-fn create_master_edition<'info>(
-    master_edition: &UncheckedAccount<'info>,
-    master_mint: &AccountInfo<'info>,
-    update_authority: &Signer<'info>,
-    master_metadata: &UncheckedAccount<'info>,
-    payer: &Signer<'info>,
-    system_program: &Program<'info, System>,
-    token_metadata_program: &AccountInfo<'info>,
-    max_supply: Option<u64>,
-    signing_seeds: &[&[&[u8]]],
-) -> Result<()> {
-    let create_master_edition_ix = CreateMasterEditionV3Builder::new()
-        .edition(master_edition.key())
-        .mint(master_mint.key())
-        .update_authority(update_authority.key())
-        .mint_authority(update_authority.key())
-        .metadata(master_metadata.key())
-        .payer(payer.key())
-        .max_supply(max_supply.unwrap_or(0)) // Unwraps Option<u64> safely
-        .instruction();
-
-    invoke_signed(
-        &create_master_edition_ix,
-        &[
-            master_edition.to_account_info(),
-            master_mint.to_account_info(),
-            update_authority.to_account_info(),
-            payer.to_account_info(),
-            system_program.to_account_info(),
-            token_metadata_program.to_account_info(),
-        ],
-        signing_seeds,
-    )
-    .map_err(Into::into)
 }
 
 fn initialize_token_mint_for_mint(ctx: &Context<MintPNFT>) -> Result<()> {

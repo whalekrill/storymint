@@ -54,9 +54,6 @@ pub struct MintPnft {
           pub rent: solana_program::pubkey::Pubkey,
           
               
-          pub server_authority: solana_program::pubkey::Pubkey,
-          
-              
           pub token_metadata_program: solana_program::pubkey::Pubkey,
       }
 
@@ -66,7 +63,7 @@ impl MintPnft {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(15 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer,
             true
@@ -124,10 +121,6 @@ impl MintPnft {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.server_authority,
-            true
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.token_metadata_program,
             false
           ));
@@ -181,8 +174,7 @@ impl Default for MintPnftInstructionData {
                 ///   11. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
                 ///   12. `[optional]` system_program (default to `11111111111111111111111111111111`)
                 ///   13. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
-                ///   14. `[signer]` server_authority
-                ///   15. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
+                ///   14. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
 #[derive(Clone, Debug, Default)]
 pub struct MintPnftBuilder {
             payer: Option<solana_program::pubkey::Pubkey>,
@@ -199,7 +191,6 @@ pub struct MintPnftBuilder {
                 associated_token_program: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 rent: Option<solana_program::pubkey::Pubkey>,
-                server_authority: Option<solana_program::pubkey::Pubkey>,
                 token_metadata_program: Option<solana_program::pubkey::Pubkey>,
                 __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -282,11 +273,6 @@ impl MintPnftBuilder {
                         self.rent = Some(rent);
                     self
     }
-            #[inline(always)]
-    pub fn server_authority(&mut self, server_authority: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.server_authority = Some(server_authority);
-                    self
-    }
             /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
 #[inline(always)]
     pub fn token_metadata_program(&mut self, token_metadata_program: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -322,7 +308,6 @@ impl MintPnftBuilder {
                                         associated_token_program: self.associated_token_program.unwrap_or(solana_program::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         rent: self.rent.unwrap_or(solana_program::pubkey!("SysvarRent111111111111111111111111111111111")),
-                                        server_authority: self.server_authority.expect("server_authority is not set"),
                                         token_metadata_program: self.token_metadata_program.unwrap_or(solana_program::pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
                       };
     
@@ -376,9 +361,6 @@ impl MintPnftBuilder {
               pub rent: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub server_authority: &'b solana_program::account_info::AccountInfo<'a>,
-                
-                    
               pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
             }
 
@@ -430,9 +412,6 @@ pub struct MintPnftCpi<'a, 'b> {
           pub rent: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub server_authority: &'b solana_program::account_info::AccountInfo<'a>,
-          
-              
           pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
         }
 
@@ -457,7 +436,6 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
               associated_token_program: accounts.associated_token_program,
               system_program: accounts.system_program,
               rent: accounts.rent,
-              server_authority: accounts.server_authority,
               token_metadata_program: accounts.token_metadata_program,
                 }
   }
@@ -480,7 +458,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(15 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true
@@ -538,10 +516,6 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.server_authority.key,
-            true
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.token_metadata_program.key,
             false
           ));
@@ -559,7 +533,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(16 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(15 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.payer.clone());
                         account_infos.push(self.vault.clone());
@@ -575,7 +549,6 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
                         account_infos.push(self.associated_token_program.clone());
                         account_infos.push(self.system_program.clone());
                         account_infos.push(self.rent.clone());
-                        account_infos.push(self.server_authority.clone());
                         account_infos.push(self.token_metadata_program.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
@@ -605,8 +578,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
           ///   11. `[]` associated_token_program
           ///   12. `[]` system_program
           ///   13. `[]` rent
-                ///   14. `[signer]` server_authority
-          ///   15. `[]` token_metadata_program
+          ///   14. `[]` token_metadata_program
 #[derive(Clone, Debug)]
 pub struct MintPnftCpiBuilder<'a, 'b> {
   instruction: Box<MintPnftCpiBuilderInstruction<'a, 'b>>,
@@ -630,7 +602,6 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
               associated_token_program: None,
               system_program: None,
               rent: None,
-              server_authority: None,
               token_metadata_program: None,
                                 __remaining_accounts: Vec::new(),
     });
@@ -707,11 +678,6 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
-    pub fn server_authority(&mut self, server_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.server_authority = Some(server_authority);
-                    self
-    }
-      #[inline(always)]
     pub fn token_metadata_program(&mut self, token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.token_metadata_program = Some(token_metadata_program);
                     self
@@ -769,8 +735,6 @@ impl<'a, 'b> MintPnftCpiBuilder<'a, 'b> {
                   
           rent: self.instruction.rent.expect("rent is not set"),
                   
-          server_authority: self.instruction.server_authority.expect("server_authority is not set"),
-                  
           token_metadata_program: self.instruction.token_metadata_program.expect("token_metadata_program is not set"),
                     };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
@@ -794,7 +758,6 @@ struct MintPnftCpiBuilderInstruction<'a, 'b> {
                 associated_token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 rent: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                server_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_metadata_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,

@@ -27,7 +27,6 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
@@ -74,7 +73,6 @@ export type MintPnftInstruction<
   TAccountRent extends
     | string
     | IAccountMeta<string> = 'SysvarRent111111111111111111111111111111111',
-  TAccountServerAuthority extends string | IAccountMeta<string> = string,
   TAccountTokenMetadataProgram extends
     | string
     | IAccountMeta<string> = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
@@ -126,10 +124,6 @@ export type MintPnftInstruction<
       TAccountRent extends string
         ? ReadonlyAccount<TAccountRent>
         : TAccountRent,
-      TAccountServerAuthority extends string
-        ? ReadonlySignerAccount<TAccountServerAuthority> &
-            IAccountSignerMeta<TAccountServerAuthority>
-        : TAccountServerAuthority,
       TAccountTokenMetadataProgram extends string
         ? ReadonlyAccount<TAccountTokenMetadataProgram>
         : TAccountTokenMetadataProgram,
@@ -179,7 +173,6 @@ export type MintPnftAsyncInput<
   TAccountAssociatedTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountRent extends string = string,
-  TAccountServerAuthority extends string = string,
   TAccountTokenMetadataProgram extends string = string,
 > = {
   payer: TransactionSigner<TAccountPayer>;
@@ -196,7 +189,6 @@ export type MintPnftAsyncInput<
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   rent?: Address<TAccountRent>;
-  serverAuthority: TransactionSigner<TAccountServerAuthority>;
   tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
 };
 
@@ -215,7 +207,6 @@ export async function getMintPnftInstructionAsync<
   TAccountAssociatedTokenProgram extends string,
   TAccountSystemProgram extends string,
   TAccountRent extends string,
-  TAccountServerAuthority extends string,
   TAccountTokenMetadataProgram extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
@@ -234,7 +225,6 @@ export async function getMintPnftInstructionAsync<
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
     TAccountRent,
-    TAccountServerAuthority,
     TAccountTokenMetadataProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -255,7 +245,6 @@ export async function getMintPnftInstructionAsync<
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
     TAccountRent,
-    TAccountServerAuthority,
     TAccountTokenMetadataProgram
   >
 > {
@@ -288,10 +277,6 @@ export async function getMintPnftInstructionAsync<
     },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     rent: { value: input.rent ?? null, isWritable: false },
-    serverAuthority: {
-      value: input.serverAuthority ?? null,
-      isWritable: false,
-    },
     tokenMetadataProgram: {
       value: input.tokenMetadataProgram ?? null,
       isWritable: false,
@@ -363,7 +348,6 @@ export async function getMintPnftInstructionAsync<
       getAccountMeta(accounts.associatedTokenProgram),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.rent),
-      getAccountMeta(accounts.serverAuthority),
       getAccountMeta(accounts.tokenMetadataProgram),
     ],
     programAddress,
@@ -384,7 +368,6 @@ export async function getMintPnftInstructionAsync<
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
     TAccountRent,
-    TAccountServerAuthority,
     TAccountTokenMetadataProgram
   >;
 
@@ -406,7 +389,6 @@ export type MintPnftInput<
   TAccountAssociatedTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountRent extends string = string,
-  TAccountServerAuthority extends string = string,
   TAccountTokenMetadataProgram extends string = string,
 > = {
   payer: TransactionSigner<TAccountPayer>;
@@ -423,7 +405,6 @@ export type MintPnftInput<
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   rent?: Address<TAccountRent>;
-  serverAuthority: TransactionSigner<TAccountServerAuthority>;
   tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
 };
 
@@ -442,7 +423,6 @@ export function getMintPnftInstruction<
   TAccountAssociatedTokenProgram extends string,
   TAccountSystemProgram extends string,
   TAccountRent extends string,
-  TAccountServerAuthority extends string,
   TAccountTokenMetadataProgram extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
@@ -461,7 +441,6 @@ export function getMintPnftInstruction<
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
     TAccountRent,
-    TAccountServerAuthority,
     TAccountTokenMetadataProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -481,7 +460,6 @@ export function getMintPnftInstruction<
   TAccountAssociatedTokenProgram,
   TAccountSystemProgram,
   TAccountRent,
-  TAccountServerAuthority,
   TAccountTokenMetadataProgram
 > {
   // Program address.
@@ -513,10 +491,6 @@ export function getMintPnftInstruction<
     },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     rent: { value: input.rent ?? null, isWritable: false },
-    serverAuthority: {
-      value: input.serverAuthority ?? null,
-      isWritable: false,
-    },
     tokenMetadataProgram: {
       value: input.tokenMetadataProgram ?? null,
       isWritable: false,
@@ -566,7 +540,6 @@ export function getMintPnftInstruction<
       getAccountMeta(accounts.associatedTokenProgram),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.rent),
-      getAccountMeta(accounts.serverAuthority),
       getAccountMeta(accounts.tokenMetadataProgram),
     ],
     programAddress,
@@ -587,7 +560,6 @@ export function getMintPnftInstruction<
     TAccountAssociatedTokenProgram,
     TAccountSystemProgram,
     TAccountRent,
-    TAccountServerAuthority,
     TAccountTokenMetadataProgram
   >;
 
@@ -614,8 +586,7 @@ export type ParsedMintPnftInstruction<
     associatedTokenProgram: TAccountMetas[11];
     systemProgram: TAccountMetas[12];
     rent: TAccountMetas[13];
-    serverAuthority: TAccountMetas[14];
-    tokenMetadataProgram: TAccountMetas[15];
+    tokenMetadataProgram: TAccountMetas[14];
   };
   data: MintPnftInstructionData;
 };
@@ -628,7 +599,7 @@ export function parseMintPnftInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedMintPnftInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 16) {
+  if (instruction.accounts.length < 15) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -655,7 +626,6 @@ export function parseMintPnftInstruction<
       associatedTokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
       rent: getNextAccount(),
-      serverAuthority: getNextAccount(),
       tokenMetadataProgram: getNextAccount(),
     },
     data: getMintPnftInstructionDataDecoder().decode(instruction.data),

@@ -57,7 +57,7 @@ export type InitializeMasterEditionInstruction<
   TAccountMasterMetadata extends string | IAccountMeta<string> = string,
   TAccountMasterEdition extends string | IAccountMeta<string> = string,
   TAccountUpdateAuthority extends string | IAccountMeta<string> = string,
-  TAccountAuthorityToken extends string | IAccountMeta<string> = string,
+  TAccountUpdateAuthorityToken extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -98,9 +98,9 @@ export type InitializeMasterEditionInstruction<
         ? WritableSignerAccount<TAccountUpdateAuthority> &
             IAccountSignerMeta<TAccountUpdateAuthority>
         : TAccountUpdateAuthority,
-      TAccountAuthorityToken extends string
-        ? WritableAccount<TAccountAuthorityToken>
-        : TAccountAuthorityToken,
+      TAccountUpdateAuthorityToken extends string
+        ? WritableAccount<TAccountUpdateAuthorityToken>
+        : TAccountUpdateAuthorityToken,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -159,7 +159,7 @@ export type InitializeMasterEditionAsyncInput<
   TAccountMasterMetadata extends string = string,
   TAccountMasterEdition extends string = string,
   TAccountUpdateAuthority extends string = string,
-  TAccountAuthorityToken extends string = string,
+  TAccountUpdateAuthorityToken extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountAssociatedTokenProgram extends string = string,
@@ -172,7 +172,7 @@ export type InitializeMasterEditionAsyncInput<
   masterMetadata: Address<TAccountMasterMetadata>;
   masterEdition: Address<TAccountMasterEdition>;
   updateAuthority: TransactionSigner<TAccountUpdateAuthority>;
-  authorityToken: Address<TAccountAuthorityToken>;
+  updateAuthorityToken: Address<TAccountUpdateAuthorityToken>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -187,7 +187,7 @@ export async function getInitializeMasterEditionInstructionAsync<
   TAccountMasterMetadata extends string,
   TAccountMasterEdition extends string,
   TAccountUpdateAuthority extends string,
-  TAccountAuthorityToken extends string,
+  TAccountUpdateAuthorityToken extends string,
   TAccountSystemProgram extends string,
   TAccountTokenProgram extends string,
   TAccountAssociatedTokenProgram extends string,
@@ -202,7 +202,7 @@ export async function getInitializeMasterEditionInstructionAsync<
     TAccountMasterMetadata,
     TAccountMasterEdition,
     TAccountUpdateAuthority,
-    TAccountAuthorityToken,
+    TAccountUpdateAuthorityToken,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
@@ -219,7 +219,7 @@ export async function getInitializeMasterEditionInstructionAsync<
     TAccountMasterMetadata,
     TAccountMasterEdition,
     TAccountUpdateAuthority,
-    TAccountAuthorityToken,
+    TAccountUpdateAuthorityToken,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
@@ -239,7 +239,10 @@ export async function getInitializeMasterEditionInstructionAsync<
     masterMetadata: { value: input.masterMetadata ?? null, isWritable: true },
     masterEdition: { value: input.masterEdition ?? null, isWritable: true },
     updateAuthority: { value: input.updateAuthority ?? null, isWritable: true },
-    authorityToken: { value: input.authorityToken ?? null, isWritable: true },
+    updateAuthorityToken: {
+      value: input.updateAuthorityToken ?? null,
+      isWritable: true,
+    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     associatedTokenProgram: {
@@ -307,7 +310,7 @@ export async function getInitializeMasterEditionInstructionAsync<
       getAccountMeta(accounts.masterMetadata),
       getAccountMeta(accounts.masterEdition),
       getAccountMeta(accounts.updateAuthority),
-      getAccountMeta(accounts.authorityToken),
+      getAccountMeta(accounts.updateAuthorityToken),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.associatedTokenProgram),
@@ -324,7 +327,7 @@ export async function getInitializeMasterEditionInstructionAsync<
     TAccountMasterMetadata,
     TAccountMasterEdition,
     TAccountUpdateAuthority,
-    TAccountAuthorityToken,
+    TAccountUpdateAuthorityToken,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
@@ -342,7 +345,7 @@ export type InitializeMasterEditionInput<
   TAccountMasterMetadata extends string = string,
   TAccountMasterEdition extends string = string,
   TAccountUpdateAuthority extends string = string,
-  TAccountAuthorityToken extends string = string,
+  TAccountUpdateAuthorityToken extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountAssociatedTokenProgram extends string = string,
@@ -355,7 +358,7 @@ export type InitializeMasterEditionInput<
   masterMetadata: Address<TAccountMasterMetadata>;
   masterEdition: Address<TAccountMasterEdition>;
   updateAuthority: TransactionSigner<TAccountUpdateAuthority>;
-  authorityToken: Address<TAccountAuthorityToken>;
+  updateAuthorityToken: Address<TAccountUpdateAuthorityToken>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -370,7 +373,7 @@ export function getInitializeMasterEditionInstruction<
   TAccountMasterMetadata extends string,
   TAccountMasterEdition extends string,
   TAccountUpdateAuthority extends string,
-  TAccountAuthorityToken extends string,
+  TAccountUpdateAuthorityToken extends string,
   TAccountSystemProgram extends string,
   TAccountTokenProgram extends string,
   TAccountAssociatedTokenProgram extends string,
@@ -385,7 +388,7 @@ export function getInitializeMasterEditionInstruction<
     TAccountMasterMetadata,
     TAccountMasterEdition,
     TAccountUpdateAuthority,
-    TAccountAuthorityToken,
+    TAccountUpdateAuthorityToken,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
@@ -401,7 +404,7 @@ export function getInitializeMasterEditionInstruction<
   TAccountMasterMetadata,
   TAccountMasterEdition,
   TAccountUpdateAuthority,
-  TAccountAuthorityToken,
+  TAccountUpdateAuthorityToken,
   TAccountSystemProgram,
   TAccountTokenProgram,
   TAccountAssociatedTokenProgram,
@@ -420,7 +423,10 @@ export function getInitializeMasterEditionInstruction<
     masterMetadata: { value: input.masterMetadata ?? null, isWritable: true },
     masterEdition: { value: input.masterEdition ?? null, isWritable: true },
     updateAuthority: { value: input.updateAuthority ?? null, isWritable: true },
-    authorityToken: { value: input.authorityToken ?? null, isWritable: true },
+    updateAuthorityToken: {
+      value: input.updateAuthorityToken ?? null,
+      isWritable: true,
+    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     associatedTokenProgram: {
@@ -469,7 +475,7 @@ export function getInitializeMasterEditionInstruction<
       getAccountMeta(accounts.masterMetadata),
       getAccountMeta(accounts.masterEdition),
       getAccountMeta(accounts.updateAuthority),
-      getAccountMeta(accounts.authorityToken),
+      getAccountMeta(accounts.updateAuthorityToken),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.associatedTokenProgram),
@@ -486,7 +492,7 @@ export function getInitializeMasterEditionInstruction<
     TAccountMasterMetadata,
     TAccountMasterEdition,
     TAccountUpdateAuthority,
-    TAccountAuthorityToken,
+    TAccountUpdateAuthorityToken,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
@@ -509,7 +515,7 @@ export type ParsedInitializeMasterEditionInstruction<
     masterMetadata: TAccountMetas[3];
     masterEdition: TAccountMetas[4];
     updateAuthority: TAccountMetas[5];
-    authorityToken: TAccountMetas[6];
+    updateAuthorityToken: TAccountMetas[6];
     systemProgram: TAccountMetas[7];
     tokenProgram: TAccountMetas[8];
     associatedTokenProgram: TAccountMetas[9];
@@ -546,7 +552,7 @@ export function parseInitializeMasterEditionInstruction<
       masterMetadata: getNextAccount(),
       masterEdition: getNextAccount(),
       updateAuthority: getNextAccount(),
-      authorityToken: getNextAccount(),
+      updateAuthorityToken: getNextAccount(),
       systemProgram: getNextAccount(),
       tokenProgram: getNextAccount(),
       associatedTokenProgram: getNextAccount(),

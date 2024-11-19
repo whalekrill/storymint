@@ -44,7 +44,6 @@ export type MintPnftInstructionAccounts = {
   associatedTokenProgram?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
   rent?: PublicKey | Pda;
-  serverAuthority: Signer;
   tokenMetadataProgram?: PublicKey | Pda;
 };
 
@@ -151,13 +150,8 @@ export function mintPnft(
       isWritable: false as boolean,
       value: input.rent ?? null,
     },
-    serverAuthority: {
-      index: 14,
-      isWritable: false as boolean,
-      value: input.serverAuthority ?? null,
-    },
     tokenMetadataProgram: {
-      index: 15,
+      index: 14,
       isWritable: false as boolean,
       value: input.tokenMetadataProgram ?? null,
     },

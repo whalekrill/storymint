@@ -30,7 +30,7 @@ pub struct InitializeMasterEdition {
           pub update_authority: solana_program::pubkey::Pubkey,
           
               
-          pub authority_token: solana_program::pubkey::Pubkey,
+          pub update_authority_token: solana_program::pubkey::Pubkey,
           
               
           pub system_program: solana_program::pubkey::Pubkey,
@@ -80,7 +80,7 @@ impl InitializeMasterEdition {
             true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
-            self.authority_token,
+            self.update_authority_token,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -145,7 +145,7 @@ impl Default for InitializeMasterEditionInstructionData {
                 ///   3. `[writable]` master_metadata
                 ///   4. `[writable]` master_edition
                       ///   5. `[writable, signer]` update_authority
-                ///   6. `[writable]` authority_token
+                ///   6. `[writable]` update_authority_token
                 ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
                 ///   8. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
                 ///   9. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
@@ -159,7 +159,7 @@ pub struct InitializeMasterEditionBuilder {
                 master_metadata: Option<solana_program::pubkey::Pubkey>,
                 master_edition: Option<solana_program::pubkey::Pubkey>,
                 update_authority: Option<solana_program::pubkey::Pubkey>,
-                authority_token: Option<solana_program::pubkey::Pubkey>,
+                update_authority_token: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 token_program: Option<solana_program::pubkey::Pubkey>,
                 associated_token_program: Option<solana_program::pubkey::Pubkey>,
@@ -203,8 +203,8 @@ impl InitializeMasterEditionBuilder {
                     self
     }
             #[inline(always)]
-    pub fn authority_token(&mut self, authority_token: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.authority_token = Some(authority_token);
+    pub fn update_authority_token(&mut self, update_authority_token: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.update_authority_token = Some(update_authority_token);
                     self
     }
             /// `[optional account, default to '11111111111111111111111111111111']`
@@ -258,7 +258,7 @@ impl InitializeMasterEditionBuilder {
                                         master_metadata: self.master_metadata.expect("master_metadata is not set"),
                                         master_edition: self.master_edition.expect("master_edition is not set"),
                                         update_authority: self.update_authority.expect("update_authority is not set"),
-                                        authority_token: self.authority_token.expect("authority_token is not set"),
+                                        update_authority_token: self.update_authority_token.expect("update_authority_token is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         token_program: self.token_program.unwrap_or(solana_program::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")),
                                         associated_token_program: self.associated_token_program.unwrap_or(solana_program::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")),
@@ -292,7 +292,7 @@ impl InitializeMasterEditionBuilder {
               pub update_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub authority_token: &'b solana_program::account_info::AccountInfo<'a>,
+              pub update_authority_token: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -334,7 +334,7 @@ pub struct InitializeMasterEditionCpi<'a, 'b> {
           pub update_authority: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub authority_token: &'b solana_program::account_info::AccountInfo<'a>,
+          pub update_authority_token: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -365,7 +365,7 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
               master_metadata: accounts.master_metadata,
               master_edition: accounts.master_edition,
               update_authority: accounts.update_authority,
-              authority_token: accounts.authority_token,
+              update_authority_token: accounts.update_authority_token,
               system_program: accounts.system_program,
               token_program: accounts.token_program,
               associated_token_program: accounts.associated_token_program,
@@ -418,7 +418,7 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
             true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.authority_token.key,
+            *self.update_authority_token.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -463,7 +463,7 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
                         account_infos.push(self.master_metadata.clone());
                         account_infos.push(self.master_edition.clone());
                         account_infos.push(self.update_authority.clone());
-                        account_infos.push(self.authority_token.clone());
+                        account_infos.push(self.update_authority_token.clone());
                         account_infos.push(self.system_program.clone());
                         account_infos.push(self.token_program.clone());
                         account_infos.push(self.associated_token_program.clone());
@@ -489,7 +489,7 @@ impl<'a, 'b> InitializeMasterEditionCpi<'a, 'b> {
                 ///   3. `[writable]` master_metadata
                 ///   4. `[writable]` master_edition
                       ///   5. `[writable, signer]` update_authority
-                ///   6. `[writable]` authority_token
+                ///   6. `[writable]` update_authority_token
           ///   7. `[]` system_program
           ///   8. `[]` token_program
           ///   9. `[]` associated_token_program
@@ -510,7 +510,7 @@ impl<'a, 'b> InitializeMasterEditionCpiBuilder<'a, 'b> {
               master_metadata: None,
               master_edition: None,
               update_authority: None,
-              authority_token: None,
+              update_authority_token: None,
               system_program: None,
               token_program: None,
               associated_token_program: None,
@@ -551,8 +551,8 @@ impl<'a, 'b> InitializeMasterEditionCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
-    pub fn authority_token(&mut self, authority_token: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.authority_token = Some(authority_token);
+    pub fn update_authority_token(&mut self, update_authority_token: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.update_authority_token = Some(update_authority_token);
                     self
     }
       #[inline(always)]
@@ -617,7 +617,7 @@ impl<'a, 'b> InitializeMasterEditionCpiBuilder<'a, 'b> {
                   
           update_authority: self.instruction.update_authority.expect("update_authority is not set"),
                   
-          authority_token: self.instruction.authority_token.expect("authority_token is not set"),
+          update_authority_token: self.instruction.update_authority_token.expect("update_authority_token is not set"),
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
@@ -642,7 +642,7 @@ struct InitializeMasterEditionCpiBuilderInstruction<'a, 'b> {
                 master_metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 master_edition: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                authority_token: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                update_authority_token: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 associated_token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
