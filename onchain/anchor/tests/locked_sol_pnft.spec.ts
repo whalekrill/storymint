@@ -3,12 +3,12 @@ import { Program } from '@coral-xyz/anchor'
 import { LockedSolPnft } from '../target/types/locked_sol_pnft'
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
 import { createSignerFromKeypair, keypairIdentity, sol, publicKey, generateSigner } from '@metaplex-foundation/umi'
-import { mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata'
+import { mplTokenMetadata, fetchMetadata } from '@metaplex-foundation/mpl-token-metadata'
 import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
 import { Keypair } from '@solana/web3.js'
 import { SendTransactionError, PublicKey as web3PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, AccountLayout } from '@solana/spl-token'
-import { initializeMasterEdition } from '../../clients/generated/umi/src/instructions'
+import { initializeMasterEdition, mintPnft } from '../../clients/generated/umi/src/instructions'
 import fs from 'fs'
 import * as path from 'path'
 
@@ -95,6 +95,17 @@ describe('initializeMasterEdition Instruction', () => {
       authorityToken,
     }).sendAndConfirm(umi)
 
+    const metadataAccount = await umi.rpc.getAccount(masterMetadata)
+    expect(metadataAccount.exists).toBe(true)
+
+    const metadata = await fetchMetadata(umi, masterMetadata)
+    expect(metadata.name).toBe('Locked SOL NFT')
+    expect(metadata.symbol).toBe('LSOL')
+    expect(metadata.uri).toBe('https://api.locked-sol.com/metadata/initial.json')
+    expect(metadata.sellerFeeBasisPoints).toBe(0)
+    expect(metadata.isMutable).toBe(true)
+    expect(metadata.updateAuthority.toString()).toBe(updateAuthority.publicKey.toString())
+
     const tokenAccountInfo = await umi.rpc.getAccount(publicKey(associatedTokenAccount.toString()))
     expect(tokenAccountInfo).toBeTruthy()
 
@@ -128,5 +139,15 @@ describe('initializeMasterEdition Instruction', () => {
         throw error
       }
     }
+  })
+})
+
+describe('mintPnft Instruction', () => {
+  it('should successfully mint a pNFT and create associated accounts', async () => {
+    await umi.rpc.airdrop(payer.publicKey, sol(2))
+
+    await mintPnft(umi, {
+      payer,
+    }).sendAndConfirm(umi)
   })
 })
