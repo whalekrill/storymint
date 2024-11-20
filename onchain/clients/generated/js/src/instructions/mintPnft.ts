@@ -124,7 +124,7 @@ export type MintPnftInstruction<
         ? WritableAccount<TAccountCollectionAuthorityRecord>
         : TAccountCollectionAuthorityRecord,
       TAccountDelegateAuthority extends string
-        ? ReadonlyAccount<TAccountDelegateAuthority>
+        ? WritableAccount<TAccountDelegateAuthority>
         : TAccountDelegateAuthority,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
@@ -306,7 +306,7 @@ export async function getMintPnftInstructionAsync<
     },
     delegateAuthority: {
       value: input.delegateAuthority ?? null,
-      isWritable: false,
+      isWritable: true,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     associatedTokenProgram: {
@@ -564,7 +564,7 @@ export function getMintPnftInstruction<
     },
     delegateAuthority: {
       value: input.delegateAuthority ?? null,
-      isWritable: false,
+      isWritable: true,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     associatedTokenProgram: {

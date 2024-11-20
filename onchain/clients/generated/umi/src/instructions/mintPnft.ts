@@ -145,7 +145,7 @@ export function mintPnft(
     },
     delegateAuthority: {
       index: 12,
-      isWritable: false as boolean,
+      isWritable: true as boolean,
       value: input.delegateAuthority ?? null,
     },
     tokenProgram: {

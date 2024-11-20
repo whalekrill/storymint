@@ -121,7 +121,7 @@ impl MintPnft {
             self.collection_authority_record,
             false
           ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
             self.delegate_authority,
             false
           ));
@@ -193,7 +193,7 @@ impl Default for MintPnftInstructionData {
           ///   9. `[]` mint_authority
                 ///   10. `[writable]` token_account
                 ///   11. `[writable]` collection_authority_record
-          ///   12. `[]` delegate_authority
+                ///   12. `[writable]` delegate_authority
                 ///   13. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
                 ///   14. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
                 ///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
@@ -573,7 +573,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
             *self.collection_authority_record.key,
             false
           ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
             *self.delegate_authority.key,
             false
           ));
@@ -657,7 +657,7 @@ impl<'a, 'b> MintPnftCpi<'a, 'b> {
           ///   9. `[]` mint_authority
                 ///   10. `[writable]` token_account
                 ///   11. `[writable]` collection_authority_record
-          ///   12. `[]` delegate_authority
+                ///   12. `[writable]` delegate_authority
           ///   13. `[]` token_program
           ///   14. `[]` associated_token_program
           ///   15. `[]` system_program
