@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
-use anchor_lang::system_program;
+use anchor_lang::{solana_program::system_instruction, system_program};
 use anchor_spl::{
     associated_token::{self, AssociatedToken, Create},
     token::{self, Token},
@@ -79,11 +79,16 @@ pub struct InitializeMasterEdition<'info> {
     pub update_authority_token: AccountInfo<'info>,
 
     /// CHECK: Collection authority record PDA
+
     #[account(mut)]
-    pub collection_authority_record: UncheckedAccount<'info>,
+    pub collection_authority_record: AccountInfo<'info>,
 
     /// CHECK: Delegate authority from master state  
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = ["collection_delegate".as_bytes(), master_mint.key().as_ref()],
+        bump,
+    )]
     pub delegate_authority: UncheckedAccount<'info>,
 
     #[account(address = system_program::ID)]
@@ -379,36 +384,6 @@ pub mod locked_sol_pnft {
     use super::*;
 
     pub fn initialize_master_edition(ctx: Context<InitializeMasterEdition>) -> Result<()> {
-        msg!("Program derived PDAs:");
-        msg!(
-            "Collection Authority Record expected: {}",
-            ctx.accounts.collection_authority_record.key()
-        );
-
-        let (delegate_authority, _) = Pubkey::find_program_address(
-            &[
-                b"collection_delegate",
-                ctx.accounts.master_mint.key().as_ref(),
-            ],
-            ctx.program_id,
-        );
-        msg!("Derived delegate authority: {}", delegate_authority);
-
-        let (collection_authority_record, _) = Pubkey::find_program_address(
-            &[
-                b"metadata",
-                METADATA_PROGRAM_ID.as_ref(),
-                ctx.accounts.master_mint.key().as_ref(),
-                b"collection_authority",
-                delegate_authority.as_ref(),
-            ],
-            &METADATA_PROGRAM_ID,
-        );
-        msg!(
-            "Derived collection authority record: {}",
-            collection_authority_record
-        );
-
         let master_state = &mut ctx.accounts.master_state;
         master_state.master_mint = ctx.accounts.master_mint.key();
         master_state.total_minted = 0;
@@ -515,6 +490,8 @@ pub mod locked_sol_pnft {
         )?;
 
         // Setup collection authority delegate
+
+        // Derive delegate authority PDA and log results
         let (delegate_authority, _) = Pubkey::find_program_address(
             &[
                 b"collection_delegate",
@@ -522,21 +499,42 @@ pub mod locked_sol_pnft {
             ],
             ctx.program_id,
         );
+        msg!("Derived Delegate Authority PDA: {}", delegate_authority);
 
-        let (collection_authority_record, _) = Pubkey::find_program_address(
-            &[
-                b"metadata",
-                METADATA_PROGRAM_ID.as_ref(),
-                ctx.accounts.master_mint.key().as_ref(),
-                b"collection_authority",
-                delegate_authority.as_ref(),
-            ],
-            &METADATA_PROGRAM_ID,
-        );
+        // Derive collection authority record PDA and log results
+        let master_mint_key = ctx.accounts.master_mint.key();
+        let seeds = &[
+            b"metadata",
+            METADATA_PROGRAM_ID.as_ref(),
+            master_mint_key.as_ref(),
+            b"collection_authority",
+            delegate_authority.as_ref(),
+        ];
+        let (collection_authority_record, bump) =
+            Pubkey::find_program_address(seeds, &METADATA_PROGRAM_ID);
+
+        msg!("Derived CAR PDA: {}", collection_authority_record);
+        msg!("Expected bump: {}", bump);
+
+        // Log the seeds used for PDA derivation
+        msg!("Seeds used for PDA derivation:");
+        msg!("  Seed 1: {}", std::str::from_utf8(seeds[0]).unwrap());
+        msg!("  Seed 2: {:?}", METADATA_PROGRAM_ID);
+        msg!("  Seed 3: {:?}", ctx.accounts.master_mint.key());
+        msg!("  Seed 4: {}", std::str::from_utf8(seeds[3]).unwrap());
+        msg!("  Seed 5: {:?}", delegate_authority);
 
         master_state.collection_delegate = delegate_authority;
         master_state.collection_authority_record = collection_authority_record;
 
+        // Log provided CAR for validation
+        msg!(
+            "Provided CAR (from context): {}",
+            ctx.accounts.collection_authority_record.key()
+        );
+        msg!("Stored CAR: {}", collection_authority_record);
+
+        // Approve collection authority
         let approve_collection_authority_ix =
             mpl_token_metadata::instructions::ApproveCollectionAuthorityBuilder::new()
                 .collection_authority_record(collection_authority_record)
@@ -547,6 +545,13 @@ pub mod locked_sol_pnft {
                 .mint(ctx.accounts.master_mint.key())
                 .instruction();
 
+        msg!("Bump value used for invoke_signed: {}", bump);
+        msg!(
+            "Collection Authority Record Owner: {}",
+            ctx.accounts.collection_authority_record.owner
+        );
+        msg!("Expected Owner: {}", METADATA_PROGRAM_ID);
+
         invoke_signed(
             &approve_collection_authority_ix,
             &[
@@ -556,8 +561,16 @@ pub mod locked_sol_pnft {
                 ctx.accounts.payer.to_account_info(),
                 ctx.accounts.master_mint.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.delegate_authority.to_account_info(),
             ],
-            &[],
+            &[&[
+                b"metadata",
+                METADATA_PROGRAM_ID.as_ref(),
+                ctx.accounts.master_mint.key().as_ref(),
+                b"collection_authority",
+                delegate_authority.as_ref(),
+                &[bump],
+            ]],
         )?;
 
         Ok(())
@@ -857,6 +870,12 @@ fn verify_collection<'info>(ctx: &Context<'_, '_, '_, 'info, MintPNFT>) -> Resul
         &[ctx.bumps.delegate_authority],
     ];
 
+    msg!(
+        "Verifying collection with delegate authority: {}",
+        ctx.accounts.delegate_authority.key()
+    );
+    msg!("Using delegate bump: {}", ctx.bumps.delegate_authority);
+
     let verify_collection_ix = VerifyCollectionBuilder::new()
         .metadata(ctx.accounts.metadata.key())
         .collection_authority(ctx.accounts.delegate_authority.key())
@@ -875,6 +894,7 @@ fn verify_collection<'info>(ctx: &Context<'_, '_, '_, 'info, MintPNFT>) -> Resul
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.collection_metadata.to_account_info(),
             ctx.accounts.collection_master_edition.to_account_info(),
+            ctx.accounts.collection_authority_record.to_account_info(),
         ],
         &[delegate_seeds],
     )?;

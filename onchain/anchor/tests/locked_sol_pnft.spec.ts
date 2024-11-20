@@ -13,13 +13,14 @@ import {
 import { mplTokenMetadata, fetchMetadata } from '@metaplex-foundation/mpl-token-metadata'
 import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
 import { Keypair } from '@solana/web3.js'
-import { SendTransactionError, PublicKey as web3PublicKey } from '@solana/web3.js'
+import { PublicKey as web3PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, AccountLayout } from '@solana/spl-token'
 import { initializeMasterEdition, mintPnft } from '../../clients/generated/umi/src/instructions'
+import bs58 from 'bs58'
 import fs from 'fs'
 import * as path from 'path'
 import { transactionBuilder } from '@metaplex-foundation/umi'
-import { setComputeUnitLimit, setComputeUnitPrice } from '@metaplex-foundation/mpl-toolbox'
+import { createAccount, setComputeUnitLimit, setComputeUnitPrice } from '@metaplex-foundation/mpl-toolbox'
 
 const umi = createUmi('http://127.0.0.1:8899', { commitment: 'processed' })
 umi.use(mplTokenMetadata())
@@ -35,45 +36,63 @@ const updateAuthority = createSignerFromKeypair(umi, {
 const payer = generateSigner(umi)
 umi.use(keypairIdentity(payer))
 
-async function setupInitializeMasterEdition() {
+const setupInitializeMasterEdition = async () => {
   const program = anchor.workspace.LockedSolPnft as Program<LockedSolPnft>
   const metadataProgramId = umi.programs.getPublicKey('mplTokenMetadata')
 
-  // Get master mint PDA first since we need it for master_state
+  // Get master mint PDA first since we need it for other PDAs
   const [masterMint] = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('master_mint')])
 
-  // Get master state PDA using correct seeds from Rust code
+  // Get master state PDA
   const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
     Buffer.from('master'),
     publicKeySerializer().serialize(masterMint),
   ])
 
-  const [masterMetadata] = umi.eddsa.findPda(metadataProgramId, [
-    Buffer.from('metadata'),
-    publicKeySerializer().serialize(metadataProgramId),
-    publicKeySerializer().serialize(masterMint),
-  ])
-
-  const [masterEdition] = umi.eddsa.findPda(metadataProgramId, [
-    Buffer.from('metadata'),
-    publicKeySerializer().serialize(metadataProgramId),
-    publicKeySerializer().serialize(masterMint),
-    Buffer.from('edition'),
-  ])
-
-  // Get delegate authority PDA
+  // Get delegate authority PDA - CRITICAL that this matches the program
   const [delegateAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
     Buffer.from('collection_delegate'),
     publicKeySerializer().serialize(masterMint),
   ])
 
-  // Get collection authority record PDA
+  console.log('\nTest side PDA derivation:')
+  console.log('Seeds (hex):', {
+    metadata: Buffer.from('metadata').toString('hex'),
+    metadataProgramId: bs58.decode(metadataProgramId.toString()).toString('hex'),
+    masterMint: bs58.decode(masterMint.toString()).toString('hex'),
+    collectionAuthority: Buffer.from('collection_authority').toString('hex'),
+    delegateAuthority: bs58.decode(delegateAuthority.toString()).toString('hex'),
+  })
+  console.log('Seeds (base58):', {
+    metadataProgramId: metadataProgramId.toString(),
+    masterMint: masterMint.toString(),
+    delegateAuthority: delegateAuthority.toString(),
+  })
+
+  // Get collection authority record PDA - CRITICAL that this matches the program
   const [collectionAuthorityRecord] = umi.eddsa.findPda(metadataProgramId, [
     Buffer.from('metadata'),
     publicKeySerializer().serialize(metadataProgramId),
     publicKeySerializer().serialize(masterMint),
     Buffer.from('collection_authority'),
     publicKeySerializer().serialize(delegateAuthority),
+  ])
+
+  console.log('Expected PDA:', collectionAuthorityRecord.toString())
+
+  // Get metadata PDA
+  const [masterMetadata] = umi.eddsa.findPda(metadataProgramId, [
+    Buffer.from('metadata'),
+    publicKeySerializer().serialize(metadataProgramId),
+    publicKeySerializer().serialize(masterMint),
+  ])
+
+  // Get edition PDA
+  const [masterEdition] = umi.eddsa.findPda(metadataProgramId, [
+    Buffer.from('metadata'),
+    publicKeySerializer().serialize(metadataProgramId),
+    publicKeySerializer().serialize(masterMint),
+    Buffer.from('edition'),
   ])
 
   const associatedTokenAccount = await getAssociatedTokenAddress(
@@ -86,11 +105,12 @@ async function setupInitializeMasterEdition() {
 
   console.log('\nDerived Program PDAs:')
   console.log('Master Mint:', masterMint.toString())
-  console.log('Master State:', masterState.toString(), '(derived from ["master", master_mint])')
+  console.log('Master State:', masterState.toString())
+  console.log('Delegate Authority:', delegateAuthority.toString())
+  console.log('Collection Authority Record:', collectionAuthorityRecord.toString())
   console.log('Master Metadata:', masterMetadata.toString())
   console.log('Master Edition:', masterEdition.toString())
   console.log('Authority Token:', authorityToken.toString())
-  console.log('Collection Authority Record:', collectionAuthorityRecord.toString())
 
   return {
     masterMint,
@@ -98,8 +118,8 @@ async function setupInitializeMasterEdition() {
     masterMetadata,
     masterEdition,
     authorityToken,
-    collectionAuthorityRecord,
     delegateAuthority,
+    collectionAuthorityRecord,
   }
 }
 
@@ -295,7 +315,9 @@ describe('mintPnft Instruction', () => {
     console.log('Master Metadata:', masterMetadata.toString())
     console.log('Master Edition:', masterEdition.toString())
     console.log('Authority Token:', authorityToken.toString())
-    console.log('Collection Authority Record:', collectionAuthorityRecord.toString())
+    console.log('Delegate Authority:', delegateAuthority.toString())
+    console.log('Expected CAR:', 'DarrJe4eE1sRGDKZFQs35N75t3d51x6jRNodSsZot7Kr')
+    console.log('Actual CAR:', collectionAuthorityRecord.toString())
 
     // Create the master edition transaction with exactly the accounts the UMI client expects
     const tx = transactionBuilder()
@@ -304,17 +326,21 @@ describe('mintPnft Instruction', () => {
         initializeMasterEdition(umi, {
           payer,
           masterState,
-          masterMint,
           masterMetadata,
           masterEdition,
           updateAuthority,
           updateAuthorityToken: authorityToken,
-          collectionAuthorityRecord,
           delegateAuthority,
+          collectionAuthorityRecord,
         }),
       )
 
+    console.log('Loaded Update Authority:', keyPair.publicKey.toString())
+    console.log('Expected SERVER_AUTHORITY: EiLANmnffXVXczyimnGEKSZpzwQ4TyuQXVAviqBji8TF')
+    console.log('Are they equal?', keyPair.publicKey.toString() === 'EiLANmnffXVXczyimnGEKSZpzwQ4TyuQXVAviqBji8TF')
+
     try {
+      umi.use(keypairIdentity(updateAuthority))
       await tx.sendAndConfirm(umi)
     } catch (error) {
       console.error('Error during initialization:', error)
@@ -419,6 +445,7 @@ describe('mintPnft Instruction', () => {
       collectionAuthorityRecord,
       tokenAccount,
     })
+    umi.use(keypairIdentity(payer))
 
     // Set the desired compute unit limit
     const computeUnitLimit = 400_000 // Adjust this value based on your transaction's requirements

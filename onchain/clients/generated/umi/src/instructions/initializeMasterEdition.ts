@@ -38,7 +38,7 @@ export type InitializeMasterEditionInstructionAccounts = {
   updateAuthority: Signer;
   updateAuthorityToken: PublicKey | Pda;
   collectionAuthorityRecord: PublicKey | Pda;
-  delegateAuthority: PublicKey | Pda;
+  delegateAuthority?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
   tokenProgram?: PublicKey | Pda;
   associatedTokenProgram?: PublicKey | Pda;
@@ -176,6 +176,22 @@ export function initializeMasterEdition(
         expectPublicKey(resolvedAccounts.masterMint.value)
       ),
     ]);
+  }
+  if (!resolvedAccounts.delegateAuthority.value) {
+    resolvedAccounts.delegateAuthority.value = context.eddsa.findPda(
+      programId,
+      [
+        bytes().serialize(
+          new Uint8Array([
+            99, 111, 108, 108, 101, 99, 116, 105, 111, 110, 95, 100, 101, 108,
+            101, 103, 97, 116, 101,
+          ])
+        ),
+        publicKeySerializer().serialize(
+          expectPublicKey(resolvedAccounts.masterMint.value)
+        ),
+      ]
+    );
   }
   if (!resolvedAccounts.systemProgram.value) {
     resolvedAccounts.systemProgram.value = context.programs.getPublicKey(

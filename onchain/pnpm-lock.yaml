@@ -50,6 +50,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.55.2
         version: 5.55.2(react@18.3.1)
+      b58:
+        specifier: ^4.0.3
+        version: 4.0.3
       bs58:
         specifier: ^4.0.1
         version: 4.0.1
@@ -2207,6 +2210,9 @@ packages:
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
+
+  b58@4.0.3:
+    resolution: {integrity: sha512-VDtdiomm0ywbL8YzgevOZ9pcx6LuOZ3d9qYTPDcYUPf7dRYNA8wvK6epYy0FKMWIM5uaDwd3kWt1x+1S9scB1Q==}
 
   babel-core@7.0.0-bridge.0:
     resolution: {integrity: sha512-poPX9mZH/5CSanm50Q+1toVci6pv5KSRv/5TWCwtzQS5XEwn40BcCrgIeMFWP9CKKIniKXNxoIOnOq4VVlGXhg==}
@@ -7690,6 +7696,10 @@ snapshots:
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.0.0
+
+  b58@4.0.3:
+    dependencies:
+      base-x: 3.0.10
 
   babel-core@7.0.0-bridge.0(@babel/core@7.25.2):
     dependencies:

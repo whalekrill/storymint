@@ -186,7 +186,7 @@ export type InitializeMasterEditionAsyncInput<
   updateAuthority: TransactionSigner<TAccountUpdateAuthority>;
   updateAuthorityToken: Address<TAccountUpdateAuthorityToken>;
   collectionAuthorityRecord: Address<TAccountCollectionAuthorityRecord>;
-  delegateAuthority: Address<TAccountDelegateAuthority>;
+  delegateAuthority?: Address<TAccountDelegateAuthority>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -304,6 +304,20 @@ export async function getInitializeMasterEditionInstructionAsync<
       programAddress,
       seeds: [
         getBytesEncoder().encode(new Uint8Array([109, 97, 115, 116, 101, 114])),
+        getAddressEncoder().encode(expectAddress(accounts.masterMint.value)),
+      ],
+    });
+  }
+  if (!accounts.delegateAuthority.value) {
+    accounts.delegateAuthority.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            99, 111, 108, 108, 101, 99, 116, 105, 111, 110, 95, 100, 101, 108,
+            101, 103, 97, 116, 101,
+          ])
+        ),
         getAddressEncoder().encode(expectAddress(accounts.masterMint.value)),
       ],
     });
