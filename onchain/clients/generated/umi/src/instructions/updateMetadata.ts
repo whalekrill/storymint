@@ -41,6 +41,7 @@ export type UpdateMetadataInstructionAccounts = {
   mint: PublicKey | Pda;
   tokenProgram?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
+  tokenMetadataProgram?: PublicKey | Pda;
 };
 
 // Data.
@@ -129,6 +130,11 @@ export function updateMetadata(
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
+    tokenMetadataProgram: {
+      index: 7,
+      isWritable: false as boolean,
+      value: input.tokenMetadataProgram ?? null,
+    },
   } satisfies ResolvedAccountsWithIndices;
 
   // Arguments.
@@ -171,6 +177,13 @@ export function updateMetadata(
       '11111111111111111111111111111111'
     );
     resolvedAccounts.systemProgram.isWritable = false;
+  }
+  if (!resolvedAccounts.tokenMetadataProgram.value) {
+    resolvedAccounts.tokenMetadataProgram.value = context.programs.getPublicKey(
+      'tokenMetadataProgram',
+      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+    );
+    resolvedAccounts.tokenMetadataProgram.isWritable = false;
   }
 
   // Accounts in order.

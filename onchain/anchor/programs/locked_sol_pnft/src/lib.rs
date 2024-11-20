@@ -243,6 +243,9 @@ pub struct UpdateMetadata<'info> {
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    /// CHECK: Token Metadata Program
+    #[account(address = METADATA_PROGRAM_ID)]
+    pub token_metadata_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -517,23 +520,12 @@ pub mod locked_sol_pnft {
         )?;
 
         // Setup collection authority delegate
-        // Derive the delegate authority PDA
         let (delegate_authority, _) = Pubkey::find_program_address(
             &[
                 b"collection_delegate",
                 ctx.accounts.master_mint.key().as_ref(),
             ],
             ctx.program_id,
-        );
-        msg!("Derived delegate authority: {}", delegate_authority);
-
-        msg!(
-            "Collection metadata owner: {}",
-            ctx.accounts.master_metadata.owner
-        );
-        msg!(
-            "Collection authority record owner: {}",
-            ctx.accounts.collection_authority_record.owner
         );
 
         // Use Metaplex's approve_collection_authority function
@@ -560,17 +552,6 @@ pub mod locked_sol_pnft {
             ],
         )?;
 
-        msg!("State after approve_collection_authority:");
-        msg!(
-            "Collection authority record: {}",
-            ctx.accounts.collection_authority_record.key()
-        );
-        msg!(
-            "Collection metadata: {}",
-            ctx.accounts.master_metadata.key()
-        );
-        msg!("Delegate authority: {}", delegate_authority);
-
         master_state.collection_delegate = delegate_authority;
         master_state.collection_authority_record = ctx.accounts.collection_authority_record.key();
 
@@ -578,38 +559,12 @@ pub mod locked_sol_pnft {
     }
 
     pub fn mint_pnft(ctx: Context<MintPNFT>) -> Result<()> {
-        msg!("Starting mint_pnft instruction");
-        msg!("Payer: {}", ctx.accounts.payer.key());
-        msg!("Vault: {}", ctx.accounts.vault.key());
-        msg!("Master State: {}", ctx.accounts.master_state.key());
-        msg!(
-            "Collection Metadata: {}",
-            ctx.accounts.collection_metadata.key()
-        );
-        msg!(
-            "Collection Master Edition: {}",
-            ctx.accounts.collection_master_edition.key()
-        );
-        msg!("Metadata: {}", ctx.accounts.metadata.key());
-        msg!("Master Edition: {}", ctx.accounts.master_edition.key());
-        msg!("Mint: {}", ctx.accounts.mint.key());
-        msg!("Mint Authority: {}", ctx.accounts.mint_authority.key());
-        msg!("Token Account: {}", ctx.accounts.token_account.key());
-        msg!("Token Program: {}", ctx.accounts.token_program.key());
-        msg!(
-            "Associated Token Program: {}",
-            ctx.accounts.associated_token_program.key()
-        );
-        msg!("System Program: {}", ctx.accounts.system_program.key());
-        msg!("Rent: {}", ctx.accounts.rent.key());
-        msg!(
-            "Token Metadata Program: {}",
-            ctx.accounts.token_metadata_program.key()
-        );
+        msg!("Starting mint_pnft");
 
         let rent_costs = utils::calculate_rent(&ctx.accounts.rent, true);
         let total_required = rent_costs.vault + rent_costs.mint + rent_costs.metadata;
 
+        msg!("Transferring {} lamports for rent", total_required);
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
@@ -621,6 +576,7 @@ pub mod locked_sol_pnft {
             total_required,
         )?;
 
+        msg!("Setting vault mint to: {}", ctx.accounts.mint.key());
         ctx.accounts.vault.mint = ctx.accounts.mint.key();
 
         let mint_key = ctx.accounts.mint.key();
@@ -644,16 +600,6 @@ pub mod locked_sol_pnft {
             &[&mint_authority_seeds],
         )?;
 
-        msg!(
-            "Collection metadata owner: {}",
-            ctx.accounts.collection_metadata.owner
-        );
-        msg!(
-            "Collection authority record owner: {}",
-            ctx.accounts.collection_authority_record.owner
-        );
-        msg!("Metadata account owner: {}", ctx.accounts.metadata.owner);
-
         // Verify collection
         verify_collection(&ctx)?;
 
@@ -664,6 +610,10 @@ pub mod locked_sol_pnft {
             .checked_add(1)
             .ok_or(CustomError::Overflow)?;
 
+        msg!(
+            "Mint complete, vault initialized with mint: {}",
+            ctx.accounts.vault.mint
+        );
         Ok(())
     }
 
@@ -880,13 +830,6 @@ fn verify_collection<'info>(ctx: &Context<'_, '_, '_, 'info, MintPNFT>) -> Resul
         master_mint_key.as_ref(),
         &[ctx.bumps.delegate_authority],
     ];
-
-    msg!(
-        "Verifying collection with delegate authority: {}",
-        ctx.accounts.delegate_authority.key()
-    );
-    msg!("Using delegate bump: {}", ctx.bumps.delegate_authority);
-
     let verify_collection_ix = VerifyCollectionBuilder::new()
         .metadata(ctx.accounts.metadata.key())
         .collection_authority(ctx.accounts.delegate_authority.key())

@@ -31,6 +31,9 @@ pub struct UpdateMetadata {
           
               
           pub system_program: solana_program::pubkey::Pubkey,
+          
+              
+          pub token_metadata_program: solana_program::pubkey::Pubkey,
       }
 
 impl UpdateMetadata {
@@ -39,7 +42,7 @@ impl UpdateMetadata {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, args: UpdateMetadataInstructionArgs, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.server_authority,
             true
@@ -66,6 +69,10 @@ impl UpdateMetadata {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.token_metadata_program,
             false
           ));
                       accounts.extend_from_slice(remaining_accounts);
@@ -119,6 +126,7 @@ pub struct UpdateMetadataInstructionArgs {
           ///   4. `[]` mint
                 ///   5. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
                 ///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   7. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
 #[derive(Clone, Debug, Default)]
 pub struct UpdateMetadataBuilder {
             server_authority: Option<solana_program::pubkey::Pubkey>,
@@ -128,6 +136,7 @@ pub struct UpdateMetadataBuilder {
                 mint: Option<solana_program::pubkey::Pubkey>,
                 token_program: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
+                token_metadata_program: Option<solana_program::pubkey::Pubkey>,
                         new_uri: Option<String>,
                 new_name: Option<String>,
         __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -174,6 +183,12 @@ impl UpdateMetadataBuilder {
                         self.system_program = Some(system_program);
                     self
     }
+            /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
+#[inline(always)]
+    pub fn token_metadata_program(&mut self, token_metadata_program: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.token_metadata_program = Some(token_metadata_program);
+                    self
+    }
                     #[inline(always)]
       pub fn new_uri(&mut self, new_uri: String) -> &mut Self {
         self.new_uri = Some(new_uri);
@@ -207,6 +222,7 @@ impl UpdateMetadataBuilder {
                                         mint: self.mint.expect("mint is not set"),
                                         token_program: self.token_program.unwrap_or(solana_program::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
+                                        token_metadata_program: self.token_metadata_program.unwrap_or(solana_program::pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
                       };
           let args = UpdateMetadataInstructionArgs {
                                                               new_uri: self.new_uri.clone().expect("new_uri is not set"),
@@ -240,6 +256,9 @@ impl UpdateMetadataBuilder {
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
             }
 
 /// `update_metadata` CPI instruction.
@@ -267,6 +286,9 @@ pub struct UpdateMetadataCpi<'a, 'b> {
           
               
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
+          pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
             /// The arguments for the instruction.
     pub __args: UpdateMetadataInstructionArgs,
   }
@@ -286,6 +308,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
               mint: accounts.mint,
               token_program: accounts.token_program,
               system_program: accounts.system_program,
+              token_metadata_program: accounts.token_metadata_program,
                     __args: args,
           }
   }
@@ -308,7 +331,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.server_authority.key,
             true
@@ -337,6 +360,10 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
             *self.system_program.key,
             false
           ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.token_metadata_program.key,
+            false
+          ));
                       remaining_accounts.iter().for_each(|remaining_account| {
       accounts.push(solana_program::instruction::AccountMeta {
           pubkey: *remaining_account.0.key,
@@ -353,7 +380,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.server_authority.clone());
                         account_infos.push(self.vault.clone());
@@ -362,6 +389,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
                         account_infos.push(self.mint.clone());
                         account_infos.push(self.token_program.clone());
                         account_infos.push(self.system_program.clone());
+                        account_infos.push(self.token_metadata_program.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
     if signers_seeds.is_empty() {
@@ -383,6 +411,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
           ///   4. `[]` mint
           ///   5. `[]` token_program
           ///   6. `[]` system_program
+          ///   7. `[]` token_metadata_program
 #[derive(Clone, Debug)]
 pub struct UpdateMetadataCpiBuilder<'a, 'b> {
   instruction: Box<UpdateMetadataCpiBuilderInstruction<'a, 'b>>,
@@ -399,6 +428,7 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
               mint: None,
               token_program: None,
               system_program: None,
+              token_metadata_program: None,
                                             new_uri: None,
                                 new_name: None,
                     __remaining_accounts: Vec::new(),
@@ -438,6 +468,11 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn system_program(&mut self, system_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.system_program = Some(system_program);
+                    self
+    }
+      #[inline(always)]
+    pub fn token_metadata_program(&mut self, token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.token_metadata_program = Some(token_metadata_program);
                     self
     }
                     #[inline(always)]
@@ -493,6 +528,8 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
           token_program: self.instruction.token_program.expect("token_program is not set"),
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
+                  
+          token_metadata_program: self.instruction.token_metadata_program.expect("token_metadata_program is not set"),
                           __args: args,
             };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
@@ -509,6 +546,7 @@ struct UpdateMetadataCpiBuilderInstruction<'a, 'b> {
                 mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                token_metadata_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                         new_uri: Option<String>,
                 new_name: Option<String>,
         /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

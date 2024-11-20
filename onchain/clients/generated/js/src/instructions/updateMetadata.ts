@@ -72,6 +72,9 @@ export type UpdateMetadataInstruction<
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
+  TAccountTokenMetadataProgram extends
+    | string
+    | IAccountMeta<string> = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -99,6 +102,9 @@ export type UpdateMetadataInstruction<
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
+      TAccountTokenMetadataProgram extends string
+        ? ReadonlyAccount<TAccountTokenMetadataProgram>
+        : TAccountTokenMetadataProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -159,6 +165,7 @@ export type UpdateMetadataAsyncInput<
   TAccountMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
+  TAccountTokenMetadataProgram extends string = string,
 > = {
   serverAuthority: TransactionSigner<TAccountServerAuthority>;
   vault?: Address<TAccountVault>;
@@ -167,6 +174,7 @@ export type UpdateMetadataAsyncInput<
   mint: Address<TAccountMint>;
   tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
+  tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
   newUri: UpdateMetadataInstructionDataArgs['newUri'];
   newName: UpdateMetadataInstructionDataArgs['newName'];
 };
@@ -179,6 +187,7 @@ export async function getUpdateMetadataInstructionAsync<
   TAccountMint extends string,
   TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
+  TAccountTokenMetadataProgram extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
   input: UpdateMetadataAsyncInput<
@@ -188,7 +197,8 @@ export async function getUpdateMetadataInstructionAsync<
     TAccountMetadata,
     TAccountMint,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountTokenMetadataProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
@@ -200,7 +210,8 @@ export async function getUpdateMetadataInstructionAsync<
     TAccountMetadata,
     TAccountMint,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountTokenMetadataProgram
   >
 > {
   // Program address.
@@ -216,6 +227,10 @@ export async function getUpdateMetadataInstructionAsync<
     mint: { value: input.mint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    tokenMetadataProgram: {
+      value: input.tokenMetadataProgram ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -261,6 +276,10 @@ export async function getUpdateMetadataInstructionAsync<
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
+  if (!accounts.tokenMetadataProgram.value) {
+    accounts.tokenMetadataProgram.value =
+      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' as Address<'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'>;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
@@ -272,6 +291,7 @@ export async function getUpdateMetadataInstructionAsync<
       getAccountMeta(accounts.mint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
+      getAccountMeta(accounts.tokenMetadataProgram),
     ],
     programAddress,
     data: getUpdateMetadataInstructionDataEncoder().encode(
@@ -285,7 +305,8 @@ export async function getUpdateMetadataInstructionAsync<
     TAccountMetadata,
     TAccountMint,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountTokenMetadataProgram
   >;
 
   return instruction;
@@ -299,6 +320,7 @@ export type UpdateMetadataInput<
   TAccountMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
+  TAccountTokenMetadataProgram extends string = string,
 > = {
   serverAuthority: TransactionSigner<TAccountServerAuthority>;
   vault: Address<TAccountVault>;
@@ -307,6 +329,7 @@ export type UpdateMetadataInput<
   mint: Address<TAccountMint>;
   tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
+  tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
   newUri: UpdateMetadataInstructionDataArgs['newUri'];
   newName: UpdateMetadataInstructionDataArgs['newName'];
 };
@@ -319,6 +342,7 @@ export function getUpdateMetadataInstruction<
   TAccountMint extends string,
   TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
+  TAccountTokenMetadataProgram extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
   input: UpdateMetadataInput<
@@ -328,7 +352,8 @@ export function getUpdateMetadataInstruction<
     TAccountMetadata,
     TAccountMint,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountTokenMetadataProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): UpdateMetadataInstruction<
@@ -339,7 +364,8 @@ export function getUpdateMetadataInstruction<
   TAccountMetadata,
   TAccountMint,
   TAccountTokenProgram,
-  TAccountSystemProgram
+  TAccountSystemProgram,
+  TAccountTokenMetadataProgram
 > {
   // Program address.
   const programAddress =
@@ -354,6 +380,10 @@ export function getUpdateMetadataInstruction<
     mint: { value: input.mint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    tokenMetadataProgram: {
+      value: input.tokenMetadataProgram ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -372,6 +402,10 @@ export function getUpdateMetadataInstruction<
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
+  if (!accounts.tokenMetadataProgram.value) {
+    accounts.tokenMetadataProgram.value =
+      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' as Address<'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'>;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
@@ -383,6 +417,7 @@ export function getUpdateMetadataInstruction<
       getAccountMeta(accounts.mint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
+      getAccountMeta(accounts.tokenMetadataProgram),
     ],
     programAddress,
     data: getUpdateMetadataInstructionDataEncoder().encode(
@@ -396,7 +431,8 @@ export function getUpdateMetadataInstruction<
     TAccountMetadata,
     TAccountMint,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountTokenMetadataProgram
   >;
 
   return instruction;
@@ -415,6 +451,7 @@ export type ParsedUpdateMetadataInstruction<
     mint: TAccountMetas[4];
     tokenProgram: TAccountMetas[5];
     systemProgram: TAccountMetas[6];
+    tokenMetadataProgram: TAccountMetas[7];
   };
   data: UpdateMetadataInstructionData;
 };
@@ -427,7 +464,7 @@ export function parseUpdateMetadataInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedUpdateMetadataInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -447,6 +484,7 @@ export function parseUpdateMetadataInstruction<
       mint: getNextAccount(),
       tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
+      tokenMetadataProgram: getNextAccount(),
     },
     data: getUpdateMetadataInstructionDataDecoder().decode(instruction.data),
   };
