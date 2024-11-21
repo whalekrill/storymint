@@ -38,8 +38,8 @@ export type UpdateMetadataInstructionAccounts = {
   vault?: PublicKey | Pda;
   masterState: PublicKey | Pda;
   metadata?: PublicKey | Pda;
+  mintAuthority?: PublicKey | Pda;
   mint: PublicKey | Pda;
-  tokenProgram?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
   tokenMetadataProgram?: PublicKey | Pda;
 };
@@ -119,12 +119,12 @@ export function updateMetadata(
       isWritable: true as boolean,
       value: input.metadata ?? null,
     },
-    mint: { index: 4, isWritable: false as boolean, value: input.mint ?? null },
-    tokenProgram: {
-      index: 5,
+    mintAuthority: {
+      index: 4,
       isWritable: false as boolean,
-      value: input.tokenProgram ?? null,
+      value: input.mintAuthority ?? null,
     },
+    mint: { index: 5, isWritable: false as boolean, value: input.mint ?? null },
     systemProgram: {
       index: 6,
       isWritable: false as boolean,
@@ -164,12 +164,17 @@ export function updateMetadata(
       ),
     ]);
   }
-  if (!resolvedAccounts.tokenProgram.value) {
-    resolvedAccounts.tokenProgram.value = context.programs.getPublicKey(
-      'tokenProgram',
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
-    );
-    resolvedAccounts.tokenProgram.isWritable = false;
+  if (!resolvedAccounts.mintAuthority.value) {
+    resolvedAccounts.mintAuthority.value = context.eddsa.findPda(programId, [
+      bytes().serialize(
+        new Uint8Array([
+          109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+        ])
+      ),
+      publicKeySerializer().serialize(
+        expectPublicKey(resolvedAccounts.mint.value)
+      ),
+    ]);
   }
   if (!resolvedAccounts.systemProgram.value) {
     resolvedAccounts.systemProgram.value = context.programs.getPublicKey(

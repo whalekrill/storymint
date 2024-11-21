@@ -24,10 +24,10 @@ pub struct UpdateMetadata {
           pub metadata: solana_program::pubkey::Pubkey,
           
               
-          pub mint: solana_program::pubkey::Pubkey,
+          pub mint_authority: solana_program::pubkey::Pubkey,
           
               
-          pub token_program: solana_program::pubkey::Pubkey,
+          pub mint: solana_program::pubkey::Pubkey,
           
               
           pub system_program: solana_program::pubkey::Pubkey,
@@ -60,11 +60,11 @@ impl UpdateMetadata {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.mint,
+            self.mint_authority,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.token_program,
+            self.mint,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -123,8 +123,8 @@ pub struct UpdateMetadataInstructionArgs {
                 ///   1. `[writable]` vault
                 ///   2. `[writable]` master_state
                 ///   3. `[writable]` metadata
-          ///   4. `[]` mint
-                ///   5. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+          ///   4. `[]` mint_authority
+          ///   5. `[]` mint
                 ///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
                 ///   7. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
 #[derive(Clone, Debug, Default)]
@@ -133,8 +133,8 @@ pub struct UpdateMetadataBuilder {
                 vault: Option<solana_program::pubkey::Pubkey>,
                 master_state: Option<solana_program::pubkey::Pubkey>,
                 metadata: Option<solana_program::pubkey::Pubkey>,
+                mint_authority: Option<solana_program::pubkey::Pubkey>,
                 mint: Option<solana_program::pubkey::Pubkey>,
-                token_program: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 token_metadata_program: Option<solana_program::pubkey::Pubkey>,
                         new_uri: Option<String>,
@@ -167,14 +167,13 @@ impl UpdateMetadataBuilder {
                     self
     }
             #[inline(always)]
-    pub fn mint(&mut self, mint: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.mint = Some(mint);
+    pub fn mint_authority(&mut self, mint_authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.mint_authority = Some(mint_authority);
                     self
     }
-            /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-#[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.token_program = Some(token_program);
+            #[inline(always)]
+    pub fn mint(&mut self, mint: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.mint = Some(mint);
                     self
     }
             /// `[optional account, default to '11111111111111111111111111111111']`
@@ -219,8 +218,8 @@ impl UpdateMetadataBuilder {
                                         vault: self.vault.expect("vault is not set"),
                                         master_state: self.master_state.expect("master_state is not set"),
                                         metadata: self.metadata.expect("metadata is not set"),
+                                        mint_authority: self.mint_authority.expect("mint_authority is not set"),
                                         mint: self.mint.expect("mint is not set"),
-                                        token_program: self.token_program.unwrap_or(solana_program::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         token_metadata_program: self.token_metadata_program.unwrap_or(solana_program::pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
                       };
@@ -249,10 +248,10 @@ impl UpdateMetadataBuilder {
               pub metadata: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub mint: &'b solana_program::account_info::AccountInfo<'a>,
+              pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
+              pub mint: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -279,10 +278,10 @@ pub struct UpdateMetadataCpi<'a, 'b> {
           pub metadata: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub mint: &'b solana_program::account_info::AccountInfo<'a>,
+          pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
+          pub mint: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -305,8 +304,8 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
               vault: accounts.vault,
               master_state: accounts.master_state,
               metadata: accounts.metadata,
+              mint_authority: accounts.mint_authority,
               mint: accounts.mint,
-              token_program: accounts.token_program,
               system_program: accounts.system_program,
               token_metadata_program: accounts.token_metadata_program,
                     __args: args,
@@ -349,11 +348,11 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.mint.key,
+            *self.mint_authority.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.token_program.key,
+            *self.mint.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -386,8 +385,8 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
                         account_infos.push(self.vault.clone());
                         account_infos.push(self.master_state.clone());
                         account_infos.push(self.metadata.clone());
+                        account_infos.push(self.mint_authority.clone());
                         account_infos.push(self.mint.clone());
-                        account_infos.push(self.token_program.clone());
                         account_infos.push(self.system_program.clone());
                         account_infos.push(self.token_metadata_program.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -408,8 +407,8 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
                 ///   1. `[writable]` vault
                 ///   2. `[writable]` master_state
                 ///   3. `[writable]` metadata
-          ///   4. `[]` mint
-          ///   5. `[]` token_program
+          ///   4. `[]` mint_authority
+          ///   5. `[]` mint
           ///   6. `[]` system_program
           ///   7. `[]` token_metadata_program
 #[derive(Clone, Debug)]
@@ -425,8 +424,8 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
               vault: None,
               master_state: None,
               metadata: None,
+              mint_authority: None,
               mint: None,
-              token_program: None,
               system_program: None,
               token_metadata_program: None,
                                             new_uri: None,
@@ -456,13 +455,13 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
-    pub fn mint(&mut self, mint: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.mint = Some(mint);
+    pub fn mint_authority(&mut self, mint_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.mint_authority = Some(mint_authority);
                     self
     }
       #[inline(always)]
-    pub fn token_program(&mut self, token_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.token_program = Some(token_program);
+    pub fn mint(&mut self, mint: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.mint = Some(mint);
                     self
     }
       #[inline(always)]
@@ -523,9 +522,9 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
                   
           metadata: self.instruction.metadata.expect("metadata is not set"),
                   
-          mint: self.instruction.mint.expect("mint is not set"),
+          mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
                   
-          token_program: self.instruction.token_program.expect("token_program is not set"),
+          mint: self.instruction.mint.expect("mint is not set"),
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
@@ -543,8 +542,8 @@ struct UpdateMetadataCpiBuilderInstruction<'a, 'b> {
                 vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_metadata_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                         new_uri: Option<String>,

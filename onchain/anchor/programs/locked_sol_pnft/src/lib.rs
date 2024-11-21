@@ -238,10 +238,16 @@ pub struct UpdateMetadata<'info> {
     )]
     pub metadata: UncheckedAccount<'info>,
 
+    /// CHECK: Mint authority
+    #[account(
+        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
+        bump
+    )]
+    pub mint_authority: AccountInfo<'info>,
+
     /// CHECK: Mint account verified through constraints
     pub mint: AccountInfo<'info>,
 
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     /// CHECK: Token Metadata Program
     #[account(address = METADATA_PROGRAM_ID)]
@@ -622,9 +628,17 @@ pub mod locked_sol_pnft {
         new_uri: String,
         new_name: Option<String>,
     ) -> Result<()> {
+        // Get PDA signer seeds
+        let mint_key = ctx.accounts.mint.key();
+        let mint_auth_seeds = &[
+            b"mint_authority",
+            mint_key.as_ref(),
+            &[ctx.bumps.mint_authority],
+        ];
+
         let update_metadata_ix = mpl_token_metadata::instructions::UpdateMetadataAccountV2 {
             metadata: ctx.accounts.metadata.key(),
-            update_authority: ctx.accounts.server_authority.key(),
+            update_authority: ctx.accounts.mint_authority.key(),
         }
         .instruction(
             mpl_token_metadata::instructions::UpdateMetadataAccountV2InstructionArgs {
@@ -640,7 +654,7 @@ pub mod locked_sol_pnft {
                     }),
                     uses: None,
                 }),
-                new_update_authority: Some(ctx.accounts.server_authority.key()),
+                new_update_authority: None,
                 primary_sale_happened: None,
                 is_mutable: Some(true),
             },
@@ -650,9 +664,10 @@ pub mod locked_sol_pnft {
             &update_metadata_ix,
             &[
                 ctx.accounts.metadata.to_account_info(),
-                ctx.accounts.server_authority.to_account_info(),
+                ctx.accounts.mint_authority.to_account_info(),
+                ctx.accounts.token_metadata_program.to_account_info(),
             ],
-            &[],
+            &[mint_auth_seeds],
         )
         .map_err(Into::into)
     }

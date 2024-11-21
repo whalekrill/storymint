@@ -289,6 +289,17 @@ describe('mintPnft Instruction', () => {
       publicKeySerializer().serialize(mint.publicKey),
       Buffer.from('edition'),
     ])
+    ;[delegateAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('collection_delegate'),
+      publicKeySerializer().serialize(masterMint),
+    ])
+    ;[collectionAuthorityRecord] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(masterMint),
+      Buffer.from('collection_authority'),
+      publicKeySerializer().serialize(delegateAuthority),
+    ])
     const associatedTokenAccount = await getAssociatedTokenAddress(
       new web3PublicKey(masterMint.toString()),
       new web3PublicKey(updateAuthority.publicKey.toString()),
@@ -315,6 +326,20 @@ describe('mintPnft Instruction', () => {
         collectionAuthorityRecord,
       }).sendAndConfirm(umi)
     }
+
+    await mintPnft(umi, {
+      payer,
+      masterState,
+      masterMint,
+      collectionMetadata,
+      collectionMasterEdition,
+      metadata,
+      masterEdition: mintMasterEdition,
+      mint,
+      delegateAuthority,
+      collectionAuthorityRecord,
+      tokenAccount,
+    }).sendAndConfirm(umi)
   })
 
   it('should successfully mint a pNFT and verify collection', async () => {
@@ -380,6 +405,8 @@ describe('updateMetadata Instruction', () => {
   let collectionMasterEdition: PublicKey
   let mintMasterEdition: PublicKey
   let tokenAccount: PublicKey
+  let delegateAuthority: PublicKey
+  let collectionAuthorityRecord: PublicKey
 
   beforeEach(async () => {
     umi = createUmi('http://127.0.0.1:8899', { commitment: 'processed' })
@@ -479,18 +506,6 @@ describe('updateMetadata Instruction', () => {
   })
 
   it('should update metadata URI and name', async () => {
-    const [delegateAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
-      Buffer.from('collection_delegate'),
-      publicKeySerializer().serialize(masterMint),
-    ])
-    const [collectionAuthorityRecord] = umi.eddsa.findPda(metadataProgramId, [
-      Buffer.from('metadata'),
-      publicKeySerializer().serialize(metadataProgramId),
-      publicKeySerializer().serialize(masterMint),
-      Buffer.from('collection_authority'),
-      publicKeySerializer().serialize(delegateAuthority),
-    ])
-
     await mintPnft(umi, {
       payer,
       masterState,
@@ -508,26 +523,15 @@ describe('updateMetadata Instruction', () => {
     const newUri = 'https://api.locked-sol.com/metadata/updated.json'
     const newName = 'Updated LSOL NFT'
 
-    const metadataProgramAccount = await umi.rpc.getAccount(publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'))
-    console.log('Metadata program account exists:', metadataProgramAccount.exists)
-
     const [vault] = umi.eddsa.findPda(publicKey(program.programId), [
       Buffer.from('vault'),
       publicKeySerializer().serialize(mint.publicKey),
     ])
 
-    // Add these checks
-    const vaultAccount = await umi.rpc.getAccount(vault)
-    console.log('Vault exists:', vaultAccount.exists)
-    if (vaultAccount.exists) {
-      console.log('Vault data:', vaultAccount.data)
-    }
-
-    console.log('Mint public key:', mint.publicKey.toString())
-
-    const currentMetadata = await fetchMetadata(umi, metadata)
-    console.log('Current metadata update authority:', currentMetadata.updateAuthority.toString())
-    console.log('Server authority being used:', updateAuthority.publicKey.toString())
+    const [mintAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('mint_authority'),
+      publicKeySerializer().serialize(mint.publicKey),
+    ])
 
     await transactionBuilder()
       .add(setComputeUnitLimit(umi, { units: 400_000 }))
@@ -538,6 +542,7 @@ describe('updateMetadata Instruction', () => {
           vault,
           masterState,
           metadata,
+          mintAuthority,
           mint: mint.publicKey,
           newUri,
           newName: some(newName),
@@ -548,7 +553,7 @@ describe('updateMetadata Instruction', () => {
     const updatedMetadata = await fetchMetadata(umi, metadata)
     expect(updatedMetadata.uri).toBe(newUri)
     expect(updatedMetadata.name).toBe(newName)
-    expect(updatedMetadata.updateAuthority.toString()).toBe(updateAuthority.publicKey.toString())
+    expect(updatedMetadata.updateAuthority.toString()).toBe(mintAuthority.toString())
 
     const collection = unwrapOption(updatedMetadata.collection)
     expect(collection).toBeTruthy()
@@ -566,10 +571,16 @@ describe('updateMetadata Instruction', () => {
     const unauthorizedAuthority = generateSigner(umi)
     const newUri = 'https://api.locked-sol.com/metadata/updated.json'
 
+    const [mintAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('mint_authority'),
+      publicKeySerializer().serialize(mint.publicKey),
+    ])
+
     try {
       await updateMetadata(umi, {
         serverAuthority: unauthorizedAuthority,
         masterState,
+        mintAuthority,
         mint: mint.publicKey,
         newUri,
         newName: none(),

@@ -65,10 +65,8 @@ export type UpdateMetadataInstruction<
   TAccountVault extends string | IAccountMeta<string> = string,
   TAccountMasterState extends string | IAccountMeta<string> = string,
   TAccountMetadata extends string | IAccountMeta<string> = string,
+  TAccountMintAuthority extends string | IAccountMeta<string> = string,
   TAccountMint extends string | IAccountMeta<string> = string,
-  TAccountTokenProgram extends
-    | string
-    | IAccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -93,12 +91,12 @@ export type UpdateMetadataInstruction<
       TAccountMetadata extends string
         ? WritableAccount<TAccountMetadata>
         : TAccountMetadata,
+      TAccountMintAuthority extends string
+        ? ReadonlyAccount<TAccountMintAuthority>
+        : TAccountMintAuthority,
       TAccountMint extends string
         ? ReadonlyAccount<TAccountMint>
         : TAccountMint,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -162,8 +160,8 @@ export type UpdateMetadataAsyncInput<
   TAccountVault extends string = string,
   TAccountMasterState extends string = string,
   TAccountMetadata extends string = string,
+  TAccountMintAuthority extends string = string,
   TAccountMint extends string = string,
-  TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountTokenMetadataProgram extends string = string,
 > = {
@@ -171,8 +169,8 @@ export type UpdateMetadataAsyncInput<
   vault?: Address<TAccountVault>;
   masterState: Address<TAccountMasterState>;
   metadata?: Address<TAccountMetadata>;
+  mintAuthority?: Address<TAccountMintAuthority>;
   mint: Address<TAccountMint>;
-  tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
   newUri: UpdateMetadataInstructionDataArgs['newUri'];
@@ -184,8 +182,8 @@ export async function getUpdateMetadataInstructionAsync<
   TAccountVault extends string,
   TAccountMasterState extends string,
   TAccountMetadata extends string,
+  TAccountMintAuthority extends string,
   TAccountMint extends string,
-  TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
   TAccountTokenMetadataProgram extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
@@ -195,8 +193,8 @@ export async function getUpdateMetadataInstructionAsync<
     TAccountVault,
     TAccountMasterState,
     TAccountMetadata,
+    TAccountMintAuthority,
     TAccountMint,
-    TAccountTokenProgram,
     TAccountSystemProgram,
     TAccountTokenMetadataProgram
   >,
@@ -208,8 +206,8 @@ export async function getUpdateMetadataInstructionAsync<
     TAccountVault,
     TAccountMasterState,
     TAccountMetadata,
+    TAccountMintAuthority,
     TAccountMint,
-    TAccountTokenProgram,
     TAccountSystemProgram,
     TAccountTokenMetadataProgram
   >
@@ -224,8 +222,8 @@ export async function getUpdateMetadataInstructionAsync<
     vault: { value: input.vault ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
     metadata: { value: input.metadata ?? null, isWritable: true },
+    mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     mint: { value: input.mint ?? null, isWritable: false },
-    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     tokenMetadataProgram: {
       value: input.tokenMetadataProgram ?? null,
@@ -268,9 +266,18 @@ export async function getUpdateMetadataInstructionAsync<
       ],
     });
   }
-  if (!accounts.tokenProgram.value) {
-    accounts.tokenProgram.value =
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
+  if (!accounts.mintAuthority.value) {
+    accounts.mintAuthority.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+          ])
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
+      ],
+    });
   }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
@@ -288,8 +295,8 @@ export async function getUpdateMetadataInstructionAsync<
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.metadata),
+      getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.tokenMetadataProgram),
     ],
@@ -303,8 +310,8 @@ export async function getUpdateMetadataInstructionAsync<
     TAccountVault,
     TAccountMasterState,
     TAccountMetadata,
+    TAccountMintAuthority,
     TAccountMint,
-    TAccountTokenProgram,
     TAccountSystemProgram,
     TAccountTokenMetadataProgram
   >;
@@ -317,8 +324,8 @@ export type UpdateMetadataInput<
   TAccountVault extends string = string,
   TAccountMasterState extends string = string,
   TAccountMetadata extends string = string,
+  TAccountMintAuthority extends string = string,
   TAccountMint extends string = string,
-  TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountTokenMetadataProgram extends string = string,
 > = {
@@ -326,8 +333,8 @@ export type UpdateMetadataInput<
   vault: Address<TAccountVault>;
   masterState: Address<TAccountMasterState>;
   metadata: Address<TAccountMetadata>;
+  mintAuthority: Address<TAccountMintAuthority>;
   mint: Address<TAccountMint>;
-  tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
   newUri: UpdateMetadataInstructionDataArgs['newUri'];
@@ -339,8 +346,8 @@ export function getUpdateMetadataInstruction<
   TAccountVault extends string,
   TAccountMasterState extends string,
   TAccountMetadata extends string,
+  TAccountMintAuthority extends string,
   TAccountMint extends string,
-  TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
   TAccountTokenMetadataProgram extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
@@ -350,8 +357,8 @@ export function getUpdateMetadataInstruction<
     TAccountVault,
     TAccountMasterState,
     TAccountMetadata,
+    TAccountMintAuthority,
     TAccountMint,
-    TAccountTokenProgram,
     TAccountSystemProgram,
     TAccountTokenMetadataProgram
   >,
@@ -362,8 +369,8 @@ export function getUpdateMetadataInstruction<
   TAccountVault,
   TAccountMasterState,
   TAccountMetadata,
+  TAccountMintAuthority,
   TAccountMint,
-  TAccountTokenProgram,
   TAccountSystemProgram,
   TAccountTokenMetadataProgram
 > {
@@ -377,8 +384,8 @@ export function getUpdateMetadataInstruction<
     vault: { value: input.vault ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
     metadata: { value: input.metadata ?? null, isWritable: true },
+    mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     mint: { value: input.mint ?? null, isWritable: false },
-    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     tokenMetadataProgram: {
       value: input.tokenMetadataProgram ?? null,
@@ -394,10 +401,6 @@ export function getUpdateMetadataInstruction<
   const args = { ...input };
 
   // Resolve default values.
-  if (!accounts.tokenProgram.value) {
-    accounts.tokenProgram.value =
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
-  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
@@ -414,8 +417,8 @@ export function getUpdateMetadataInstruction<
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.metadata),
+      getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.tokenMetadataProgram),
     ],
@@ -429,8 +432,8 @@ export function getUpdateMetadataInstruction<
     TAccountVault,
     TAccountMasterState,
     TAccountMetadata,
+    TAccountMintAuthority,
     TAccountMint,
-    TAccountTokenProgram,
     TAccountSystemProgram,
     TAccountTokenMetadataProgram
   >;
@@ -448,8 +451,8 @@ export type ParsedUpdateMetadataInstruction<
     vault: TAccountMetas[1];
     masterState: TAccountMetas[2];
     metadata: TAccountMetas[3];
-    mint: TAccountMetas[4];
-    tokenProgram: TAccountMetas[5];
+    mintAuthority: TAccountMetas[4];
+    mint: TAccountMetas[5];
     systemProgram: TAccountMetas[6];
     tokenMetadataProgram: TAccountMetas[7];
   };
@@ -481,8 +484,8 @@ export function parseUpdateMetadataInstruction<
       vault: getNextAccount(),
       masterState: getNextAccount(),
       metadata: getNextAccount(),
+      mintAuthority: getNextAccount(),
       mint: getNextAccount(),
-      tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
       tokenMetadataProgram: getNextAccount(),
     },
