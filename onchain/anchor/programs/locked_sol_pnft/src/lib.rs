@@ -1,21 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::{invoke, invoke_signed};
 use anchor_lang::system_program;
-use anchor_spl::{
-    associated_token::{self, AssociatedToken, Create},
-    token::{self, Token},
-};
-
-// MPL imports
-use mpl_token_metadata::{
-    accounts::Metadata,
-    instructions::{
-        BurnNft, CreateMasterEditionV3Builder, CreateMetadataAccountV3Builder,
-        VerifyCollectionBuilder,
-    },
-    types::{Collection, DataV2},
-    ID as METADATA_PROGRAM_ID,
-};
+use mpl_core::types::{DataState, PluginAuthorityPair};
 
 declare_id!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
 
@@ -35,7 +20,7 @@ const MAX_SUPPLY: u64 = 10_000;
 pub const METADATA_SIZE: usize = 679;
 
 #[derive(Accounts)]
-pub struct InitializeMasterEdition<'info> {
+pub struct InitializeCollection<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -43,29 +28,14 @@ pub struct InitializeMasterEdition<'info> {
         init,
         payer = payer,
         space = MasterState::SPACE,
-        seeds = ["master".as_bytes(), master_mint.key().as_ref()],
+        seeds = ["master".as_bytes(), collection.key().as_ref()],
         bump
     )]
     pub master_state: Account<'info, MasterState>,
 
-    /// CHECK: Mint account with explicit program check
-    #[account(
-        init,
-        payer = payer,
-        space = anchor_spl::token::Mint::LEN,
-        seeds = ["master_mint".as_bytes()],
-        bump,
-        owner = token_program.key()
-    )]
-    pub master_mint: AccountInfo<'info>,
-
-    /// CHECK: Metadata account with explicit program check
+    /// CHECK: Initialized by MPL Core
     #[account(mut)]
-    pub master_metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Master edition account with explicit program check
-    #[account(mut)]
-    pub master_edition: UncheckedAccount<'info>,
+    pub collection: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -74,39 +44,16 @@ pub struct InitializeMasterEdition<'info> {
     )]
     pub update_authority: Signer<'info>,
 
-    /// CHECK: Token account for the update authority
-    #[account(mut)]
-    pub update_authority_token: AccountInfo<'info>,
-
-    /// CHECK: Collection authority record PDA
-
-    #[account(mut)]
-    pub collection_authority_record: UncheckedAccount<'info>,
-
-    /// CHECK: Delegate authority from master state  
-    #[account(
-        mut,
-        seeds = ["collection_delegate".as_bytes(), master_mint.key().as_ref()],
-        bump,
-    )]
-    pub delegate_authority: UncheckedAccount<'info>,
-
     #[account(address = system_program::ID)]
     pub system_program: Program<'info, System>,
 
-    pub token_program: Program<'info, Token>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-
-    pub rent: Sysvar<'info, Rent>,
-
-    /// CHECK: Required by token metadata program
-    #[account(address = METADATA_PROGRAM_ID)]
-    pub token_metadata_program: AccountInfo<'info>,
+    /// CHECK: MPL Core program
+    #[account(address = mpl_core::ID)]
+    pub mpl_core: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
-pub struct MintPNFT<'info> {
+pub struct MintAsset<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -114,144 +61,93 @@ pub struct MintPNFT<'info> {
         init,
         payer = payer,
         space = TokenVault::SPACE,
-        seeds = ["vault".as_bytes(), mint.key().as_ref()],
+        seeds = ["vault".as_bytes(), asset.key().as_ref()],
         bump,
     )]
     pub vault: Account<'info, TokenVault>,
 
+    /// The new asset being created
+    #[account(mut)]
+    pub asset: Signer<'info>,
+
     #[account(
         mut,
-        seeds = ["master".as_bytes(), master_state.master_mint.as_ref()],
+        seeds = ["master".as_bytes(), collection.key().as_ref()],
         bump,
         constraint = master_state.total_minted < MAX_SUPPLY @ CustomError::MaxSupplyReached,
-        has_one = master_mint @ CustomError::InvalidCollection
+        has_one = collection @ CustomError::InvalidCollection
     )]
     pub master_state: Account<'info, MasterState>,
 
-    /// CHECK: Collection mint account required by Metaplex verify_collection
-    #[account(
-        constraint = master_mint.owner == &token::ID @ CustomError::InvalidProgramId
-    )]
-    pub master_mint: AccountInfo<'info>,
-
-    /// CHECK: Collection metadata with explicit program check
-    #[account(
-        mut,
-        owner = mpl_token_metadata::ID @ CustomError::InvalidProgramId
-    )]
-    pub collection_metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Collection master edition with explicit program check
-    #[account(
-        owner = mpl_token_metadata::ID @ CustomError::InvalidProgramId
-    )]
-    pub collection_master_edition: UncheckedAccount<'info>,
-
-    /// CHECK: Will be initialized as metadata
+    /// The collection this asset belongs to
+    /// CHECK: Checked in mpl-core
     #[account(mut)]
-    pub metadata: UncheckedAccount<'info>,
+    pub collection: AccountInfo<'info>,
 
-    /// CHECK: Edition marker account
-    #[account(mut)]
-    pub master_edition: UncheckedAccount<'info>,
+    /// The authority signing for creation (optional)
+    pub authority: Option<Signer<'info>>,
 
-    #[account(
-        init,
-        payer = payer,
-        space = utils::MINT_SPACE,
-        owner = token_program.key(),
-    )]
-    /// CHECK: Initialized as mint in instruction
-    pub mint: AccountInfo<'info>,
+    /// The owner of the new asset
+    /// CHECK: Checked in mpl-core
+    pub owner: Option<AccountInfo<'info>>,
 
-    /// CHECK: Mint authority PDA
-    #[account(
-        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
-        bump,
-    )]
-    pub mint_authority: UncheckedAccount<'info>,
+    /// The authority on the new asset
+    /// CHECK: Checked in mpl-core
+    pub update_authority: Option<AccountInfo<'info>>,
 
-    /// CHECK: Token account to be initialized
-    #[account(mut)]
-    pub token_account: AccountInfo<'info>,
-
-    /// CHECK: Collection authority record from master state
-    #[account(
-        mut,
-        address = master_state.collection_authority_record
-    )]
-    pub collection_authority_record: UncheckedAccount<'info>,
-
-    /// CHECK: Delegate authority from master state  
-    #[account(
-        mut,
-        seeds = ["collection_delegate".as_bytes(), master_mint.key().as_ref()],
-        bump,  
-    )]
-    pub delegate_authority: UncheckedAccount<'info>,
-
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 
-    /// CHECK: Required by token metadata program
-    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
-    pub token_metadata_program: UncheckedAccount<'info>,
+    /// CHECK: SPL Noop program
+    pub log_wrapper: Option<AccountInfo<'info>>,
+
+    /// CHECK: MPL Core program
+    #[account(address = mpl_core::ID)]
+    pub mpl_core: AccountInfo<'info>,
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize)]
+pub struct MintAssetArgs {
+    pub name: String,
+    pub uri: String,
+    pub plugins: Option<Vec<PluginAuthorityPair>>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateMetadata<'info> {
+    /// The asset to update
+    /// CHECK: Checked in mpl-core
+    #[account(mut)]
+    pub asset: AccountInfo<'info>,
+
+    /// The collection this asset belongs to (optional)
+    /// CHECK: Checked in mpl-core
+    #[account(mut)]
+    pub collection: Option<AccountInfo<'info>>,
+
     #[account(
         mut, 
         signer,
-        constraint = server_authority.key() == SERVER_AUTHORITY @ CustomError::UnauthorizedUpdate
+        constraint = authority.key() == SERVER_AUTHORITY @ CustomError::UnauthorizedUpdate
     )]
-    /// CHECK: Server authority against constant
-    pub server_authority: AccountInfo<'info>,
+    pub authority: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = ["vault".as_bytes(), mint.key().as_ref()],
-        bump,
-        has_one = mint,
-    )]
-    pub vault: Account<'info, TokenVault>,
-
-    #[account(
-        mut, 
-        seeds = ["master".as_bytes(), master_state.master_mint.as_ref()], 
-        bump
-    )]
-    pub master_state: Account<'info, MasterState>,
-
-    /// CHECK: Metadata account with explicit program check
-    #[account(
-        mut,
-        seeds = [
-            b"metadata",
-            METADATA_PROGRAM_ID.as_ref(),
-            mint.key().as_ref(),
-        ],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Mint authority
-    #[account(
-        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
-        bump
-    )]
-    pub mint_authority: AccountInfo<'info>,
-
-    /// CHECK: Mint account verified through constraints
-    pub mint: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-    /// CHECK: Token Metadata Program
-    #[account(address = METADATA_PROGRAM_ID)]
-    pub token_metadata_program: AccountInfo<'info>,
+
+    /// CHECK: SPL Noop program
+    pub log_wrapper: Option<AccountInfo<'info>>,
+
+    /// CHECK: MPL Core program
+    #[account(address = mpl_core::ID)]
+    pub mpl_core: AccountInfo<'info>,
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize)]
+pub struct UpdateMetadataArgs {
+    pub name: Option<String>,
+    pub uri: Option<String>,
 }
 
 #[derive(Accounts)]
@@ -259,110 +155,47 @@ pub struct BurnAndWithdraw<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// CHECK: Token record
-    #[account(
-        mut,
-        seeds = [
-            b"metadata",
-            token_metadata_program.key().as_ref(),
-            mint.key().as_ref(),
-            b"token_record",
-            token_account.key().as_ref()
-        ],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub token_record: UncheckedAccount<'info>,
+    /// CHECK: Asset being burned, checked by MPL Core
+    #[account(mut)]
+    pub asset: AccountInfo<'info>,
 
-    /// CHECK: Mint authority
-    #[account(
-        mut,
-        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
-        bump,
-    )]
-    pub mint_authority: AccountInfo<'info>,
+    /// CHECK: Collection the asset belongs to
+    #[account(mut)]
+    pub collection: AccountInfo<'info>,
 
     #[account(
-        mut, 
-        seeds = ["master".as_bytes(), master_state.master_mint.as_ref()], 
+        mut,
+        seeds = ["master".as_bytes(), collection.key().as_ref()],
         bump
     )]
     pub master_state: Account<'info, MasterState>,
 
     #[account(
         mut,
-        seeds = ["vault".as_bytes(), mint.key().as_ref()],
+        seeds = ["vault".as_bytes(), asset.key().as_ref()],
         bump,
-        has_one = mint,
         close = owner
     )]
     pub vault: Account<'info, TokenVault>,
 
-    /// CHECK: Metadata account verified by seeds and collection
-    #[account(
-        mut,
-        seeds = [
-            b"metadata",
-            METADATA_PROGRAM_ID.as_ref(),
-            mint.key().as_ref(),
-        ],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID,
-        constraint = {
-            let metadata = Metadata::safe_deserialize(&metadata.data.borrow())?;
-            metadata.collection.map(|c| c.key == master_state.master_mint && c.verified).ok_or(CustomError::InvalidCollection)?
-        }
-    )]
-    pub metadata: UncheckedAccount<'info>,
-
-    /// CHECK: Token account
-    #[account(mut)]
-    pub token_account: AccountInfo<'info>,
-
-    /// CHECK: Mint account
-    #[account(mut)]
-    pub mint: AccountInfo<'info>,
-
-    /// CHECK: Edition marker account for burning
-    #[account(
-        mut,
-        seeds = [
-            b"metadata", 
-            METADATA_PROGRAM_ID.as_ref(),
-            mint.key().as_ref(),
-            b"edition",
-        ],
-        bump,
-        seeds::program = METADATA_PROGRAM_ID
-    )]
-    pub edition_marker: UncheckedAccount<'info>,
-
-    /// CHECK: Metadata program will check this
-    #[account(mut)]
-    pub collection_metadata: AccountInfo<'info>,
-
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 
-    /// CHECK: Token Metadata Program
-    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
-    pub token_metadata_program: AccountInfo<'info>,
+    /// CHECK: SPL Noop program
+    pub log_wrapper: Option<AccountInfo<'info>>,
 
-    /// CHECK: Required by token metadata program
-    pub sysvar_instructions: AccountInfo<'info>,
+    /// CHECK: MPL Core program
+    #[account(address = mpl_core::ID)]
+    pub mpl_core: AccountInfo<'info>,
 }
 
 #[account]
 pub struct MasterState {
-    pub master_mint: Pubkey,
+    pub collection: Pubkey,
     pub total_minted: u64,
-    pub collection_delegate: Pubkey,
-    pub collection_authority_record: Pubkey,
 }
 
 impl MasterState {
-    pub const SPACE: usize = 8 + 32 + 8 + 32 + 32; // discriminator + master_mint + total_minted + delegate + authority_record
+    pub const SPACE: usize = 8 + 32 + 8; // discriminator + collection + total_minted
 }
 
 #[account]
@@ -391,212 +224,52 @@ pub enum CustomError {
     InvalidVaultBalance,
     #[msg("Unauthorized metadata update")]
     UnauthorizedUpdate,
-    #[msg("Token account not properly closed")]
-    TokenAccountNotClosed,
     #[msg("Maximum supply reached")]
     MaxSupplyReached,
-    #[msg("Arithmetic overflow")]
-    Overflow,
     #[msg("Invalid collection data")]
     InvalidCollection,
+    #[msg("Arithmetic overflow")]
+    Overflow,
     #[msg("Arithmetic underflow")]
     Underflow,
-    #[msg("Account is owned by wrong program")]
-    InvalidProgramId,
     #[msg("Invalid update authority")]
     InvalidUpdateAuthority,
-    #[msg("Metadata deserialization failed")]
-    MetadataDeserializationError,
-    #[msg("Collection verification failed")]
-    CollectionVerificationError,
-    #[msg("Invalid metadata data")]
-    InvalidMetadata,
-    #[msg("Invalid collection verification")]
-    InvalidCollectionVerification,
 }
 
 #[program]
 pub mod locked_sol_pnft {
     use super::*;
 
-    pub fn initialize_master_edition(ctx: Context<InitializeMasterEdition>) -> Result<()> {
+    pub fn initialize_collection(
+        ctx: Context<InitializeCollection>,
+        name: String,
+        uri: String,
+    ) -> Result<()> {
         let master_state = &mut ctx.accounts.master_state;
-        master_state.master_mint = ctx.accounts.master_mint.key();
         master_state.total_minted = 0;
 
-        // Initialize master mint
-        token::initialize_mint(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
-                token::InitializeMint {
-                    mint: ctx.accounts.master_mint.to_account_info(),
-                    rent: ctx.accounts.rent.to_account_info(),
-                },
-            ),
-            0,
-            &ctx.accounts.update_authority.key(),
-            Some(&ctx.accounts.update_authority.key()),
-        )?;
-
-        // Create update authority's ATA
-        let cpi_accounts = Create {
-            payer: ctx.accounts.payer.to_account_info(),
-            associated_token: ctx.accounts.update_authority_token.to_account_info(),
-            authority: ctx.accounts.update_authority.to_account_info(),
-            mint: ctx.accounts.master_mint.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-        };
-
-        let cpi_context = CpiContext::new(
-            ctx.accounts.associated_token_program.to_account_info(),
-            cpi_accounts,
-        );
-
-        associated_token::create(cpi_context)?;
-
-        // Mint one token to update authority's ATA
-        token::mint_to(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
-                token::MintTo {
-                    mint: ctx.accounts.master_mint.to_account_info(),
-                    to: ctx.accounts.update_authority_token.to_account_info(),
-                    authority: ctx.accounts.update_authority.to_account_info(),
-                },
-            ),
-            1,
-        )?;
-
-        // Create metadata
-        let metadata_data = DataV2 {
-            name: NAME.to_string(),
-            symbol: SYMBOL.to_string(),
-            uri: URI.to_string(),
-            seller_fee_basis_points: SELLER_FEE_BASIS_POINTS,
-            creators: None,
-            collection: None,
-            uses: None,
-        };
-
-        let create_metadata_ix = CreateMetadataAccountV3Builder::new()
-            .metadata(ctx.accounts.master_metadata.key())
-            .mint(ctx.accounts.master_mint.key())
-            .mint_authority(ctx.accounts.update_authority.key())
-            .payer(ctx.accounts.payer.key())
-            .update_authority(ctx.accounts.update_authority.key(), true)
-            .data(metadata_data)
-            .is_mutable(true)
-            .instruction();
-
-        invoke_signed(
-            &create_metadata_ix,
-            &[
-                ctx.accounts.master_metadata.to_account_info(),
-                ctx.accounts.master_mint.to_account_info(),
-                ctx.accounts.update_authority.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.token_metadata_program.to_account_info(),
-            ],
-            &[],
-        )?;
-
-        // Create master edition
-        let create_master_edition_ix = CreateMasterEditionV3Builder::new()
-            .edition(ctx.accounts.master_edition.key())
-            .mint(ctx.accounts.master_mint.key())
-            .update_authority(ctx.accounts.update_authority.key())
-            .mint_authority(ctx.accounts.update_authority.key())
-            .metadata(ctx.accounts.master_metadata.key())
-            .payer(ctx.accounts.payer.key())
-            .max_supply(0)
-            .instruction();
-
-        invoke_signed(
-            &create_master_edition_ix,
-            &[
-                ctx.accounts.master_edition.to_account_info(),
-                ctx.accounts.master_mint.to_account_info(),
-                ctx.accounts.update_authority.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.master_metadata.to_account_info(),
-                ctx.accounts.token_metadata_program.to_account_info(),
-            ],
-            &[],
-        )?;
-
-        let set_and_verify_collection_ix =
-            mpl_token_metadata::instructions::SetAndVerifyCollectionBuilder::new()
-                .metadata(ctx.accounts.master_metadata.key())
-                .collection_authority(ctx.accounts.update_authority.key())
-                .update_authority(ctx.accounts.update_authority.key())
-                .payer(ctx.accounts.payer.key())
-                .collection_mint(ctx.accounts.master_mint.key())
-                .collection(ctx.accounts.master_metadata.key())
-                .collection_master_edition_account(ctx.accounts.master_edition.key())
-                .collection_authority_record(None)
-                .instruction();
-
-        invoke_signed(
-            &set_and_verify_collection_ix,
-            &[
-                ctx.accounts.master_metadata.to_account_info(),
-                ctx.accounts.update_authority.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.master_mint.to_account_info(),
-                ctx.accounts.master_metadata.to_account_info(),
-                ctx.accounts.master_edition.to_account_info(),
-                ctx.accounts.token_metadata_program.to_account_info(),
-            ],
-            &[],
-        )?;
-
-        // Setup collection authority delegate
-        let (delegate_authority, _) = Pubkey::find_program_address(
-            &[
-                b"collection_delegate",
-                ctx.accounts.master_mint.key().as_ref(),
-            ],
-            ctx.program_id,
-        );
-
-        // Use Metaplex's approve_collection_authority function
-        let approve_collection_authority_ix =
-            mpl_token_metadata::instructions::ApproveCollectionAuthorityBuilder::new()
-                .collection_authority_record(ctx.accounts.collection_authority_record.key())
-                .new_collection_authority(delegate_authority)
-                .update_authority(ctx.accounts.update_authority.key())
-                .payer(ctx.accounts.payer.key())
-                .metadata(ctx.accounts.master_metadata.key())
-                .mint(ctx.accounts.master_mint.key())
-                .instruction();
-
-        invoke(
-            &approve_collection_authority_ix,
-            &[
-                ctx.accounts.master_metadata.to_account_info(),
-                ctx.accounts.update_authority.to_account_info(),
-                ctx.accounts.collection_authority_record.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.master_mint.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-                ctx.accounts.delegate_authority.to_account_info(),
-            ],
-        )?;
-
-        master_state.collection_delegate = delegate_authority;
-        master_state.collection_authority_record = ctx.accounts.collection_authority_record.key();
+        mpl_core::instructions::CreateCollectionV1Cpi {
+            collection: ctx.accounts.collection.as_ref(),
+            payer: &ctx.accounts.payer.to_account_info(),
+            update_authority: Some(ctx.accounts.update_authority.as_ref()),
+            system_program: &ctx.accounts.system_program.to_account_info(),
+            __program: &ctx.accounts.mpl_core,
+            __args: mpl_core::instructions::CreateCollectionV1InstructionArgs {
+                name,
+                uri,
+                plugins: None,
+            },
+        }
+        .invoke()?;
 
         Ok(())
     }
 
-    pub fn mint_pnft(ctx: Context<MintPNFT>) -> Result<()> {
-        msg!("Starting mint_pnft");
-
-        let rent_costs = utils::calculate_rent(&ctx.accounts.rent, true);
+    pub fn mint_asset(ctx: Context<MintAsset>, args: MintAssetArgs) -> Result<()> {
+        let rent = Rent::get()?;
+        let rent_costs = utils::calculate_rent(&rent, true);
         let total_required = rent_costs.vault + rent_costs.mint + rent_costs.metadata;
 
-        msg!("Transferring {} lamports for rent", total_required);
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
@@ -608,32 +281,27 @@ pub mod locked_sol_pnft {
             total_required,
         )?;
 
-        msg!("Setting vault mint to: {}", ctx.accounts.mint.key());
-        ctx.accounts.vault.mint = ctx.accounts.mint.key();
+        ctx.accounts.vault.mint = ctx.accounts.asset.key();
 
-        let mint_key = ctx.accounts.mint.key();
-        let mut bump_arr = [0u8; 1];
-        let mint_authority_seeds =
-            utils::get_mint_authority_seeds(&mint_key, ctx.bumps.mint_authority, &mut bump_arr);
-
-        initialize_token_mint_for_mint(&ctx)?;
-        create_associated_token(&ctx)?;
-        mint_token(&ctx, &[&mint_authority_seeds])?;
-
-        let collection = Some(Collection {
-            verified: false,
-            key: ctx.accounts.master_state.master_mint,
-        });
-
-        // Create metadata (with mint_authority as update authority)
-        create_metadata(
-            &ctx,
-            get_initial_metadata(collection),
-            &[&mint_authority_seeds],
-        )?;
-
-        // Verify collection
-        verify_collection(&ctx)?;
+        // Create the asset using MPL Core
+        mpl_core::instructions::CreateV1Cpi {
+            asset: &ctx.accounts.asset.to_account_info(),
+            collection: Some(ctx.accounts.collection.as_ref()),
+            authority: ctx.accounts.authority.as_deref(),
+            payer: &ctx.accounts.payer.to_account_info(),
+            owner: ctx.accounts.owner.as_ref(),
+            update_authority: ctx.accounts.update_authority.as_ref(),
+            system_program: &ctx.accounts.system_program.to_account_info(),
+            log_wrapper: ctx.accounts.log_wrapper.as_ref(),
+            __program: &ctx.accounts.mpl_core,
+            __args: mpl_core::instructions::CreateV1InstructionArgs {
+                data_state: DataState::AccountState,
+                name: args.name,
+                uri: args.uri,
+                plugins: args.plugins,
+            },
+        }
+        .invoke()?;
 
         ctx.accounts.master_state.total_minted = ctx
             .accounts
@@ -642,80 +310,45 @@ pub mod locked_sol_pnft {
             .checked_add(1)
             .ok_or(CustomError::Overflow)?;
 
-        msg!(
-            "Mint complete, vault initialized with mint: {}",
-            ctx.accounts.vault.mint
-        );
+        Ok(())
+    }
+    pub fn update_metadata(ctx: Context<UpdateMetadata>, args: UpdateMetadataArgs) -> Result<()> {
+        mpl_core::instructions::UpdateV1Cpi {
+            asset: &ctx.accounts.asset.to_account_info(),
+            collection: ctx.accounts.collection.as_ref(),
+            authority: Some(ctx.accounts.authority.as_ref()),
+            payer: &ctx.accounts.payer.to_account_info(),
+            system_program: &ctx.accounts.system_program.to_account_info(),
+            log_wrapper: ctx.accounts.log_wrapper.as_ref(),
+            __program: &ctx.accounts.mpl_core,
+            __args: mpl_core::instructions::UpdateV1InstructionArgs {
+                new_name: args.name,
+                new_uri: args.uri,
+                new_update_authority: None,
+            },
+        }
+        .invoke()?;
+
         Ok(())
     }
 
-    pub fn update_metadata(
-        ctx: Context<UpdateMetadata>,
-        new_uri: String,
-        new_name: Option<String>,
-    ) -> Result<()> {
-        // Get PDA signer seeds
-        let mint_key = ctx.accounts.mint.key();
-        let mint_auth_seeds = &[
-            b"mint_authority",
-            mint_key.as_ref(),
-            &[ctx.bumps.mint_authority],
-        ];
-
-        let update_metadata_ix = mpl_token_metadata::instructions::UpdateMetadataAccountV2 {
-            metadata: ctx.accounts.metadata.key(),
-            update_authority: ctx.accounts.mint_authority.key(),
-        }
-        .instruction(
-            mpl_token_metadata::instructions::UpdateMetadataAccountV2InstructionArgs {
-                data: Some(DataV2 {
-                    name: new_name.unwrap_or("Locked SOL NFT".to_string()),
-                    symbol: "LSOL".to_string(),
-                    uri: new_uri,
-                    seller_fee_basis_points: 0,
-                    creators: None,
-                    collection: Some(Collection {
-                        verified: true,
-                        key: ctx.accounts.master_state.master_mint,
-                    }),
-                    uses: None,
-                }),
-                new_update_authority: None,
-                primary_sale_happened: None,
-                is_mutable: Some(true),
-            },
-        );
-
-        invoke_signed(
-            &update_metadata_ix,
-            &[
-                ctx.accounts.metadata.to_account_info(),
-                ctx.accounts.mint_authority.to_account_info(),
-                ctx.accounts.token_metadata_program.to_account_info(),
-            ],
-            &[mint_auth_seeds],
-        )
-        .map_err(Into::into)
-    }
-
     pub fn burn_and_withdraw(ctx: Context<BurnAndWithdraw>) -> Result<()> {
-        burn_nft(&ctx)?;
-
-        token::close_account(CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            token::CloseAccount {
-                account: ctx.accounts.token_account.to_account_info(),
-                destination: ctx.accounts.owner.to_account_info(),
-                authority: ctx.accounts.owner.to_account_info(),
+        // Burn the asset
+        mpl_core::instructions::BurnV1Cpi {
+            asset: &ctx.accounts.asset.to_account_info(),
+            collection: Some(ctx.accounts.collection.as_ref()),
+            authority: Some(ctx.accounts.owner.as_ref()),
+            payer: &ctx.accounts.owner.to_account_info(),
+            system_program: Some(&ctx.accounts.system_program.to_account_info()),
+            log_wrapper: ctx.accounts.log_wrapper.as_ref(),
+            __program: &ctx.accounts.mpl_core,
+            __args: mpl_core::instructions::BurnV1InstructionArgs {
+                compression_proof: None,
             },
-        ))?;
+        }
+        .invoke()?;
 
-        require_eq!(
-            ctx.accounts.token_account.to_account_info().lamports(),
-            0,
-            CustomError::TokenAccountNotClosed
-        );
-
+        // Return SOL from vault
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
@@ -727,6 +360,7 @@ pub mod locked_sol_pnft {
             VAULT_AMOUNT,
         )?;
 
+        // Update collection stats
         ctx.accounts.master_state.total_minted = ctx
             .accounts
             .master_state
@@ -762,182 +396,4 @@ mod utils {
             metadata: rent.minimum_balance(METADATA_SIZE),
         }
     }
-
-    pub fn get_mint_authority_seeds<'a>(
-        mint: &'a Pubkey,
-        bump: u8,
-        bump_arr: &'a mut [u8; 1],
-    ) -> [&'a [u8]; 3] {
-        const PREFIX: &[u8] = b"mint_authority";
-        bump_arr[0] = bump;
-        [PREFIX, mint.as_ref(), &bump_arr[..]]
-    }
-}
-
-fn get_initial_metadata(collection: Option<Collection>) -> DataV2 {
-    DataV2 {
-        name: NAME.to_string(),
-        symbol: SYMBOL.to_string(),
-        uri: URI.to_string(),
-        seller_fee_basis_points: SELLER_FEE_BASIS_POINTS,
-        creators: None,
-        collection,
-        uses: None,
-    }
-}
-
-fn create_metadata<'info>(
-    ctx: &Context<'_, '_, '_, 'info, MintPNFT>,
-    metadata_data: DataV2,
-    signing_seeds: &[&[&[u8]]],
-) -> Result<()> {
-    let create_metadata_ix = CreateMetadataAccountV3Builder::new()
-        .metadata(ctx.accounts.metadata.key())
-        .mint(ctx.accounts.mint.key())
-        .mint_authority(ctx.accounts.mint_authority.key())
-        .payer(ctx.accounts.payer.key())
-        .update_authority(ctx.accounts.mint_authority.key(), true)
-        .data(metadata_data)
-        .is_mutable(true)
-        .instruction();
-
-    invoke_signed(
-        &create_metadata_ix,
-        &[
-            ctx.accounts.metadata.to_account_info(),
-            ctx.accounts.mint.to_account_info(),
-            ctx.accounts.mint_authority.to_account_info(),
-            ctx.accounts.payer.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-            ctx.accounts.token_metadata_program.to_account_info(),
-        ],
-        signing_seeds,
-    )
-    .map_err(Into::into)
-}
-
-fn create_associated_token(ctx: &Context<MintPNFT>) -> Result<()> {
-    anchor_spl::associated_token::create(CpiContext::new(
-        ctx.accounts.associated_token_program.to_account_info(),
-        anchor_spl::associated_token::Create {
-            payer: ctx.accounts.payer.to_account_info(),
-            associated_token: ctx.accounts.token_account.to_account_info(),
-            authority: ctx.accounts.payer.to_account_info(),
-            mint: ctx.accounts.mint.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-        },
-    ))
-}
-
-fn mint_token<'info>(ctx: &Context<MintPNFT>, signer_seeds: &[&[&[u8]]]) -> Result<()> {
-    token::mint_to(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            token::MintTo {
-                mint: ctx.accounts.mint.to_account_info(),
-                to: ctx.accounts.token_account.to_account_info(),
-                authority: ctx.accounts.mint_authority.to_account_info(),
-            },
-            signer_seeds,
-        ),
-        1,
-    )
-}
-
-fn initialize_token_mint_for_mint(ctx: &Context<MintPNFT>) -> Result<()> {
-    token::initialize_mint(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            token::InitializeMint {
-                mint: ctx.accounts.mint.to_account_info(),
-                rent: ctx.accounts.rent.to_account_info(),
-            },
-        ),
-        0,
-        &ctx.accounts.mint_authority.key(),
-        Some(&ctx.accounts.mint_authority.key()),
-    )
-}
-
-fn verify_collection<'info>(ctx: &Context<'_, '_, '_, 'info, MintPNFT>) -> Result<()> {
-    let master_mint_key = ctx.accounts.master_mint.key();
-    let delegate_seeds = &[
-        b"collection_delegate",
-        master_mint_key.as_ref(),
-        &[ctx.bumps.delegate_authority],
-    ];
-    let verify_collection_ix = VerifyCollectionBuilder::new()
-        .metadata(ctx.accounts.metadata.key())
-        .collection_authority(ctx.accounts.delegate_authority.key())
-        .payer(ctx.accounts.payer.key())
-        .collection_mint(ctx.accounts.master_mint.key())
-        .collection(ctx.accounts.collection_metadata.key())
-        .collection_master_edition_account(ctx.accounts.collection_master_edition.key())
-        .collection_authority_record(Some(ctx.accounts.collection_authority_record.key()))
-        .instruction();
-
-    invoke_signed(
-        &verify_collection_ix,
-        &[
-            ctx.accounts.metadata.to_account_info(),
-            ctx.accounts.master_mint.to_account_info(),
-            ctx.accounts.delegate_authority.to_account_info(),
-            ctx.accounts.payer.to_account_info(),
-            ctx.accounts.collection_metadata.to_account_info(),
-            ctx.accounts.collection_master_edition.to_account_info(),
-            ctx.accounts.collection_authority_record.to_account_info(),
-        ],
-        &[delegate_seeds],
-    )?;
-
-    Ok(())
-}
-
-fn burn_nft(ctx: &Context<BurnAndWithdraw>) -> Result<()> {
-    msg!("Starting NFT burn using BurnNft instruction");
-    msg!("Metadata: {}", ctx.accounts.metadata.key());
-    msg!("Owner: {}", ctx.accounts.owner.key());
-    msg!("Mint: {}", ctx.accounts.mint.key());
-    msg!("Token Account: {}", ctx.accounts.token_account.key());
-    msg!("Edition Marker: {}", ctx.accounts.edition_marker.key());
-    msg!(
-        "Collection Metadata: {}",
-        ctx.accounts.collection_metadata.key()
-    );
-    msg!("Token Record: {}", ctx.accounts.token_record.key());
-    msg!(
-        "Token Metadata Program: {}",
-        ctx.accounts.token_metadata_program.key()
-    );
-
-    let burn_nft_ix = BurnNft {
-        metadata: ctx.accounts.metadata.key(),
-        owner: ctx.accounts.owner.key(),
-        mint: ctx.accounts.mint.key(),
-        token_account: ctx.accounts.token_account.key(),
-        master_edition_account: ctx.accounts.edition_marker.key(),
-        spl_token_program: ctx.accounts.token_program.key(),
-        collection_metadata: Some(ctx.accounts.collection_metadata.key()),
-    }
-    .instruction();
-
-    let _ = 42;
-
-    msg!("Created burn instruction: {:?}", burn_nft_ix);
-
-    invoke(
-        &burn_nft_ix,
-        &[
-            ctx.accounts.metadata.to_account_info(),
-            ctx.accounts.owner.to_account_info(),
-            ctx.accounts.mint.to_account_info(),
-            ctx.accounts.token_account.to_account_info(),
-            ctx.accounts.edition_marker.to_account_info(),
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.collection_metadata.to_account_info(),
-            ctx.accounts.token_record.to_account_info(),
-        ],
-    )
-    .map_err(Into::into)
 }

@@ -15,8 +15,8 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedBurnAndWithdrawInstruction,
-  type ParsedInitializeMasterEditionInstruction,
-  type ParsedMintPnftInstruction,
+  type ParsedInitializeCollectionInstruction,
+  type ParsedMintAssetInstruction,
   type ParsedUpdateMetadataInstruction,
 } from '../instructions';
 
@@ -61,8 +61,8 @@ export function identifyLockedSolPnftAccount(
 
 export enum LockedSolPnftInstruction {
   BurnAndWithdraw,
-  InitializeMasterEdition,
-  MintPnft,
+  InitializeCollection,
+  MintAsset,
   UpdateMetadata,
 }
 
@@ -85,23 +85,23 @@ export function identifyLockedSolPnftInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([175, 153, 201, 57, 96, 128, 94, 181])
+        new Uint8Array([112, 62, 53, 139, 173, 152, 98, 93])
       ),
       0
     )
   ) {
-    return LockedSolPnftInstruction.InitializeMasterEdition;
+    return LockedSolPnftInstruction.InitializeCollection;
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([10, 40, 243, 254, 133, 205, 199, 93])
+        new Uint8Array([84, 175, 211, 156, 56, 250, 104, 118])
       ),
       0
     )
   ) {
-    return LockedSolPnftInstruction.MintPnft;
+    return LockedSolPnftInstruction.MintAsset;
   }
   if (
     containsBytes(
@@ -126,11 +126,11 @@ export type ParsedLockedSolPnftInstruction<
       instructionType: LockedSolPnftInstruction.BurnAndWithdraw;
     } & ParsedBurnAndWithdrawInstruction<TProgram>)
   | ({
-      instructionType: LockedSolPnftInstruction.InitializeMasterEdition;
-    } & ParsedInitializeMasterEditionInstruction<TProgram>)
+      instructionType: LockedSolPnftInstruction.InitializeCollection;
+    } & ParsedInitializeCollectionInstruction<TProgram>)
   | ({
-      instructionType: LockedSolPnftInstruction.MintPnft;
-    } & ParsedMintPnftInstruction<TProgram>)
+      instructionType: LockedSolPnftInstruction.MintAsset;
+    } & ParsedMintAssetInstruction<TProgram>)
   | ({
       instructionType: LockedSolPnftInstruction.UpdateMetadata;
     } & ParsedUpdateMetadataInstruction<TProgram>);

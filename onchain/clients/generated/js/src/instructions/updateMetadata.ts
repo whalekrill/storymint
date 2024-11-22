@@ -7,23 +7,13 @@
  */
 
 import {
-  addDecoderSizePrefix,
-  addEncoderSizePrefix,
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
-  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getOptionDecoder,
-  getOptionEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU32Decoder,
-  getU32Encoder,
-  getUtf8Decoder,
-  getUtf8Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -34,8 +24,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -43,11 +31,13 @@ import {
   type WritableSignerAccount,
 } from '@solana/web3.js';
 import { LOCKED_SOL_PNFT_PROGRAM_ADDRESS } from '../programs';
+import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 import {
-  expectAddress,
-  getAccountMetaFactory,
-  type ResolvedAccount,
-} from '../shared';
+  getUpdateMetadataArgsDecoder,
+  getUpdateMetadataArgsEncoder,
+  type UpdateMetadataArgs,
+  type UpdateMetadataArgsArgs,
+} from '../types';
 
 export const UPDATE_METADATA_DISCRIMINATOR = new Uint8Array([
   170, 182, 43, 239, 97, 78, 225, 186,
@@ -61,74 +51,63 @@ export function getUpdateMetadataDiscriminatorBytes() {
 
 export type UpdateMetadataInstruction<
   TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
-  TAccountServerAuthority extends string | IAccountMeta<string> = string,
-  TAccountVault extends string | IAccountMeta<string> = string,
-  TAccountMasterState extends string | IAccountMeta<string> = string,
-  TAccountMetadata extends string | IAccountMeta<string> = string,
-  TAccountMintAuthority extends string | IAccountMeta<string> = string,
-  TAccountMint extends string | IAccountMeta<string> = string,
+  TAccountAsset extends string | IAccountMeta<string> = string,
+  TAccountCollection extends string | IAccountMeta<string> = string,
+  TAccountAuthority extends string | IAccountMeta<string> = string,
+  TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
-  TAccountTokenMetadataProgram extends
+  TAccountLogWrapper extends string | IAccountMeta<string> = string,
+  TAccountMplCore extends
     | string
-    | IAccountMeta<string> = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
+    | IAccountMeta<string> = 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountServerAuthority extends string
-        ? WritableSignerAccount<TAccountServerAuthority> &
-            IAccountSignerMeta<TAccountServerAuthority>
-        : TAccountServerAuthority,
-      TAccountVault extends string
-        ? WritableAccount<TAccountVault>
-        : TAccountVault,
-      TAccountMasterState extends string
-        ? WritableAccount<TAccountMasterState>
-        : TAccountMasterState,
-      TAccountMetadata extends string
-        ? WritableAccount<TAccountMetadata>
-        : TAccountMetadata,
-      TAccountMintAuthority extends string
-        ? ReadonlyAccount<TAccountMintAuthority>
-        : TAccountMintAuthority,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
+      TAccountAsset extends string
+        ? WritableAccount<TAccountAsset>
+        : TAccountAsset,
+      TAccountCollection extends string
+        ? WritableAccount<TAccountCollection>
+        : TAccountCollection,
+      TAccountAuthority extends string
+        ? WritableSignerAccount<TAccountAuthority> &
+            IAccountSignerMeta<TAccountAuthority>
+        : TAccountAuthority,
+      TAccountPayer extends string
+        ? WritableSignerAccount<TAccountPayer> &
+            IAccountSignerMeta<TAccountPayer>
+        : TAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      TAccountTokenMetadataProgram extends string
-        ? ReadonlyAccount<TAccountTokenMetadataProgram>
-        : TAccountTokenMetadataProgram,
+      TAccountLogWrapper extends string
+        ? ReadonlyAccount<TAccountLogWrapper>
+        : TAccountLogWrapper,
+      TAccountMplCore extends string
+        ? ReadonlyAccount<TAccountMplCore>
+        : TAccountMplCore,
       ...TRemainingAccounts,
     ]
   >;
 
 export type UpdateMetadataInstructionData = {
   discriminator: ReadonlyUint8Array;
-  newUri: string;
-  newName: Option<string>;
+  args: UpdateMetadataArgs;
 };
 
 export type UpdateMetadataInstructionDataArgs = {
-  newUri: string;
-  newName: OptionOrNullable<string>;
+  args: UpdateMetadataArgsArgs;
 };
 
 export function getUpdateMetadataInstructionDataEncoder(): Encoder<UpdateMetadataInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['newUri', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
-      [
-        'newName',
-        getOptionEncoder(
-          addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())
-        ),
-      ],
+      ['args', getUpdateMetadataArgsEncoder()],
     ]),
     (value) => ({ ...value, discriminator: UPDATE_METADATA_DISCRIMINATOR })
   );
@@ -137,11 +116,7 @@ export function getUpdateMetadataInstructionDataEncoder(): Encoder<UpdateMetadat
 export function getUpdateMetadataInstructionDataDecoder(): Decoder<UpdateMetadataInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['newUri', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
-    [
-      'newName',
-      getOptionDecoder(addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())),
-    ],
+    ['args', getUpdateMetadataArgsDecoder()],
   ]);
 }
 
@@ -155,224 +130,56 @@ export function getUpdateMetadataInstructionDataCodec(): Codec<
   );
 }
 
-export type UpdateMetadataAsyncInput<
-  TAccountServerAuthority extends string = string,
-  TAccountVault extends string = string,
-  TAccountMasterState extends string = string,
-  TAccountMetadata extends string = string,
-  TAccountMintAuthority extends string = string,
-  TAccountMint extends string = string,
-  TAccountSystemProgram extends string = string,
-  TAccountTokenMetadataProgram extends string = string,
-> = {
-  serverAuthority: TransactionSigner<TAccountServerAuthority>;
-  vault?: Address<TAccountVault>;
-  masterState: Address<TAccountMasterState>;
-  metadata?: Address<TAccountMetadata>;
-  mintAuthority?: Address<TAccountMintAuthority>;
-  mint: Address<TAccountMint>;
-  systemProgram?: Address<TAccountSystemProgram>;
-  tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
-  newUri: UpdateMetadataInstructionDataArgs['newUri'];
-  newName: UpdateMetadataInstructionDataArgs['newName'];
-};
-
-export async function getUpdateMetadataInstructionAsync<
-  TAccountServerAuthority extends string,
-  TAccountVault extends string,
-  TAccountMasterState extends string,
-  TAccountMetadata extends string,
-  TAccountMintAuthority extends string,
-  TAccountMint extends string,
-  TAccountSystemProgram extends string,
-  TAccountTokenMetadataProgram extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
->(
-  input: UpdateMetadataAsyncInput<
-    TAccountServerAuthority,
-    TAccountVault,
-    TAccountMasterState,
-    TAccountMetadata,
-    TAccountMintAuthority,
-    TAccountMint,
-    TAccountSystemProgram,
-    TAccountTokenMetadataProgram
-  >,
-  config?: { programAddress?: TProgramAddress }
-): Promise<
-  UpdateMetadataInstruction<
-    TProgramAddress,
-    TAccountServerAuthority,
-    TAccountVault,
-    TAccountMasterState,
-    TAccountMetadata,
-    TAccountMintAuthority,
-    TAccountMint,
-    TAccountSystemProgram,
-    TAccountTokenMetadataProgram
-  >
-> {
-  // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
-
-  // Original accounts.
-  const originalAccounts = {
-    serverAuthority: { value: input.serverAuthority ?? null, isWritable: true },
-    vault: { value: input.vault ?? null, isWritable: true },
-    masterState: { value: input.masterState ?? null, isWritable: true },
-    metadata: { value: input.metadata ?? null, isWritable: true },
-    mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
-    mint: { value: input.mint ?? null, isWritable: false },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    tokenMetadataProgram: {
-      value: input.tokenMetadataProgram ?? null,
-      isWritable: false,
-    },
-  };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedAccount
-  >;
-
-  // Original args.
-  const args = { ...input };
-
-  // Resolve default values.
-  if (!accounts.vault.value) {
-    accounts.vault.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([118, 97, 117, 108, 116])),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
-      ],
-    });
-  }
-  if (!accounts.metadata.value) {
-    accounts.metadata.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])
-        ),
-        getBytesEncoder().encode(
-          new Uint8Array([
-            11, 112, 101, 177, 227, 209, 124, 69, 56, 157, 82, 127, 107, 4, 195,
-            205, 88, 184, 108, 115, 26, 160, 253, 181, 73, 182, 209, 188, 3,
-            248, 41, 70,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
-      ],
-    });
-  }
-  if (!accounts.mintAuthority.value) {
-    accounts.mintAuthority.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
-      ],
-    });
-  }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
-  if (!accounts.tokenMetadataProgram.value) {
-    accounts.tokenMetadataProgram.value =
-      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' as Address<'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'>;
-  }
-
-  const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
-  const instruction = {
-    accounts: [
-      getAccountMeta(accounts.serverAuthority),
-      getAccountMeta(accounts.vault),
-      getAccountMeta(accounts.masterState),
-      getAccountMeta(accounts.metadata),
-      getAccountMeta(accounts.mintAuthority),
-      getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.tokenMetadataProgram),
-    ],
-    programAddress,
-    data: getUpdateMetadataInstructionDataEncoder().encode(
-      args as UpdateMetadataInstructionDataArgs
-    ),
-  } as UpdateMetadataInstruction<
-    TProgramAddress,
-    TAccountServerAuthority,
-    TAccountVault,
-    TAccountMasterState,
-    TAccountMetadata,
-    TAccountMintAuthority,
-    TAccountMint,
-    TAccountSystemProgram,
-    TAccountTokenMetadataProgram
-  >;
-
-  return instruction;
-}
-
 export type UpdateMetadataInput<
-  TAccountServerAuthority extends string = string,
-  TAccountVault extends string = string,
-  TAccountMasterState extends string = string,
-  TAccountMetadata extends string = string,
-  TAccountMintAuthority extends string = string,
-  TAccountMint extends string = string,
+  TAccountAsset extends string = string,
+  TAccountCollection extends string = string,
+  TAccountAuthority extends string = string,
+  TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountTokenMetadataProgram extends string = string,
+  TAccountLogWrapper extends string = string,
+  TAccountMplCore extends string = string,
 > = {
-  serverAuthority: TransactionSigner<TAccountServerAuthority>;
-  vault: Address<TAccountVault>;
-  masterState: Address<TAccountMasterState>;
-  metadata: Address<TAccountMetadata>;
-  mintAuthority: Address<TAccountMintAuthority>;
-  mint: Address<TAccountMint>;
+  /** The asset to update */
+  asset: Address<TAccountAsset>;
+  /** The collection this asset belongs to (optional) */
+  collection?: Address<TAccountCollection>;
+  authority: TransactionSigner<TAccountAuthority>;
+  payer: TransactionSigner<TAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
-  tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
-  newUri: UpdateMetadataInstructionDataArgs['newUri'];
-  newName: UpdateMetadataInstructionDataArgs['newName'];
+  logWrapper?: Address<TAccountLogWrapper>;
+  mplCore?: Address<TAccountMplCore>;
+  args: UpdateMetadataInstructionDataArgs['args'];
 };
 
 export function getUpdateMetadataInstruction<
-  TAccountServerAuthority extends string,
-  TAccountVault extends string,
-  TAccountMasterState extends string,
-  TAccountMetadata extends string,
-  TAccountMintAuthority extends string,
-  TAccountMint extends string,
+  TAccountAsset extends string,
+  TAccountCollection extends string,
+  TAccountAuthority extends string,
+  TAccountPayer extends string,
   TAccountSystemProgram extends string,
-  TAccountTokenMetadataProgram extends string,
+  TAccountLogWrapper extends string,
+  TAccountMplCore extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
   input: UpdateMetadataInput<
-    TAccountServerAuthority,
-    TAccountVault,
-    TAccountMasterState,
-    TAccountMetadata,
-    TAccountMintAuthority,
-    TAccountMint,
+    TAccountAsset,
+    TAccountCollection,
+    TAccountAuthority,
+    TAccountPayer,
     TAccountSystemProgram,
-    TAccountTokenMetadataProgram
+    TAccountLogWrapper,
+    TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
 ): UpdateMetadataInstruction<
   TProgramAddress,
-  TAccountServerAuthority,
-  TAccountVault,
-  TAccountMasterState,
-  TAccountMetadata,
-  TAccountMintAuthority,
-  TAccountMint,
+  TAccountAsset,
+  TAccountCollection,
+  TAccountAuthority,
+  TAccountPayer,
   TAccountSystemProgram,
-  TAccountTokenMetadataProgram
+  TAccountLogWrapper,
+  TAccountMplCore
 > {
   // Program address.
   const programAddress =
@@ -380,17 +187,13 @@ export function getUpdateMetadataInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    serverAuthority: { value: input.serverAuthority ?? null, isWritable: true },
-    vault: { value: input.vault ?? null, isWritable: true },
-    masterState: { value: input.masterState ?? null, isWritable: true },
-    metadata: { value: input.metadata ?? null, isWritable: true },
-    mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
-    mint: { value: input.mint ?? null, isWritable: false },
+    asset: { value: input.asset ?? null, isWritable: true },
+    collection: { value: input.collection ?? null, isWritable: true },
+    authority: { value: input.authority ?? null, isWritable: true },
+    payer: { value: input.payer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    tokenMetadataProgram: {
-      value: input.tokenMetadataProgram ?? null,
-      isWritable: false,
-    },
+    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
+    mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -405,22 +208,21 @@ export function getUpdateMetadataInstruction<
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
-  if (!accounts.tokenMetadataProgram.value) {
-    accounts.tokenMetadataProgram.value =
-      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' as Address<'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'>;
+  if (!accounts.mplCore.value) {
+    accounts.mplCore.value =
+      'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d' as Address<'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d'>;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.serverAuthority),
-      getAccountMeta(accounts.vault),
-      getAccountMeta(accounts.masterState),
-      getAccountMeta(accounts.metadata),
-      getAccountMeta(accounts.mintAuthority),
-      getAccountMeta(accounts.mint),
+      getAccountMeta(accounts.asset),
+      getAccountMeta(accounts.collection),
+      getAccountMeta(accounts.authority),
+      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.tokenMetadataProgram),
+      getAccountMeta(accounts.logWrapper),
+      getAccountMeta(accounts.mplCore),
     ],
     programAddress,
     data: getUpdateMetadataInstructionDataEncoder().encode(
@@ -428,14 +230,13 @@ export function getUpdateMetadataInstruction<
     ),
   } as UpdateMetadataInstruction<
     TProgramAddress,
-    TAccountServerAuthority,
-    TAccountVault,
-    TAccountMasterState,
-    TAccountMetadata,
-    TAccountMintAuthority,
-    TAccountMint,
+    TAccountAsset,
+    TAccountCollection,
+    TAccountAuthority,
+    TAccountPayer,
     TAccountSystemProgram,
-    TAccountTokenMetadataProgram
+    TAccountLogWrapper,
+    TAccountMplCore
   >;
 
   return instruction;
@@ -447,14 +248,15 @@ export type ParsedUpdateMetadataInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    serverAuthority: TAccountMetas[0];
-    vault: TAccountMetas[1];
-    masterState: TAccountMetas[2];
-    metadata: TAccountMetas[3];
-    mintAuthority: TAccountMetas[4];
-    mint: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
-    tokenMetadataProgram: TAccountMetas[7];
+    /** The asset to update */
+    asset: TAccountMetas[0];
+    /** The collection this asset belongs to (optional) */
+    collection?: TAccountMetas[1] | undefined;
+    authority: TAccountMetas[2];
+    payer: TAccountMetas[3];
+    systemProgram: TAccountMetas[4];
+    logWrapper?: TAccountMetas[5] | undefined;
+    mplCore: TAccountMetas[6];
   };
   data: UpdateMetadataInstructionData;
 };
@@ -467,7 +269,7 @@ export function parseUpdateMetadataInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedUpdateMetadataInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -477,17 +279,22 @@ export function parseUpdateMetadataInstruction<
     accountIndex += 1;
     return accountMeta;
   };
+  const getNextOptionalAccount = () => {
+    const accountMeta = getNextAccount();
+    return accountMeta.address === LOCKED_SOL_PNFT_PROGRAM_ADDRESS
+      ? undefined
+      : accountMeta;
+  };
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      serverAuthority: getNextAccount(),
-      vault: getNextAccount(),
-      masterState: getNextAccount(),
-      metadata: getNextAccount(),
-      mintAuthority: getNextAccount(),
-      mint: getNextAccount(),
+      asset: getNextAccount(),
+      collection: getNextOptionalAccount(),
+      authority: getNextAccount(),
+      payer: getNextAccount(),
       systemProgram: getNextAccount(),
-      tokenMetadataProgram: getNextAccount(),
+      logWrapper: getNextOptionalAccount(),
+      mplCore: getNextAccount(),
     },
     data: getUpdateMetadataInstructionDataDecoder().decode(instruction.data),
   };

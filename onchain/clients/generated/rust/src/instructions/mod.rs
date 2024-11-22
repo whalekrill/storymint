@@ -6,12 +6,12 @@
 //!
 
   pub(crate) mod r#burn_and_withdraw;
-  pub(crate) mod r#initialize_master_edition;
-  pub(crate) mod r#mint_pnft;
+  pub(crate) mod r#initialize_collection;
+  pub(crate) mod r#mint_asset;
   pub(crate) mod r#update_metadata;
 
   pub use self::r#burn_and_withdraw::*;
-  pub use self::r#initialize_master_edition::*;
-  pub use self::r#mint_pnft::*;
+  pub use self::r#initialize_collection::*;
+  pub use self::r#mint_asset::*;
   pub use self::r#update_metadata::*;
 

@@ -41,31 +41,31 @@ export class UnauthorizedUpdateError extends ProgramError {
 codeToErrorMap.set(0x1771, UnauthorizedUpdateError);
 nameToErrorMap.set('UnauthorizedUpdate', UnauthorizedUpdateError);
 
-/** TokenAccountNotClosed: Token account not properly closed */
-export class TokenAccountNotClosedError extends ProgramError {
-  override readonly name: string = 'TokenAccountNotClosed';
-
-  readonly code: number = 0x1772; // 6002
-
-  constructor(program: Program, cause?: Error) {
-    super('Token account not properly closed', program, cause);
-  }
-}
-codeToErrorMap.set(0x1772, TokenAccountNotClosedError);
-nameToErrorMap.set('TokenAccountNotClosed', TokenAccountNotClosedError);
-
 /** MaxSupplyReached: Maximum supply reached */
 export class MaxSupplyReachedError extends ProgramError {
   override readonly name: string = 'MaxSupplyReached';
 
-  readonly code: number = 0x1773; // 6003
+  readonly code: number = 0x1772; // 6002
 
   constructor(program: Program, cause?: Error) {
     super('Maximum supply reached', program, cause);
   }
 }
-codeToErrorMap.set(0x1773, MaxSupplyReachedError);
+codeToErrorMap.set(0x1772, MaxSupplyReachedError);
 nameToErrorMap.set('MaxSupplyReached', MaxSupplyReachedError);
+
+/** InvalidCollection: Invalid collection data */
+export class InvalidCollectionError extends ProgramError {
+  override readonly name: string = 'InvalidCollection';
+
+  readonly code: number = 0x1773; // 6003
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid collection data', program, cause);
+  }
+}
+codeToErrorMap.set(0x1773, InvalidCollectionError);
+nameToErrorMap.set('InvalidCollection', InvalidCollectionError);
 
 /** Overflow: Arithmetic overflow */
 export class OverflowError extends ProgramError {
@@ -80,118 +80,31 @@ export class OverflowError extends ProgramError {
 codeToErrorMap.set(0x1774, OverflowError);
 nameToErrorMap.set('Overflow', OverflowError);
 
-/** InvalidCollection: Invalid collection data */
-export class InvalidCollectionError extends ProgramError {
-  override readonly name: string = 'InvalidCollection';
-
-  readonly code: number = 0x1775; // 6005
-
-  constructor(program: Program, cause?: Error) {
-    super('Invalid collection data', program, cause);
-  }
-}
-codeToErrorMap.set(0x1775, InvalidCollectionError);
-nameToErrorMap.set('InvalidCollection', InvalidCollectionError);
-
 /** Underflow: Arithmetic underflow */
 export class UnderflowError extends ProgramError {
   override readonly name: string = 'Underflow';
 
-  readonly code: number = 0x1776; // 6006
+  readonly code: number = 0x1775; // 6005
 
   constructor(program: Program, cause?: Error) {
     super('Arithmetic underflow', program, cause);
   }
 }
-codeToErrorMap.set(0x1776, UnderflowError);
+codeToErrorMap.set(0x1775, UnderflowError);
 nameToErrorMap.set('Underflow', UnderflowError);
-
-/** InvalidProgramId: Account is owned by wrong program */
-export class InvalidProgramIdError extends ProgramError {
-  override readonly name: string = 'InvalidProgramId';
-
-  readonly code: number = 0x1777; // 6007
-
-  constructor(program: Program, cause?: Error) {
-    super('Account is owned by wrong program', program, cause);
-  }
-}
-codeToErrorMap.set(0x1777, InvalidProgramIdError);
-nameToErrorMap.set('InvalidProgramId', InvalidProgramIdError);
 
 /** InvalidUpdateAuthority: Invalid update authority */
 export class InvalidUpdateAuthorityError extends ProgramError {
   override readonly name: string = 'InvalidUpdateAuthority';
 
-  readonly code: number = 0x1778; // 6008
+  readonly code: number = 0x1776; // 6006
 
   constructor(program: Program, cause?: Error) {
     super('Invalid update authority', program, cause);
   }
 }
-codeToErrorMap.set(0x1778, InvalidUpdateAuthorityError);
+codeToErrorMap.set(0x1776, InvalidUpdateAuthorityError);
 nameToErrorMap.set('InvalidUpdateAuthority', InvalidUpdateAuthorityError);
-
-/** MetadataDeserializationError: Metadata deserialization failed */
-export class MetadataDeserializationErrorError extends ProgramError {
-  override readonly name: string = 'MetadataDeserializationError';
-
-  readonly code: number = 0x1779; // 6009
-
-  constructor(program: Program, cause?: Error) {
-    super('Metadata deserialization failed', program, cause);
-  }
-}
-codeToErrorMap.set(0x1779, MetadataDeserializationErrorError);
-nameToErrorMap.set(
-  'MetadataDeserializationError',
-  MetadataDeserializationErrorError
-);
-
-/** CollectionVerificationError: Collection verification failed */
-export class CollectionVerificationErrorError extends ProgramError {
-  override readonly name: string = 'CollectionVerificationError';
-
-  readonly code: number = 0x177a; // 6010
-
-  constructor(program: Program, cause?: Error) {
-    super('Collection verification failed', program, cause);
-  }
-}
-codeToErrorMap.set(0x177a, CollectionVerificationErrorError);
-nameToErrorMap.set(
-  'CollectionVerificationError',
-  CollectionVerificationErrorError
-);
-
-/** InvalidMetadata: Invalid metadata data */
-export class InvalidMetadataError extends ProgramError {
-  override readonly name: string = 'InvalidMetadata';
-
-  readonly code: number = 0x177b; // 6011
-
-  constructor(program: Program, cause?: Error) {
-    super('Invalid metadata data', program, cause);
-  }
-}
-codeToErrorMap.set(0x177b, InvalidMetadataError);
-nameToErrorMap.set('InvalidMetadata', InvalidMetadataError);
-
-/** InvalidCollectionVerification: Invalid collection verification */
-export class InvalidCollectionVerificationError extends ProgramError {
-  override readonly name: string = 'InvalidCollectionVerification';
-
-  readonly code: number = 0x177c; // 6012
-
-  constructor(program: Program, cause?: Error) {
-    super('Invalid collection verification', program, cause);
-  }
-}
-codeToErrorMap.set(0x177c, InvalidCollectionVerificationError);
-nameToErrorMap.set(
-  'InvalidCollectionVerification',
-  InvalidCollectionVerificationError
-);
 
 /**
  * Attempts to resolve a custom program error from the provided error code.

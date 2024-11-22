@@ -16,39 +16,21 @@ pub enum LockedSolPnftError {
     /// 6001 - Unauthorized metadata update
     #[error("Unauthorized metadata update")]
     UnauthorizedUpdate = 0x1771,
-    /// 6002 - Token account not properly closed
-    #[error("Token account not properly closed")]
-    TokenAccountNotClosed = 0x1772,
-    /// 6003 - Maximum supply reached
+    /// 6002 - Maximum supply reached
     #[error("Maximum supply reached")]
-    MaxSupplyReached = 0x1773,
+    MaxSupplyReached = 0x1772,
+    /// 6003 - Invalid collection data
+    #[error("Invalid collection data")]
+    InvalidCollection = 0x1773,
     /// 6004 - Arithmetic overflow
     #[error("Arithmetic overflow")]
     Overflow = 0x1774,
-    /// 6005 - Invalid collection data
-    #[error("Invalid collection data")]
-    InvalidCollection = 0x1775,
-    /// 6006 - Arithmetic underflow
+    /// 6005 - Arithmetic underflow
     #[error("Arithmetic underflow")]
-    Underflow = 0x1776,
-    /// 6007 - Account is owned by wrong program
-    #[error("Account is owned by wrong program")]
-    InvalidProgramId = 0x1777,
-    /// 6008 - Invalid update authority
+    Underflow = 0x1775,
+    /// 6006 - Invalid update authority
     #[error("Invalid update authority")]
-    InvalidUpdateAuthority = 0x1778,
-    /// 6009 - Metadata deserialization failed
-    #[error("Metadata deserialization failed")]
-    MetadataDeserializationError = 0x1779,
-    /// 6010 - Collection verification failed
-    #[error("Collection verification failed")]
-    CollectionVerificationError = 0x177A,
-    /// 6011 - Invalid metadata data
-    #[error("Invalid metadata data")]
-    InvalidMetadata = 0x177B,
-    /// 6012 - Invalid collection verification
-    #[error("Invalid collection verification")]
-    InvalidCollectionVerification = 0x177C,
+    InvalidUpdateAuthority = 0x1776,
 }
 
 impl solana_program::program_error::PrintProgramError for LockedSolPnftError {

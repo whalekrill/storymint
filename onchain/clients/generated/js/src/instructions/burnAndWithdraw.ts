@@ -52,28 +52,17 @@ export function getBurnAndWithdrawDiscriminatorBytes() {
 export type BurnAndWithdrawInstruction<
   TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
   TAccountOwner extends string | IAccountMeta<string> = string,
-  TAccountTokenRecord extends string | IAccountMeta<string> = string,
-  TAccountMintAuthority extends string | IAccountMeta<string> = string,
+  TAccountAsset extends string | IAccountMeta<string> = string,
+  TAccountCollection extends string | IAccountMeta<string> = string,
   TAccountMasterState extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
-  TAccountMetadata extends string | IAccountMeta<string> = string,
-  TAccountTokenAccount extends string | IAccountMeta<string> = string,
-  TAccountMint extends string | IAccountMeta<string> = string,
-  TAccountEditionMarker extends string | IAccountMeta<string> = string,
-  TAccountCollectionMetadata extends string | IAccountMeta<string> = string,
-  TAccountTokenProgram extends
-    | string
-    | IAccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
-  TAccountRent extends
+  TAccountLogWrapper extends string | IAccountMeta<string> = string,
+  TAccountMplCore extends
     | string
-    | IAccountMeta<string> = 'SysvarRent111111111111111111111111111111111',
-  TAccountTokenMetadataProgram extends
-    | string
-    | IAccountMeta<string> = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
-  TAccountSysvarInstructions extends string | IAccountMeta<string> = string,
+    | IAccountMeta<string> = 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -83,48 +72,27 @@ export type BurnAndWithdrawInstruction<
         ? WritableSignerAccount<TAccountOwner> &
             IAccountSignerMeta<TAccountOwner>
         : TAccountOwner,
-      TAccountTokenRecord extends string
-        ? WritableAccount<TAccountTokenRecord>
-        : TAccountTokenRecord,
-      TAccountMintAuthority extends string
-        ? WritableAccount<TAccountMintAuthority>
-        : TAccountMintAuthority,
+      TAccountAsset extends string
+        ? WritableAccount<TAccountAsset>
+        : TAccountAsset,
+      TAccountCollection extends string
+        ? WritableAccount<TAccountCollection>
+        : TAccountCollection,
       TAccountMasterState extends string
         ? WritableAccount<TAccountMasterState>
         : TAccountMasterState,
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
-      TAccountMetadata extends string
-        ? WritableAccount<TAccountMetadata>
-        : TAccountMetadata,
-      TAccountTokenAccount extends string
-        ? WritableAccount<TAccountTokenAccount>
-        : TAccountTokenAccount,
-      TAccountMint extends string
-        ? WritableAccount<TAccountMint>
-        : TAccountMint,
-      TAccountEditionMarker extends string
-        ? WritableAccount<TAccountEditionMarker>
-        : TAccountEditionMarker,
-      TAccountCollectionMetadata extends string
-        ? WritableAccount<TAccountCollectionMetadata>
-        : TAccountCollectionMetadata,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      TAccountRent extends string
-        ? ReadonlyAccount<TAccountRent>
-        : TAccountRent,
-      TAccountTokenMetadataProgram extends string
-        ? ReadonlyAccount<TAccountTokenMetadataProgram>
-        : TAccountTokenMetadataProgram,
-      TAccountSysvarInstructions extends string
-        ? ReadonlyAccount<TAccountSysvarInstructions>
-        : TAccountSysvarInstructions,
+      TAccountLogWrapper extends string
+        ? ReadonlyAccount<TAccountLogWrapper>
+        : TAccountLogWrapper,
+      TAccountMplCore extends string
+        ? ReadonlyAccount<TAccountMplCore>
+        : TAccountMplCore,
       ...TRemainingAccounts,
     ]
   >;
@@ -160,92 +128,57 @@ export function getBurnAndWithdrawInstructionDataCodec(): Codec<
 
 export type BurnAndWithdrawAsyncInput<
   TAccountOwner extends string = string,
-  TAccountTokenRecord extends string = string,
-  TAccountMintAuthority extends string = string,
+  TAccountAsset extends string = string,
+  TAccountCollection extends string = string,
   TAccountMasterState extends string = string,
   TAccountVault extends string = string,
-  TAccountMetadata extends string = string,
-  TAccountTokenAccount extends string = string,
-  TAccountMint extends string = string,
-  TAccountEditionMarker extends string = string,
-  TAccountCollectionMetadata extends string = string,
-  TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountRent extends string = string,
-  TAccountTokenMetadataProgram extends string = string,
-  TAccountSysvarInstructions extends string = string,
+  TAccountLogWrapper extends string = string,
+  TAccountMplCore extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
-  tokenRecord?: Address<TAccountTokenRecord>;
-  mintAuthority?: Address<TAccountMintAuthority>;
-  masterState: Address<TAccountMasterState>;
+  asset: Address<TAccountAsset>;
+  collection: Address<TAccountCollection>;
+  masterState?: Address<TAccountMasterState>;
   vault?: Address<TAccountVault>;
-  metadata?: Address<TAccountMetadata>;
-  tokenAccount: Address<TAccountTokenAccount>;
-  mint: Address<TAccountMint>;
-  editionMarker?: Address<TAccountEditionMarker>;
-  collectionMetadata: Address<TAccountCollectionMetadata>;
-  tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  rent?: Address<TAccountRent>;
-  tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
-  sysvarInstructions: Address<TAccountSysvarInstructions>;
+  logWrapper?: Address<TAccountLogWrapper>;
+  mplCore?: Address<TAccountMplCore>;
 };
 
 export async function getBurnAndWithdrawInstructionAsync<
   TAccountOwner extends string,
-  TAccountTokenRecord extends string,
-  TAccountMintAuthority extends string,
+  TAccountAsset extends string,
+  TAccountCollection extends string,
   TAccountMasterState extends string,
   TAccountVault extends string,
-  TAccountMetadata extends string,
-  TAccountTokenAccount extends string,
-  TAccountMint extends string,
-  TAccountEditionMarker extends string,
-  TAccountCollectionMetadata extends string,
-  TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
-  TAccountRent extends string,
-  TAccountTokenMetadataProgram extends string,
-  TAccountSysvarInstructions extends string,
+  TAccountLogWrapper extends string,
+  TAccountMplCore extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
   input: BurnAndWithdrawAsyncInput<
     TAccountOwner,
-    TAccountTokenRecord,
-    TAccountMintAuthority,
+    TAccountAsset,
+    TAccountCollection,
     TAccountMasterState,
     TAccountVault,
-    TAccountMetadata,
-    TAccountTokenAccount,
-    TAccountMint,
-    TAccountEditionMarker,
-    TAccountCollectionMetadata,
-    TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent,
-    TAccountTokenMetadataProgram,
-    TAccountSysvarInstructions
+    TAccountLogWrapper,
+    TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
   BurnAndWithdrawInstruction<
     TProgramAddress,
     TAccountOwner,
-    TAccountTokenRecord,
-    TAccountMintAuthority,
+    TAccountAsset,
+    TAccountCollection,
     TAccountMasterState,
     TAccountVault,
-    TAccountMetadata,
-    TAccountTokenAccount,
-    TAccountMint,
-    TAccountEditionMarker,
-    TAccountCollectionMetadata,
-    TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent,
-    TAccountTokenMetadataProgram,
-    TAccountSysvarInstructions
+    TAccountLogWrapper,
+    TAccountMplCore
   >
 > {
   // Program address.
@@ -255,29 +188,13 @@ export async function getBurnAndWithdrawInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: true },
-    tokenRecord: { value: input.tokenRecord ?? null, isWritable: true },
-    mintAuthority: { value: input.mintAuthority ?? null, isWritable: true },
+    asset: { value: input.asset ?? null, isWritable: true },
+    collection: { value: input.collection ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
-    metadata: { value: input.metadata ?? null, isWritable: true },
-    tokenAccount: { value: input.tokenAccount ?? null, isWritable: true },
-    mint: { value: input.mint ?? null, isWritable: true },
-    editionMarker: { value: input.editionMarker ?? null, isWritable: true },
-    collectionMetadata: {
-      value: input.collectionMetadata ?? null,
-      isWritable: true,
-    },
-    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    rent: { value: input.rent ?? null, isWritable: false },
-    tokenMetadataProgram: {
-      value: input.tokenMetadataProgram ?? null,
-      isWritable: false,
-    },
-    sysvarInstructions: {
-      value: input.sysvarInstructions ?? null,
-      isWritable: false,
-    },
+    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
+    mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -285,40 +202,12 @@ export async function getBurnAndWithdrawInstructionAsync<
   >;
 
   // Resolve default values.
-  if (!accounts.tokenMetadataProgram.value) {
-    accounts.tokenMetadataProgram.value =
-      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' as Address<'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'>;
-  }
-  if (!accounts.tokenRecord.value) {
-    accounts.tokenRecord.value = await getProgramDerivedAddress({
+  if (!accounts.masterState.value) {
+    accounts.masterState.value = await getProgramDerivedAddress({
       programAddress,
       seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])
-        ),
-        getAddressEncoder().encode(
-          expectAddress(accounts.tokenMetadataProgram.value)
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
-        getBytesEncoder().encode(
-          new Uint8Array([
-            116, 111, 107, 101, 110, 95, 114, 101, 99, 111, 114, 100,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.tokenAccount.value)),
-      ],
-    });
-  }
-  if (!accounts.mintAuthority.value) {
-    accounts.mintAuthority.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
+        getBytesEncoder().encode(new Uint8Array([109, 97, 115, 116, 101, 114])),
+        getAddressEncoder().encode(expectAddress(accounts.collection.value)),
       ],
     });
   }
@@ -327,100 +216,43 @@ export async function getBurnAndWithdrawInstructionAsync<
       programAddress,
       seeds: [
         getBytesEncoder().encode(new Uint8Array([118, 97, 117, 108, 116])),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
+        getAddressEncoder().encode(expectAddress(accounts.asset.value)),
       ],
     });
-  }
-  if (!accounts.metadata.value) {
-    accounts.metadata.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])
-        ),
-        getBytesEncoder().encode(
-          new Uint8Array([
-            11, 112, 101, 177, 227, 209, 124, 69, 56, 157, 82, 127, 107, 4, 195,
-            205, 88, 184, 108, 115, 26, 160, 253, 181, 73, 182, 209, 188, 3,
-            248, 41, 70,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
-      ],
-    });
-  }
-  if (!accounts.editionMarker.value) {
-    accounts.editionMarker.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])
-        ),
-        getBytesEncoder().encode(
-          new Uint8Array([
-            11, 112, 101, 177, 227, 209, 124, 69, 56, 157, 82, 127, 107, 4, 195,
-            205, 88, 184, 108, 115, 26, 160, 253, 181, 73, 182, 209, 188, 3,
-            248, 41, 70,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.mint.value)),
-        getBytesEncoder().encode(
-          new Uint8Array([101, 100, 105, 116, 105, 111, 110])
-        ),
-      ],
-    });
-  }
-  if (!accounts.tokenProgram.value) {
-    accounts.tokenProgram.value =
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
   }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
-  if (!accounts.rent.value) {
-    accounts.rent.value =
-      'SysvarRent111111111111111111111111111111111' as Address<'SysvarRent111111111111111111111111111111111'>;
+  if (!accounts.mplCore.value) {
+    accounts.mplCore.value =
+      'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d' as Address<'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d'>;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.owner),
-      getAccountMeta(accounts.tokenRecord),
-      getAccountMeta(accounts.mintAuthority),
+      getAccountMeta(accounts.asset),
+      getAccountMeta(accounts.collection),
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.vault),
-      getAccountMeta(accounts.metadata),
-      getAccountMeta(accounts.tokenAccount),
-      getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.editionMarker),
-      getAccountMeta(accounts.collectionMetadata),
-      getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.rent),
-      getAccountMeta(accounts.tokenMetadataProgram),
-      getAccountMeta(accounts.sysvarInstructions),
+      getAccountMeta(accounts.logWrapper),
+      getAccountMeta(accounts.mplCore),
     ],
     programAddress,
     data: getBurnAndWithdrawInstructionDataEncoder().encode({}),
   } as BurnAndWithdrawInstruction<
     TProgramAddress,
     TAccountOwner,
-    TAccountTokenRecord,
-    TAccountMintAuthority,
+    TAccountAsset,
+    TAccountCollection,
     TAccountMasterState,
     TAccountVault,
-    TAccountMetadata,
-    TAccountTokenAccount,
-    TAccountMint,
-    TAccountEditionMarker,
-    TAccountCollectionMetadata,
-    TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent,
-    TAccountTokenMetadataProgram,
-    TAccountSysvarInstructions
+    TAccountLogWrapper,
+    TAccountMplCore
   >;
 
   return instruction;
@@ -428,91 +260,56 @@ export async function getBurnAndWithdrawInstructionAsync<
 
 export type BurnAndWithdrawInput<
   TAccountOwner extends string = string,
-  TAccountTokenRecord extends string = string,
-  TAccountMintAuthority extends string = string,
+  TAccountAsset extends string = string,
+  TAccountCollection extends string = string,
   TAccountMasterState extends string = string,
   TAccountVault extends string = string,
-  TAccountMetadata extends string = string,
-  TAccountTokenAccount extends string = string,
-  TAccountMint extends string = string,
-  TAccountEditionMarker extends string = string,
-  TAccountCollectionMetadata extends string = string,
-  TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountRent extends string = string,
-  TAccountTokenMetadataProgram extends string = string,
-  TAccountSysvarInstructions extends string = string,
+  TAccountLogWrapper extends string = string,
+  TAccountMplCore extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
-  tokenRecord: Address<TAccountTokenRecord>;
-  mintAuthority: Address<TAccountMintAuthority>;
+  asset: Address<TAccountAsset>;
+  collection: Address<TAccountCollection>;
   masterState: Address<TAccountMasterState>;
   vault: Address<TAccountVault>;
-  metadata: Address<TAccountMetadata>;
-  tokenAccount: Address<TAccountTokenAccount>;
-  mint: Address<TAccountMint>;
-  editionMarker: Address<TAccountEditionMarker>;
-  collectionMetadata: Address<TAccountCollectionMetadata>;
-  tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  rent?: Address<TAccountRent>;
-  tokenMetadataProgram?: Address<TAccountTokenMetadataProgram>;
-  sysvarInstructions: Address<TAccountSysvarInstructions>;
+  logWrapper?: Address<TAccountLogWrapper>;
+  mplCore?: Address<TAccountMplCore>;
 };
 
 export function getBurnAndWithdrawInstruction<
   TAccountOwner extends string,
-  TAccountTokenRecord extends string,
-  TAccountMintAuthority extends string,
+  TAccountAsset extends string,
+  TAccountCollection extends string,
   TAccountMasterState extends string,
   TAccountVault extends string,
-  TAccountMetadata extends string,
-  TAccountTokenAccount extends string,
-  TAccountMint extends string,
-  TAccountEditionMarker extends string,
-  TAccountCollectionMetadata extends string,
-  TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
-  TAccountRent extends string,
-  TAccountTokenMetadataProgram extends string,
-  TAccountSysvarInstructions extends string,
+  TAccountLogWrapper extends string,
+  TAccountMplCore extends string,
   TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
 >(
   input: BurnAndWithdrawInput<
     TAccountOwner,
-    TAccountTokenRecord,
-    TAccountMintAuthority,
+    TAccountAsset,
+    TAccountCollection,
     TAccountMasterState,
     TAccountVault,
-    TAccountMetadata,
-    TAccountTokenAccount,
-    TAccountMint,
-    TAccountEditionMarker,
-    TAccountCollectionMetadata,
-    TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent,
-    TAccountTokenMetadataProgram,
-    TAccountSysvarInstructions
+    TAccountLogWrapper,
+    TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
 ): BurnAndWithdrawInstruction<
   TProgramAddress,
   TAccountOwner,
-  TAccountTokenRecord,
-  TAccountMintAuthority,
+  TAccountAsset,
+  TAccountCollection,
   TAccountMasterState,
   TAccountVault,
-  TAccountMetadata,
-  TAccountTokenAccount,
-  TAccountMint,
-  TAccountEditionMarker,
-  TAccountCollectionMetadata,
-  TAccountTokenProgram,
   TAccountSystemProgram,
-  TAccountRent,
-  TAccountTokenMetadataProgram,
-  TAccountSysvarInstructions
+  TAccountLogWrapper,
+  TAccountMplCore
 > {
   // Program address.
   const programAddress =
@@ -521,29 +318,13 @@ export function getBurnAndWithdrawInstruction<
   // Original accounts.
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: true },
-    tokenRecord: { value: input.tokenRecord ?? null, isWritable: true },
-    mintAuthority: { value: input.mintAuthority ?? null, isWritable: true },
+    asset: { value: input.asset ?? null, isWritable: true },
+    collection: { value: input.collection ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
-    metadata: { value: input.metadata ?? null, isWritable: true },
-    tokenAccount: { value: input.tokenAccount ?? null, isWritable: true },
-    mint: { value: input.mint ?? null, isWritable: true },
-    editionMarker: { value: input.editionMarker ?? null, isWritable: true },
-    collectionMetadata: {
-      value: input.collectionMetadata ?? null,
-      isWritable: true,
-    },
-    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    rent: { value: input.rent ?? null, isWritable: false },
-    tokenMetadataProgram: {
-      value: input.tokenMetadataProgram ?? null,
-      isWritable: false,
-    },
-    sysvarInstructions: {
-      value: input.sysvarInstructions ?? null,
-      isWritable: false,
-    },
+    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
+    mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -551,61 +332,39 @@ export function getBurnAndWithdrawInstruction<
   >;
 
   // Resolve default values.
-  if (!accounts.tokenMetadataProgram.value) {
-    accounts.tokenMetadataProgram.value =
-      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' as Address<'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'>;
-  }
-  if (!accounts.tokenProgram.value) {
-    accounts.tokenProgram.value =
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
-  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
-  if (!accounts.rent.value) {
-    accounts.rent.value =
-      'SysvarRent111111111111111111111111111111111' as Address<'SysvarRent111111111111111111111111111111111'>;
+  if (!accounts.mplCore.value) {
+    accounts.mplCore.value =
+      'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d' as Address<'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d'>;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.owner),
-      getAccountMeta(accounts.tokenRecord),
-      getAccountMeta(accounts.mintAuthority),
+      getAccountMeta(accounts.asset),
+      getAccountMeta(accounts.collection),
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.vault),
-      getAccountMeta(accounts.metadata),
-      getAccountMeta(accounts.tokenAccount),
-      getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.editionMarker),
-      getAccountMeta(accounts.collectionMetadata),
-      getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.rent),
-      getAccountMeta(accounts.tokenMetadataProgram),
-      getAccountMeta(accounts.sysvarInstructions),
+      getAccountMeta(accounts.logWrapper),
+      getAccountMeta(accounts.mplCore),
     ],
     programAddress,
     data: getBurnAndWithdrawInstructionDataEncoder().encode({}),
   } as BurnAndWithdrawInstruction<
     TProgramAddress,
     TAccountOwner,
-    TAccountTokenRecord,
-    TAccountMintAuthority,
+    TAccountAsset,
+    TAccountCollection,
     TAccountMasterState,
     TAccountVault,
-    TAccountMetadata,
-    TAccountTokenAccount,
-    TAccountMint,
-    TAccountEditionMarker,
-    TAccountCollectionMetadata,
-    TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent,
-    TAccountTokenMetadataProgram,
-    TAccountSysvarInstructions
+    TAccountLogWrapper,
+    TAccountMplCore
   >;
 
   return instruction;
@@ -618,20 +377,13 @@ export type ParsedBurnAndWithdrawInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     owner: TAccountMetas[0];
-    tokenRecord: TAccountMetas[1];
-    mintAuthority: TAccountMetas[2];
+    asset: TAccountMetas[1];
+    collection: TAccountMetas[2];
     masterState: TAccountMetas[3];
     vault: TAccountMetas[4];
-    metadata: TAccountMetas[5];
-    tokenAccount: TAccountMetas[6];
-    mint: TAccountMetas[7];
-    editionMarker: TAccountMetas[8];
-    collectionMetadata: TAccountMetas[9];
-    tokenProgram: TAccountMetas[10];
-    systemProgram: TAccountMetas[11];
-    rent: TAccountMetas[12];
-    tokenMetadataProgram: TAccountMetas[13];
-    sysvarInstructions: TAccountMetas[14];
+    systemProgram: TAccountMetas[5];
+    logWrapper?: TAccountMetas[6] | undefined;
+    mplCore: TAccountMetas[7];
   };
   data: BurnAndWithdrawInstructionData;
 };
@@ -644,7 +396,7 @@ export function parseBurnAndWithdrawInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedBurnAndWithdrawInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 15) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -654,24 +406,23 @@ export function parseBurnAndWithdrawInstruction<
     accountIndex += 1;
     return accountMeta;
   };
+  const getNextOptionalAccount = () => {
+    const accountMeta = getNextAccount();
+    return accountMeta.address === LOCKED_SOL_PNFT_PROGRAM_ADDRESS
+      ? undefined
+      : accountMeta;
+  };
   return {
     programAddress: instruction.programAddress,
     accounts: {
       owner: getNextAccount(),
-      tokenRecord: getNextAccount(),
-      mintAuthority: getNextAccount(),
+      asset: getNextAccount(),
+      collection: getNextAccount(),
       masterState: getNextAccount(),
       vault: getNextAccount(),
-      metadata: getNextAccount(),
-      tokenAccount: getNextAccount(),
-      mint: getNextAccount(),
-      editionMarker: getNextAccount(),
-      collectionMetadata: getNextAccount(),
-      tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
-      rent: getNextAccount(),
-      tokenMetadataProgram: getNextAccount(),
-      sysvarInstructions: getNextAccount(),
+      logWrapper: getNextOptionalAccount(),
+      mplCore: getNextAccount(),
     },
     data: getBurnAndWithdrawInstructionDataDecoder().decode(instruction.data),
   };

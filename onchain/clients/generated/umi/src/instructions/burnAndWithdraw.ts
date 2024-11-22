@@ -31,20 +31,13 @@ import {
 // Accounts.
 export type BurnAndWithdrawInstructionAccounts = {
   owner: Signer;
-  tokenRecord?: PublicKey | Pda;
-  mintAuthority?: PublicKey | Pda;
-  masterState: PublicKey | Pda;
+  asset: PublicKey | Pda;
+  collection: PublicKey | Pda;
+  masterState?: PublicKey | Pda;
   vault?: PublicKey | Pda;
-  metadata?: PublicKey | Pda;
-  tokenAccount: PublicKey | Pda;
-  mint: PublicKey | Pda;
-  editionMarker?: PublicKey | Pda;
-  collectionMetadata: PublicKey | Pda;
-  tokenProgram?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
-  rent?: PublicKey | Pda;
-  tokenMetadataProgram?: PublicKey | Pda;
-  sysvarInstructions: PublicKey | Pda;
+  logWrapper?: PublicKey | Pda;
+  mplCore?: PublicKey | Pda;
 };
 
 // Data.
@@ -93,15 +86,15 @@ export function burnAndWithdraw(
       isWritable: true as boolean,
       value: input.owner ?? null,
     },
-    tokenRecord: {
+    asset: {
       index: 1,
       isWritable: true as boolean,
-      value: input.tokenRecord ?? null,
+      value: input.asset ?? null,
     },
-    mintAuthority: {
+    collection: {
       index: 2,
       isWritable: true as boolean,
-      value: input.mintAuthority ?? null,
+      value: input.collection ?? null,
     },
     masterState: {
       index: 3,
@@ -113,90 +106,29 @@ export function burnAndWithdraw(
       isWritable: true as boolean,
       value: input.vault ?? null,
     },
-    metadata: {
-      index: 5,
-      isWritable: true as boolean,
-      value: input.metadata ?? null,
-    },
-    tokenAccount: {
-      index: 6,
-      isWritable: true as boolean,
-      value: input.tokenAccount ?? null,
-    },
-    mint: { index: 7, isWritable: true as boolean, value: input.mint ?? null },
-    editionMarker: {
-      index: 8,
-      isWritable: true as boolean,
-      value: input.editionMarker ?? null,
-    },
-    collectionMetadata: {
-      index: 9,
-      isWritable: true as boolean,
-      value: input.collectionMetadata ?? null,
-    },
-    tokenProgram: {
-      index: 10,
-      isWritable: false as boolean,
-      value: input.tokenProgram ?? null,
-    },
     systemProgram: {
-      index: 11,
+      index: 5,
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
-    rent: {
-      index: 12,
+    logWrapper: {
+      index: 6,
       isWritable: false as boolean,
-      value: input.rent ?? null,
+      value: input.logWrapper ?? null,
     },
-    tokenMetadataProgram: {
-      index: 13,
+    mplCore: {
+      index: 7,
       isWritable: false as boolean,
-      value: input.tokenMetadataProgram ?? null,
-    },
-    sysvarInstructions: {
-      index: 14,
-      isWritable: false as boolean,
-      value: input.sysvarInstructions ?? null,
+      value: input.mplCore ?? null,
     },
   } satisfies ResolvedAccountsWithIndices;
 
   // Default values.
-  if (!resolvedAccounts.tokenMetadataProgram.value) {
-    resolvedAccounts.tokenMetadataProgram.value = context.programs.getPublicKey(
-      'tokenMetadataProgram',
-      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-    );
-    resolvedAccounts.tokenMetadataProgram.isWritable = false;
-  }
-  if (!resolvedAccounts.tokenRecord.value) {
-    resolvedAccounts.tokenRecord.value = context.eddsa.findPda(programId, [
-      bytes().serialize(new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])),
+  if (!resolvedAccounts.masterState.value) {
+    resolvedAccounts.masterState.value = context.eddsa.findPda(programId, [
+      bytes().serialize(new Uint8Array([109, 97, 115, 116, 101, 114])),
       publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.tokenMetadataProgram.value)
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
-      ),
-      bytes().serialize(
-        new Uint8Array([
-          116, 111, 107, 101, 110, 95, 114, 101, 99, 111, 114, 100,
-        ])
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.tokenAccount.value)
-      ),
-    ]);
-  }
-  if (!resolvedAccounts.mintAuthority.value) {
-    resolvedAccounts.mintAuthority.value = context.eddsa.findPda(programId, [
-      bytes().serialize(
-        new Uint8Array([
-          109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
-        ])
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
+        expectPublicKey(resolvedAccounts.collection.value)
       ),
     ]);
   }
@@ -204,47 +136,9 @@ export function burnAndWithdraw(
     resolvedAccounts.vault.value = context.eddsa.findPda(programId, [
       bytes().serialize(new Uint8Array([118, 97, 117, 108, 116])),
       publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
+        expectPublicKey(resolvedAccounts.asset.value)
       ),
     ]);
-  }
-  if (!resolvedAccounts.metadata.value) {
-    resolvedAccounts.metadata.value = context.eddsa.findPda(programId, [
-      bytes().serialize(new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])),
-      bytes().serialize(
-        new Uint8Array([
-          11, 112, 101, 177, 227, 209, 124, 69, 56, 157, 82, 127, 107, 4, 195,
-          205, 88, 184, 108, 115, 26, 160, 253, 181, 73, 182, 209, 188, 3, 248,
-          41, 70,
-        ])
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
-      ),
-    ]);
-  }
-  if (!resolvedAccounts.editionMarker.value) {
-    resolvedAccounts.editionMarker.value = context.eddsa.findPda(programId, [
-      bytes().serialize(new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])),
-      bytes().serialize(
-        new Uint8Array([
-          11, 112, 101, 177, 227, 209, 124, 69, 56, 157, 82, 127, 107, 4, 195,
-          205, 88, 184, 108, 115, 26, 160, 253, 181, 73, 182, 209, 188, 3, 248,
-          41, 70,
-        ])
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
-      ),
-      bytes().serialize(new Uint8Array([101, 100, 105, 116, 105, 111, 110])),
-    ]);
-  }
-  if (!resolvedAccounts.tokenProgram.value) {
-    resolvedAccounts.tokenProgram.value = context.programs.getPublicKey(
-      'tokenProgram',
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
-    );
-    resolvedAccounts.tokenProgram.isWritable = false;
   }
   if (!resolvedAccounts.systemProgram.value) {
     resolvedAccounts.systemProgram.value = context.programs.getPublicKey(
@@ -253,12 +147,12 @@ export function burnAndWithdraw(
     );
     resolvedAccounts.systemProgram.isWritable = false;
   }
-  if (!resolvedAccounts.rent.value) {
-    resolvedAccounts.rent.value = context.programs.getPublicKey(
-      'rent',
-      'SysvarRent111111111111111111111111111111111'
+  if (!resolvedAccounts.mplCore.value) {
+    resolvedAccounts.mplCore.value = context.programs.getPublicKey(
+      'mplCore',
+      'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d'
     );
-    resolvedAccounts.rent.isWritable = false;
+    resolvedAccounts.mplCore.isWritable = false;
   }
 
   // Accounts in order.

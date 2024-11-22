@@ -15,12 +15,8 @@ use borsh::BorshDeserialize;
 pub struct MasterState {
 pub discriminator: [u8; 8],
 #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
-pub master_mint: Pubkey,
+pub collection: Pubkey,
 pub total_minted: u64,
-#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
-pub collection_delegate: Pubkey,
-#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
-pub collection_authority_record: Pubkey,
 }
 
 

@@ -32,17 +32,13 @@ export type MasterState = Account<MasterStateAccountData>;
 
 export type MasterStateAccountData = {
   discriminator: Uint8Array;
-  masterMint: PublicKey;
+  collection: PublicKey;
   totalMinted: bigint;
-  collectionDelegate: PublicKey;
-  collectionAuthorityRecord: PublicKey;
 };
 
 export type MasterStateAccountDataArgs = {
-  masterMint: PublicKey;
+  collection: PublicKey;
   totalMinted: number | bigint;
-  collectionDelegate: PublicKey;
-  collectionAuthorityRecord: PublicKey;
 };
 
 export function getMasterStateAccountDataSerializer(): Serializer<
@@ -53,10 +49,8 @@ export function getMasterStateAccountDataSerializer(): Serializer<
     struct<MasterStateAccountData>(
       [
         ['discriminator', bytes({ size: 8 })],
-        ['masterMint', publicKeySerializer()],
+        ['collection', publicKeySerializer()],
         ['totalMinted', u64()],
-        ['collectionDelegate', publicKeySerializer()],
-        ['collectionAuthorityRecord', publicKeySerializer()],
       ],
       { description: 'MasterStateAccountData' }
     ),
@@ -135,16 +129,12 @@ export function getMasterStateGpaBuilder(
   return gpaBuilder(context, programId)
     .registerFields<{
       discriminator: Uint8Array;
-      masterMint: PublicKey;
+      collection: PublicKey;
       totalMinted: number | bigint;
-      collectionDelegate: PublicKey;
-      collectionAuthorityRecord: PublicKey;
     }>({
       discriminator: [0, bytes({ size: 8 })],
-      masterMint: [8, publicKeySerializer()],
+      collection: [8, publicKeySerializer()],
       totalMinted: [40, u64()],
-      collectionDelegate: [48, publicKeySerializer()],
-      collectionAuthorityRecord: [80, publicKeySerializer()],
     })
     .deserializeUsing<MasterState>((account) => deserializeMasterState(account))
     .whereField(

@@ -7,33 +7,35 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use crate::generated::types::UpdateMetadataArgs;
 
 /// Accounts.
 pub struct UpdateMetadata {
-      
+            /// The asset to update
+
+    
               
-          pub server_authority: solana_program::pubkey::Pubkey,
+          pub asset: solana_program::pubkey::Pubkey,
+                /// The collection this asset belongs to (optional)
+
+    
+              
+          pub collection: Option<solana_program::pubkey::Pubkey>,
           
               
-          pub vault: solana_program::pubkey::Pubkey,
+          pub authority: solana_program::pubkey::Pubkey,
           
               
-          pub master_state: solana_program::pubkey::Pubkey,
-          
-              
-          pub metadata: solana_program::pubkey::Pubkey,
-          
-              
-          pub mint_authority: solana_program::pubkey::Pubkey,
-          
-              
-          pub mint: solana_program::pubkey::Pubkey,
+          pub payer: solana_program::pubkey::Pubkey,
           
               
           pub system_program: solana_program::pubkey::Pubkey,
           
               
-          pub token_metadata_program: solana_program::pubkey::Pubkey,
+          pub log_wrapper: Option<solana_program::pubkey::Pubkey>,
+          
+              
+          pub mpl_core: solana_program::pubkey::Pubkey,
       }
 
 impl UpdateMetadata {
@@ -42,37 +44,47 @@ impl UpdateMetadata {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, args: UpdateMetadataInstructionArgs, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
-            self.server_authority,
+            self.asset,
+            false
+          ));
+                                                      if let Some(collection) = self.collection {
+              accounts.push(solana_program::instruction::AccountMeta::new(
+                collection,
+                false,
+              ));
+            } else {
+              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                crate::LOCKED_SOL_PNFT_ID,
+                false,
+              ));
+            }
+                                                    accounts.push(solana_program::instruction::AccountMeta::new(
+            self.authority,
             true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
-            self.vault,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new(
-            self.master_state,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new(
-            self.metadata,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.mint_authority,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.mint,
-            false
+            self.payer,
+            true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
             false
           ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.token_metadata_program,
+                                                      if let Some(log_wrapper) = self.log_wrapper {
+              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                log_wrapper,
+                false,
+              ));
+            } else {
+              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                crate::LOCKED_SOL_PNFT_ID,
+                false,
+              ));
+            }
+                                                    accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.mpl_core,
             false
           ));
                       accounts.extend_from_slice(remaining_accounts);
@@ -91,13 +103,13 @@ impl UpdateMetadata {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct UpdateMetadataInstructionData {
             discriminator: [u8; 8],
-                  }
+            }
 
 impl UpdateMetadataInstructionData {
   pub fn new() -> Self {
     Self {
                         discriminator: [170, 182, 43, 239, 97, 78, 225, 186],
-                                              }
+                                }
   }
 }
 
@@ -110,8 +122,7 @@ impl Default for UpdateMetadataInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UpdateMetadataInstructionArgs {
-                  pub new_uri: String,
-                pub new_name: Option<String>,
+                  pub args: UpdateMetadataArgs,
       }
 
 
@@ -119,26 +130,23 @@ pub struct UpdateMetadataInstructionArgs {
 ///
 /// ### Accounts:
 ///
-                      ///   0. `[writable, signer]` server_authority
-                ///   1. `[writable]` vault
-                ///   2. `[writable]` master_state
-                ///   3. `[writable]` metadata
-          ///   4. `[]` mint_authority
-          ///   5. `[]` mint
-                ///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   7. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
+                ///   0. `[writable]` asset
+                      ///   1. `[writable, optional]` collection
+                      ///   2. `[writable, signer]` authority
+                      ///   3. `[writable, signer]` payer
+                ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   5. `[optional]` log_wrapper
+                ///   6. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
 #[derive(Clone, Debug, Default)]
 pub struct UpdateMetadataBuilder {
-            server_authority: Option<solana_program::pubkey::Pubkey>,
-                vault: Option<solana_program::pubkey::Pubkey>,
-                master_state: Option<solana_program::pubkey::Pubkey>,
-                metadata: Option<solana_program::pubkey::Pubkey>,
-                mint_authority: Option<solana_program::pubkey::Pubkey>,
-                mint: Option<solana_program::pubkey::Pubkey>,
+            asset: Option<solana_program::pubkey::Pubkey>,
+                collection: Option<solana_program::pubkey::Pubkey>,
+                authority: Option<solana_program::pubkey::Pubkey>,
+                payer: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
-                token_metadata_program: Option<solana_program::pubkey::Pubkey>,
-                        new_uri: Option<String>,
-                new_name: Option<String>,
+                log_wrapper: Option<solana_program::pubkey::Pubkey>,
+                mpl_core: Option<solana_program::pubkey::Pubkey>,
+                        args: Option<UpdateMetadataArgs>,
         __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -146,34 +154,27 @@ impl UpdateMetadataBuilder {
   pub fn new() -> Self {
     Self::default()
   }
-            #[inline(always)]
-    pub fn server_authority(&mut self, server_authority: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.server_authority = Some(server_authority);
+            /// The asset to update
+#[inline(always)]
+    pub fn asset(&mut self, asset: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.asset = Some(asset);
+                    self
+    }
+            /// `[optional account]`
+/// The collection this asset belongs to (optional)
+#[inline(always)]
+    pub fn collection(&mut self, collection: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
+                        self.collection = collection;
                     self
     }
             #[inline(always)]
-    pub fn vault(&mut self, vault: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.vault = Some(vault);
+    pub fn authority(&mut self, authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.authority = Some(authority);
                     self
     }
             #[inline(always)]
-    pub fn master_state(&mut self, master_state: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.master_state = Some(master_state);
-                    self
-    }
-            #[inline(always)]
-    pub fn metadata(&mut self, metadata: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.metadata = Some(metadata);
-                    self
-    }
-            #[inline(always)]
-    pub fn mint_authority(&mut self, mint_authority: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.mint_authority = Some(mint_authority);
-                    self
-    }
-            #[inline(always)]
-    pub fn mint(&mut self, mint: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.mint = Some(mint);
+    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.payer = Some(payer);
                     self
     }
             /// `[optional account, default to '11111111111111111111111111111111']`
@@ -182,21 +183,21 @@ impl UpdateMetadataBuilder {
                         self.system_program = Some(system_program);
                     self
     }
-            /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
+            /// `[optional account]`
 #[inline(always)]
-    pub fn token_metadata_program(&mut self, token_metadata_program: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.token_metadata_program = Some(token_metadata_program);
+    pub fn log_wrapper(&mut self, log_wrapper: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
+                        self.log_wrapper = log_wrapper;
+                    self
+    }
+            /// `[optional account, default to 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d']`
+#[inline(always)]
+    pub fn mpl_core(&mut self, mpl_core: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.mpl_core = Some(mpl_core);
                     self
     }
                     #[inline(always)]
-      pub fn new_uri(&mut self, new_uri: String) -> &mut Self {
-        self.new_uri = Some(new_uri);
-        self
-      }
-                /// `[optional argument]`
-#[inline(always)]
-      pub fn new_name(&mut self, new_name: String) -> &mut Self {
-        self.new_name = Some(new_name);
+      pub fn args(&mut self, args: UpdateMetadataArgs) -> &mut Self {
+        self.args = Some(args);
         self
       }
         /// Add an additional account to the instruction.
@@ -214,18 +215,16 @@ impl UpdateMetadataBuilder {
   #[allow(clippy::clone_on_copy)]
   pub fn instruction(&self) -> solana_program::instruction::Instruction {
     let accounts = UpdateMetadata {
-                              server_authority: self.server_authority.expect("server_authority is not set"),
-                                        vault: self.vault.expect("vault is not set"),
-                                        master_state: self.master_state.expect("master_state is not set"),
-                                        metadata: self.metadata.expect("metadata is not set"),
-                                        mint_authority: self.mint_authority.expect("mint_authority is not set"),
-                                        mint: self.mint.expect("mint is not set"),
+                              asset: self.asset.expect("asset is not set"),
+                                        collection: self.collection,
+                                        authority: self.authority.expect("authority is not set"),
+                                        payer: self.payer.expect("payer is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
-                                        token_metadata_program: self.token_metadata_program.unwrap_or(solana_program::pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
+                                        log_wrapper: self.log_wrapper,
+                                        mpl_core: self.mpl_core.unwrap_or(solana_program::pubkey!("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d")),
                       };
           let args = UpdateMetadataInstructionArgs {
-                                                              new_uri: self.new_uri.clone().expect("new_uri is not set"),
-                                                                  new_name: self.new_name.clone(),
+                                                              args: self.args.clone().expect("args is not set"),
                                     };
     
     accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -234,60 +233,62 @@ impl UpdateMetadataBuilder {
 
   /// `update_metadata` CPI accounts.
   pub struct UpdateMetadataCpiAccounts<'a, 'b> {
-          
+                  /// The asset to update
+
+      
                     
-              pub server_authority: &'b solana_program::account_info::AccountInfo<'a>,
+              pub asset: &'b solana_program::account_info::AccountInfo<'a>,
+                        /// The collection this asset belongs to (optional)
+
+      
+                    
+              pub collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 
                     
-              pub vault: &'b solana_program::account_info::AccountInfo<'a>,
+              pub authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
-                
-                    
-              pub metadata: &'b solana_program::account_info::AccountInfo<'a>,
-                
-                    
-              pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
-                
-                    
-              pub mint: &'b solana_program::account_info::AccountInfo<'a>,
+              pub payer: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
+              pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                
+                    
+              pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
             }
 
 /// `update_metadata` CPI instruction.
 pub struct UpdateMetadataCpi<'a, 'b> {
   /// The program to invoke.
   pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-      
+            /// The asset to update
+
+    
               
-          pub server_authority: &'b solana_program::account_info::AccountInfo<'a>,
+          pub asset: &'b solana_program::account_info::AccountInfo<'a>,
+                /// The collection this asset belongs to (optional)
+
+    
+              
+          pub collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
           
               
-          pub vault: &'b solana_program::account_info::AccountInfo<'a>,
+          pub authority: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
-          
-              
-          pub metadata: &'b solana_program::account_info::AccountInfo<'a>,
-          
-              
-          pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
-          
-              
-          pub mint: &'b solana_program::account_info::AccountInfo<'a>,
+          pub payer: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
+          pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+          
+              
+          pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
             /// The arguments for the instruction.
     pub __args: UpdateMetadataInstructionArgs,
   }
@@ -300,14 +301,13 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
       ) -> Self {
     Self {
       __program: program,
-              server_authority: accounts.server_authority,
-              vault: accounts.vault,
-              master_state: accounts.master_state,
-              metadata: accounts.metadata,
-              mint_authority: accounts.mint_authority,
-              mint: accounts.mint,
+              asset: accounts.asset,
+              collection: accounts.collection,
+              authority: accounts.authority,
+              payer: accounts.payer,
               system_program: accounts.system_program,
-              token_metadata_program: accounts.token_metadata_program,
+              log_wrapper: accounts.log_wrapper,
+              mpl_core: accounts.mpl_core,
                     __args: args,
           }
   }
@@ -330,37 +330,47 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.server_authority.key,
+            *self.asset.key,
+            false
+          ));
+                                          if let Some(collection) = self.collection {
+            accounts.push(solana_program::instruction::AccountMeta::new(
+              *collection.key,
+              false,
+            ));
+          } else {
+            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+              crate::LOCKED_SOL_PNFT_ID,
+              false,
+            ));
+          }
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.authority.key,
             true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.vault.key,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.master_state.key,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.metadata.key,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.mint_authority.key,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.mint.key,
-            false
+            *self.payer.key,
+            true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false
           ));
+                                          if let Some(log_wrapper) = self.log_wrapper {
+            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+              *log_wrapper.key,
+              false,
+            ));
+          } else {
+            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+              crate::LOCKED_SOL_PNFT_ID,
+              false,
+            ));
+          }
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.token_metadata_program.key,
+            *self.mpl_core.key,
             false
           ));
                       remaining_accounts.iter().for_each(|remaining_account| {
@@ -379,16 +389,19 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
-                  account_infos.push(self.server_authority.clone());
-                        account_infos.push(self.vault.clone());
-                        account_infos.push(self.master_state.clone());
-                        account_infos.push(self.metadata.clone());
-                        account_infos.push(self.mint_authority.clone());
-                        account_infos.push(self.mint.clone());
+                  account_infos.push(self.asset.clone());
+                        if let Some(collection) = self.collection {
+          account_infos.push(collection.clone());
+        }
+                        account_infos.push(self.authority.clone());
+                        account_infos.push(self.payer.clone());
                         account_infos.push(self.system_program.clone());
-                        account_infos.push(self.token_metadata_program.clone());
+                        if let Some(log_wrapper) = self.log_wrapper {
+          account_infos.push(log_wrapper.clone());
+        }
+                        account_infos.push(self.mpl_core.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
     if signers_seeds.is_empty() {
@@ -403,14 +416,13 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-                      ///   0. `[writable, signer]` server_authority
-                ///   1. `[writable]` vault
-                ///   2. `[writable]` master_state
-                ///   3. `[writable]` metadata
-          ///   4. `[]` mint_authority
-          ///   5. `[]` mint
-          ///   6. `[]` system_program
-          ///   7. `[]` token_metadata_program
+                ///   0. `[writable]` asset
+                      ///   1. `[writable, optional]` collection
+                      ///   2. `[writable, signer]` authority
+                      ///   3. `[writable, signer]` payer
+          ///   4. `[]` system_program
+                ///   5. `[optional]` log_wrapper
+          ///   6. `[]` mpl_core
 #[derive(Clone, Debug)]
 pub struct UpdateMetadataCpiBuilder<'a, 'b> {
   instruction: Box<UpdateMetadataCpiBuilderInstruction<'a, 'b>>,
@@ -420,48 +432,39 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
   pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
     let instruction = Box::new(UpdateMetadataCpiBuilderInstruction {
       __program: program,
-              server_authority: None,
-              vault: None,
-              master_state: None,
-              metadata: None,
-              mint_authority: None,
-              mint: None,
+              asset: None,
+              collection: None,
+              authority: None,
+              payer: None,
               system_program: None,
-              token_metadata_program: None,
-                                            new_uri: None,
-                                new_name: None,
+              log_wrapper: None,
+              mpl_core: None,
+                                            args: None,
                     __remaining_accounts: Vec::new(),
     });
     Self { instruction }
   }
-      #[inline(always)]
-    pub fn server_authority(&mut self, server_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.server_authority = Some(server_authority);
+      /// The asset to update
+#[inline(always)]
+    pub fn asset(&mut self, asset: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.asset = Some(asset);
+                    self
+    }
+      /// `[optional account]`
+/// The collection this asset belongs to (optional)
+#[inline(always)]
+    pub fn collection(&mut self, collection: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
+                        self.instruction.collection = collection;
                     self
     }
       #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.vault = Some(vault);
+    pub fn authority(&mut self, authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.authority = Some(authority);
                     self
     }
       #[inline(always)]
-    pub fn master_state(&mut self, master_state: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.master_state = Some(master_state);
-                    self
-    }
-      #[inline(always)]
-    pub fn metadata(&mut self, metadata: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.metadata = Some(metadata);
-                    self
-    }
-      #[inline(always)]
-    pub fn mint_authority(&mut self, mint_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.mint_authority = Some(mint_authority);
-                    self
-    }
-      #[inline(always)]
-    pub fn mint(&mut self, mint: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.mint = Some(mint);
+    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.payer = Some(payer);
                     self
     }
       #[inline(always)]
@@ -469,20 +472,20 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
                         self.instruction.system_program = Some(system_program);
                     self
     }
+      /// `[optional account]`
+#[inline(always)]
+    pub fn log_wrapper(&mut self, log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
+                        self.instruction.log_wrapper = log_wrapper;
+                    self
+    }
       #[inline(always)]
-    pub fn token_metadata_program(&mut self, token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.token_metadata_program = Some(token_metadata_program);
+    pub fn mpl_core(&mut self, mpl_core: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.mpl_core = Some(mpl_core);
                     self
     }
                     #[inline(always)]
-      pub fn new_uri(&mut self, new_uri: String) -> &mut Self {
-        self.instruction.new_uri = Some(new_uri);
-        self
-      }
-                /// `[optional argument]`
-#[inline(always)]
-      pub fn new_name(&mut self, new_name: String) -> &mut Self {
-        self.instruction.new_name = Some(new_name);
+      pub fn args(&mut self, args: UpdateMetadataArgs) -> &mut Self {
+        self.instruction.args = Some(args);
         self
       }
         /// Add an additional account to the instruction.
@@ -508,27 +511,24 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
   #[allow(clippy::vec_init_then_push)]
   pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program::entrypoint::ProgramResult {
           let args = UpdateMetadataInstructionArgs {
-                                                              new_uri: self.instruction.new_uri.clone().expect("new_uri is not set"),
-                                                                  new_name: self.instruction.new_name.clone(),
+                                                              args: self.instruction.args.clone().expect("args is not set"),
                                     };
         let instruction = UpdateMetadataCpi {
         __program: self.instruction.__program,
                   
-          server_authority: self.instruction.server_authority.expect("server_authority is not set"),
+          asset: self.instruction.asset.expect("asset is not set"),
                   
-          vault: self.instruction.vault.expect("vault is not set"),
+          collection: self.instruction.collection,
                   
-          master_state: self.instruction.master_state.expect("master_state is not set"),
+          authority: self.instruction.authority.expect("authority is not set"),
                   
-          metadata: self.instruction.metadata.expect("metadata is not set"),
-                  
-          mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
-                  
-          mint: self.instruction.mint.expect("mint is not set"),
+          payer: self.instruction.payer.expect("payer is not set"),
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
-          token_metadata_program: self.instruction.token_metadata_program.expect("token_metadata_program is not set"),
+          log_wrapper: self.instruction.log_wrapper,
+                  
+          mpl_core: self.instruction.mpl_core.expect("mpl_core is not set"),
                           __args: args,
             };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
@@ -538,16 +538,14 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct UpdateMetadataCpiBuilderInstruction<'a, 'b> {
   __program: &'b solana_program::account_info::AccountInfo<'a>,
-            server_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+            asset: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                token_metadata_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                        new_uri: Option<String>,
-                new_name: Option<String>,
+                log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                mpl_core: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                        args: Option<UpdateMetadataArgs>,
         /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,
 }

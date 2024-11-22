@@ -8,8 +8,6 @@
 
 import {
   Context,
-  Option,
-  OptionOrNullable,
   Pda,
   PublicKey,
   Signer,
@@ -20,40 +18,40 @@ import {
   Serializer,
   bytes,
   mapSerializer,
-  option,
-  publicKey as publicKeySerializer,
-  string,
   struct,
 } from '@metaplex-foundation/umi/serializers';
 import {
   ResolvedAccount,
   ResolvedAccountsWithIndices,
-  expectPublicKey,
   getAccountMetasAndSigners,
 } from '../shared';
+import {
+  UpdateMetadataArgs,
+  UpdateMetadataArgsArgs,
+  getUpdateMetadataArgsSerializer,
+} from '../types';
 
 // Accounts.
 export type UpdateMetadataInstructionAccounts = {
-  serverAuthority: Signer;
-  vault?: PublicKey | Pda;
-  masterState: PublicKey | Pda;
-  metadata?: PublicKey | Pda;
-  mintAuthority?: PublicKey | Pda;
-  mint: PublicKey | Pda;
+  /** The asset to update */
+  asset: PublicKey | Pda;
+  /** The collection this asset belongs to (optional) */
+  collection?: PublicKey | Pda;
+  authority: Signer;
+  payer: Signer;
   systemProgram?: PublicKey | Pda;
-  tokenMetadataProgram?: PublicKey | Pda;
+  logWrapper?: PublicKey | Pda;
+  mplCore?: PublicKey | Pda;
 };
 
 // Data.
 export type UpdateMetadataInstructionData = {
   discriminator: Uint8Array;
-  newUri: string;
-  newName: Option<string>;
+  args: UpdateMetadataArgs;
 };
 
 export type UpdateMetadataInstructionDataArgs = {
-  newUri: string;
-  newName: OptionOrNullable<string>;
+  args: UpdateMetadataArgsArgs;
 };
 
 export function getUpdateMetadataInstructionDataSerializer(): Serializer<
@@ -68,8 +66,7 @@ export function getUpdateMetadataInstructionDataSerializer(): Serializer<
     struct<UpdateMetadataInstructionData>(
       [
         ['discriminator', bytes({ size: 8 })],
-        ['newUri', string()],
-        ['newName', option(string())],
+        ['args', getUpdateMetadataArgsSerializer()],
       ],
       { description: 'UpdateMetadataInstructionData' }
     ),
@@ -88,7 +85,7 @@ export type UpdateMetadataInstructionArgs = UpdateMetadataInstructionDataArgs;
 
 // Instruction.
 export function updateMetadata(
-  context: Pick<Context, 'eddsa' | 'programs'>,
+  context: Pick<Context, 'programs'>,
   input: UpdateMetadataInstructionAccounts & UpdateMetadataInstructionArgs
 ): TransactionBuilder {
   // Program ID.
@@ -99,41 +96,40 @@ export function updateMetadata(
 
   // Accounts.
   const resolvedAccounts = {
-    serverAuthority: {
+    asset: {
       index: 0,
       isWritable: true as boolean,
-      value: input.serverAuthority ?? null,
+      value: input.asset ?? null,
     },
-    vault: {
+    collection: {
       index: 1,
       isWritable: true as boolean,
-      value: input.vault ?? null,
+      value: input.collection ?? null,
     },
-    masterState: {
+    authority: {
       index: 2,
       isWritable: true as boolean,
-      value: input.masterState ?? null,
+      value: input.authority ?? null,
     },
-    metadata: {
+    payer: {
       index: 3,
       isWritable: true as boolean,
-      value: input.metadata ?? null,
+      value: input.payer ?? null,
     },
-    mintAuthority: {
-      index: 4,
-      isWritable: false as boolean,
-      value: input.mintAuthority ?? null,
-    },
-    mint: { index: 5, isWritable: false as boolean, value: input.mint ?? null },
     systemProgram: {
-      index: 6,
+      index: 4,
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
-    tokenMetadataProgram: {
-      index: 7,
+    logWrapper: {
+      index: 5,
       isWritable: false as boolean,
-      value: input.tokenMetadataProgram ?? null,
+      value: input.logWrapper ?? null,
+    },
+    mplCore: {
+      index: 6,
+      isWritable: false as boolean,
+      value: input.mplCore ?? null,
     },
   } satisfies ResolvedAccountsWithIndices;
 
@@ -141,41 +137,6 @@ export function updateMetadata(
   const resolvedArgs: UpdateMetadataInstructionArgs = { ...input };
 
   // Default values.
-  if (!resolvedAccounts.vault.value) {
-    resolvedAccounts.vault.value = context.eddsa.findPda(programId, [
-      bytes().serialize(new Uint8Array([118, 97, 117, 108, 116])),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
-      ),
-    ]);
-  }
-  if (!resolvedAccounts.metadata.value) {
-    resolvedAccounts.metadata.value = context.eddsa.findPda(programId, [
-      bytes().serialize(new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])),
-      bytes().serialize(
-        new Uint8Array([
-          11, 112, 101, 177, 227, 209, 124, 69, 56, 157, 82, 127, 107, 4, 195,
-          205, 88, 184, 108, 115, 26, 160, 253, 181, 73, 182, 209, 188, 3, 248,
-          41, 70,
-        ])
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
-      ),
-    ]);
-  }
-  if (!resolvedAccounts.mintAuthority.value) {
-    resolvedAccounts.mintAuthority.value = context.eddsa.findPda(programId, [
-      bytes().serialize(
-        new Uint8Array([
-          109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
-        ])
-      ),
-      publicKeySerializer().serialize(
-        expectPublicKey(resolvedAccounts.mint.value)
-      ),
-    ]);
-  }
   if (!resolvedAccounts.systemProgram.value) {
     resolvedAccounts.systemProgram.value = context.programs.getPublicKey(
       'systemProgram',
@@ -183,12 +144,12 @@ export function updateMetadata(
     );
     resolvedAccounts.systemProgram.isWritable = false;
   }
-  if (!resolvedAccounts.tokenMetadataProgram.value) {
-    resolvedAccounts.tokenMetadataProgram.value = context.programs.getPublicKey(
-      'tokenMetadataProgram',
-      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+  if (!resolvedAccounts.mplCore.value) {
+    resolvedAccounts.mplCore.value = context.programs.getPublicKey(
+      'mplCore',
+      'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d'
     );
-    resolvedAccounts.tokenMetadataProgram.isWritable = false;
+    resolvedAccounts.mplCore.isWritable = false;
   }
 
   // Accounts in order.

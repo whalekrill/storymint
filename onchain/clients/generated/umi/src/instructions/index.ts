@@ -7,6 +7,6 @@
  */
 
 export * from './burnAndWithdraw';
-export * from './initializeMasterEdition';
-export * from './mintPnft';
+export * from './initializeCollection';
+export * from './mintAsset';
 export * from './updateMetadata';
