@@ -67,11 +67,12 @@ describe('Initialize Collection', () => {
     }).sendAndConfirm(umi)
 
     const assetData = await fetchAssetV1(umi, collection)
-    expect(assetData.metadata.name).toBe('Locked SOL NFT')
-    expect(assetData.metadata.uri).toBe('https://api.locked-sol.com/metadata/initial.json')
-    expect(assetData.metadata.updateAuthority.toString()).toBe(updateAuthority.publicKey.toString())
+    expect(assetData.name).toBe('Locked SOL NFT')
+    expect(assetData.uri).toBe('https://api.locked-sol.com/metadata/initial.json')
+    expect(assetData.updateAuthority.toString()).toBe(updateAuthority.publicKey.toString())
 
-    const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('master'), collection])
+    const masterStateSeeds = [Buffer.from('master'), publicKeySerializer().serialize(collection)]
+    const [masterState] = umi.eddsa.findPda(publicKey(program.programId), masterStateSeeds)
     const masterStateAccount = await umi.rpc.getAccount(masterState)
     expect(masterStateAccount.exists).toBe(true)
   })
@@ -141,17 +142,21 @@ describe('Mint Asset', () => {
       .sendAndConfirm(umi)
 
     const assetData = await fetchAssetV1(umi, asset.publicKey)
-    expect(assetData.metadata.name).toBe('Locked SOL NFT')
-    expect(assetData.metadata.uri).toBe('https://api.locked-sol.com/metadata/initial.json')
-    expect(assetData.metadata.updateAuthority.toString()).toBe(updateAuthority.publicKey.toString())
+    expect(assetData.name).toBe('Locked SOL NFT')
+    expect(assetData.uri).toBe('https://api.locked-sol.com/metadata/initial.json')
+    expect(assetData.updateAuthority.toString()).toBe(updateAuthority.publicKey.toString())
 
-    const vault = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('vault'), asset.publicKey])[0]
+    const vaultSeeds = [Buffer.from('vault'), publicKeySerializer().serialize(asset)]
+    const [vault] = umi.eddsa.findPda(publicKey(program.programId), vaultSeeds)
     const vaultAccount = await umi.rpc.getAccount(vault)
     expect(vaultAccount.exists).toBe(true)
   })
 
   it('should update master state total minted', async () => {
-    const masterState = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('master'), collection])[0]
+    const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('master'),
+      publicKeySerializer().serialize(collection),
+    ])
 
     const beforeState = await umi.rpc.getAccount(masterState)
     const beforeMinted = beforeState.exists ? Number(beforeState.data.slice(40, 48)) : 0
@@ -224,16 +229,14 @@ describe('Update Metadata', () => {
       authority: updateAuthority,
       payer,
       args: {
-        metadata: {
-          name: newName,
-          uri: newUri,
-        },
+        name: newName,
+        uri: newUri,
       },
     }).sendAndConfirm(umi)
 
     const assetData = await fetchAssetV1(umi, asset.publicKey)
-    expect(assetData.metadata.name).toBe(newName)
-    expect(assetData.metadata.uri).toBe(newUri)
+    expect(assetData.name).toBe(newName)
+    expect(assetData.uri).toBe(newUri)
   })
 
   it('should fail with unauthorized authority', async () => {
@@ -246,10 +249,8 @@ describe('Update Metadata', () => {
         authority: wrongAuthority,
         payer,
         args: {
-          metadata: {
-            name: 'Updated Name',
-            uri: 'https://api.locked-sol.com/metadata/updated.json',
-          },
+          name: 'Updated Name',
+          uri: 'https://api.locked-sol.com/metadata/updated.json',
         },
       }).sendAndConfirm(umi)
       fail('Should have thrown error')
@@ -300,7 +301,10 @@ describe('Burn and Withdraw', () => {
   })
 
   it('should burn asset and withdraw SOL', async () => {
-    const vault = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('vault'), asset.publicKey])[0]
+    const [vault] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('vault'),
+      publicKeySerializer().serialize(asset),
+    ])
 
     const initialVaultBalance = await umi.rpc.getBalance(vault)
     expect(initialVaultBalance.basisPoints).toBe(BigInt(1000000000))
