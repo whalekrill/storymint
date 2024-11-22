@@ -10,7 +10,7 @@ use anchor_spl::{
 use mpl_token_metadata::{
     accounts::Metadata,
     instructions::{
-        BurnBuilder, CreateMasterEditionV3Builder, CreateMetadataAccountV3Builder,
+        BurnNft, CreateMasterEditionV3Builder, CreateMetadataAccountV3Builder,
         VerifyCollectionBuilder,
     },
     types::{Collection, DataV2},
@@ -259,6 +259,29 @@ pub struct BurnAndWithdraw<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
+    /// CHECK: Token record
+    #[account(
+        mut,
+        seeds = [
+            b"metadata",
+            token_metadata_program.key().as_ref(),
+            mint.key().as_ref(),
+            b"token_record",
+            token_account.key().as_ref()
+        ],
+        bump,
+        seeds::program = METADATA_PROGRAM_ID
+    )]
+    pub token_record: UncheckedAccount<'info>,
+
+    /// CHECK: Mint authority
+    #[account(
+        mut,
+        seeds = ["mint_authority".as_bytes(), mint.key().as_ref()],
+        bump,
+    )]
+    pub mint_authority: AccountInfo<'info>,
+
     #[account(
         mut, 
         seeds = ["master".as_bytes(), master_state.master_mint.as_ref()], 
@@ -274,10 +297,6 @@ pub struct BurnAndWithdraw<'info> {
         close = owner
     )]
     pub vault: Account<'info, TokenVault>,
-
-    /// CHECK: Token Metadata Program
-    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
-    pub token_metadata_program: AccountInfo<'info>,
 
     /// CHECK: Metadata account verified by seeds and collection
     #[account(
@@ -304,13 +323,6 @@ pub struct BurnAndWithdraw<'info> {
     #[account(mut)]
     pub mint: AccountInfo<'info>,
 
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-
-    /// CHECK: Required by token metadata program
-    pub sysvar_instructions: AccountInfo<'info>,
-
     /// CHECK: Edition marker account for burning
     #[account(
         mut,
@@ -319,12 +331,26 @@ pub struct BurnAndWithdraw<'info> {
             METADATA_PROGRAM_ID.as_ref(),
             mint.key().as_ref(),
             b"edition",
-            token_program.key().as_ref()
         ],
         bump,
         seeds::program = METADATA_PROGRAM_ID
     )]
     pub edition_marker: UncheckedAccount<'info>,
+
+    /// CHECK: Metadata program will check this
+    #[account(mut)]
+    pub collection_metadata: AccountInfo<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+
+    /// CHECK: Token Metadata Program
+    #[account(address = METADATA_PROGRAM_ID @ CustomError::InvalidProgramId)]
+    pub token_metadata_program: AccountInfo<'info>,
+
+    /// CHECK: Required by token metadata program
+    pub sysvar_instructions: AccountInfo<'info>,
 }
 
 #[account]
@@ -673,10 +699,6 @@ pub mod locked_sol_pnft {
     }
 
     pub fn burn_and_withdraw(ctx: Context<BurnAndWithdraw>) -> Result<()> {
-        ctx.accounts
-            .vault
-            .validate_balance(&ctx.accounts.vault.to_account_info(), &ctx.accounts.rent)?;
-
         burn_nft(&ctx)?;
 
         token::close_account(CpiContext::new(
@@ -873,39 +895,49 @@ fn verify_collection<'info>(ctx: &Context<'_, '_, '_, 'info, MintPNFT>) -> Resul
 }
 
 fn burn_nft(ctx: &Context<BurnAndWithdraw>) -> Result<()> {
-    token::burn(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            token::Burn {
-                mint: ctx.accounts.mint.to_account_info(),
-                from: ctx.accounts.token_account.to_account_info(),
-                authority: ctx.accounts.owner.to_account_info(),
-            },
-        ),
-        1,
-    )?;
+    msg!("Starting NFT burn using BurnNft instruction");
+    msg!("Metadata: {}", ctx.accounts.metadata.key());
+    msg!("Owner: {}", ctx.accounts.owner.key());
+    msg!("Mint: {}", ctx.accounts.mint.key());
+    msg!("Token Account: {}", ctx.accounts.token_account.key());
+    msg!("Edition Marker: {}", ctx.accounts.edition_marker.key());
+    msg!(
+        "Collection Metadata: {}",
+        ctx.accounts.collection_metadata.key()
+    );
+    msg!("Token Record: {}", ctx.accounts.token_record.key());
+    msg!(
+        "Token Metadata Program: {}",
+        ctx.accounts.token_metadata_program.key()
+    );
 
-    let burn_ix = BurnBuilder::new()
-        .authority(ctx.accounts.owner.key())
-        .metadata(ctx.accounts.metadata.key())
-        .mint(ctx.accounts.mint.key())
-        .token(ctx.accounts.token_account.key())
-        .edition_marker(Some(ctx.accounts.edition_marker.key()))
-        .instruction();
+    let burn_nft_ix = BurnNft {
+        metadata: ctx.accounts.metadata.key(),
+        owner: ctx.accounts.owner.key(),
+        mint: ctx.accounts.mint.key(),
+        token_account: ctx.accounts.token_account.key(),
+        master_edition_account: ctx.accounts.edition_marker.key(),
+        spl_token_program: ctx.accounts.token_program.key(),
+        collection_metadata: Some(ctx.accounts.collection_metadata.key()),
+    }
+    .instruction();
 
-    invoke_signed(
-        &burn_ix,
+    let _ = 42;
+
+    msg!("Created burn instruction: {:?}", burn_nft_ix);
+
+    invoke(
+        &burn_nft_ix,
         &[
-            ctx.accounts.owner.to_account_info(),
             ctx.accounts.metadata.to_account_info(),
+            ctx.accounts.owner.to_account_info(),
             ctx.accounts.mint.to_account_info(),
             ctx.accounts.token_account.to_account_info(),
             ctx.accounts.edition_marker.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-            ctx.accounts.sysvar_instructions.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.collection_metadata.to_account_info(),
+            ctx.accounts.token_record.to_account_info(),
         ],
-        &[],
     )
     .map_err(Into::into)
 }

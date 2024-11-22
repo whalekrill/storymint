@@ -19,7 +19,12 @@ import { mplTokenMetadata, fetchMetadata } from '@metaplex-foundation/mpl-token-
 import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
 import { SendTransactionError, Keypair, PublicKey as web3PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, AccountLayout } from '@solana/spl-token'
-import { initializeMasterEdition, mintPnft, updateMetadata } from '../../clients/generated/umi/src/instructions'
+import {
+  initializeMasterEdition,
+  mintPnft,
+  updateMetadata,
+  burnAndWithdraw,
+} from '../../clients/generated/umi/src/instructions'
 import fs from 'fs'
 import * as path from 'path'
 import { transactionBuilder } from '@metaplex-foundation/umi'
@@ -574,5 +579,219 @@ describe('updateMetadata Instruction', () => {
         expect(error.message).toContain('Unauthorized metadata update')
       }
     }
+  })
+})
+
+describe('burnAndWithdraw Instruction', () => {
+  let program: Program<LockedSolPnft>
+  let umi: Umi
+  let metadataProgramId: PublicKey
+
+  let payer: KeypairSigner
+  let mint: KeypairSigner
+  let updateAuthority: KeypairSigner
+
+  let masterMint: PublicKey
+  let masterState: PublicKey
+  let metadata: PublicKey
+  let tokenAccount: PublicKey
+  let editionMarker: PublicKey
+  let delegateAuthority: PublicKey
+  let collectionAuthorityRecord: PublicKey
+  let masterMetadata: PublicKey
+  let masterEdition: PublicKey
+  let collectionMetadata: PublicKey
+  let collectionMasterEdition: PublicKey
+  let mintMasterEdition: PublicKey
+  let vault: PublicKey
+  let tokenRecord: PublicKey
+
+  beforeEach(async () => {
+    // Initialize UMI and program
+    umi = createUmi('http://127.0.0.1:8899', { commitment: 'processed' })
+    umi.use(mplTokenMetadata())
+
+    // Set up signers
+    const keypairPath = path.join(__dirname, '../../../keys/update-authority-devnet.json')
+    const secretKey = JSON.parse(fs.readFileSync(keypairPath, 'utf-8'))
+    const keyPair = Keypair.fromSecretKey(Uint8Array.from(secretKey))
+
+    updateAuthority = createSignerFromKeypair(umi, {
+      publicKey: publicKey(keyPair.publicKey.toString()),
+      secretKey: keyPair.secretKey,
+    })
+    payer = generateSigner(umi)
+    mint = generateSigner(umi)
+
+    umi.use(keypairIdentity(payer))
+    await umi.rpc.airdrop(payer.publicKey, sol(2))
+    await umi.rpc.airdrop(updateAuthority.publicKey, sol(2))
+
+    // Get program and metadata program ID
+    program = anchor.workspace.LockedSolPnft
+    metadataProgramId = umi.programs.getPublicKey('mplTokenMetadata')
+
+    // Find all PDAs
+    ;[masterMint] = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('master_mint')])
+    ;[masterState] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('master'),
+      publicKeySerializer().serialize(masterMint),
+    ])
+    ;[metadata] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(mint.publicKey),
+    ])
+    ;[editionMarker] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(mint.publicKey),
+      Buffer.from('edition'),
+    ])
+    ;[masterMetadata] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(masterMint),
+    ])
+    ;[masterEdition] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(masterMint),
+      Buffer.from('edition'),
+    ])
+    ;[collectionMetadata] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(masterMint),
+    ])
+    ;[collectionMasterEdition] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(masterMint),
+      Buffer.from('edition'),
+    ])
+    ;[mintMasterEdition] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(mint.publicKey),
+      Buffer.from('edition'),
+    ])
+    ;[delegateAuthority] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('collection_delegate'),
+      publicKeySerializer().serialize(masterMint),
+    ])
+    ;[collectionAuthorityRecord] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(masterMint),
+      Buffer.from('collection_authority'),
+      publicKeySerializer().serialize(delegateAuthority),
+    ])
+    // Get token account
+    const nftTokenAccount = await getAssociatedTokenAddress(
+      new web3PublicKey(mint.publicKey.toString()),
+      new web3PublicKey(payer.publicKey.toString()),
+    )
+    tokenAccount = publicKey(nftTokenAccount.toString())
+    ;[vault] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('vault'),
+      publicKeySerializer().serialize(mint.publicKey),
+    ])
+    ;[tokenRecord] = umi.eddsa.findPda(metadataProgramId, [
+      Buffer.from('metadata'),
+      publicKeySerializer().serialize(metadataProgramId),
+      publicKeySerializer().serialize(mint.publicKey),
+      Buffer.from('token_record'),
+      publicKeySerializer().serialize(tokenAccount),
+    ])
+
+    // Initialize master edition if it doesn't exist
+    const masterEditionAccount = await umi.rpc.getAccount(masterEdition)
+    if (!masterEditionAccount.exists) {
+      const authorityToken = publicKey(
+        (
+          await getAssociatedTokenAddress(
+            new web3PublicKey(masterMint.toString()),
+            new web3PublicKey(updateAuthority.publicKey.toString()),
+            true,
+          )
+        ).toString(),
+      )
+
+      await initializeMasterEdition(umi, {
+        payer,
+        masterMint,
+        masterMetadata,
+        masterEdition,
+        updateAuthority,
+        updateAuthorityToken: authorityToken,
+        delegateAuthority,
+        collectionAuthorityRecord,
+      }).sendAndConfirm(umi)
+    }
+
+    // Mint the NFT that we'll burn
+    await mintPnft(umi, {
+      payer,
+      masterState,
+      masterMint,
+      collectionMetadata,
+      collectionMasterEdition,
+      metadata,
+      masterEdition: mintMasterEdition,
+      mint,
+      delegateAuthority,
+      collectionAuthorityRecord,
+      tokenAccount,
+    }).sendAndConfirm(umi)
+  })
+
+  it('should successfully burn NFT and withdraw SOL', async () => {
+    const sysvarInstructions = publicKey('Sysvar1nstructions1111111111111111111111111')
+    console.log('Using sysvar instructions account:', sysvarInstructions.toString())
+
+    console.log('Mint pubkey:', mint.publicKey.toString())
+    console.log('Expected vault seeds: vault +', mint.publicKey.toString())
+    console.log('Actual vault:', vault.toString())
+
+    const initialVaultBalance = await umi.rpc.getBalance(vault)
+    expect(initialVaultBalance.basisPoints).toBeGreaterThan(BigInt(1000000000))
+
+    await transactionBuilder()
+      .add(setComputeUnitLimit(umi, { units: 400_000 }))
+      .add(
+        burnAndWithdraw(umi, {
+          owner: payer,
+          masterState,
+          vault,
+          metadata,
+          tokenAccount,
+          mint: mint.publicKey,
+          editionMarker,
+          sysvarInstructions,
+          collectionMetadata,
+          tokenRecord,
+        }),
+      )
+      .sendAndConfirm(umi)
+
+    // Verify token account is closed
+    const tokenAccountInfo = await umi.rpc.getAccount(tokenAccount)
+    expect(tokenAccountInfo.exists).toBe(false)
+
+    // Verify vault is closed and SOL is transferred
+    const vaultAccountInfo = await umi.rpc.getAccount(vault)
+    expect(vaultAccountInfo.exists).toBe(false)
+
+    // Verify metadata is burned
+    const metadataAccount = await umi.rpc.getAccount(metadata)
+    expect(metadataAccount.exists).toBe(false)
+
+    const finalPayerBalance = await umi.rpc.getBalance(payer.publicKey)
+    const initialPayerBalance = await umi.rpc.getBalance(payer.publicKey)
+
+    const balanceDifference = finalPayerBalance.basisPoints - initialPayerBalance.basisPoints
+    expect(balanceDifference).toBeGreaterThan(BigInt(990000000))
+    expect(balanceDifference).toBeLessThan(BigInt(1000000000))
   })
 })

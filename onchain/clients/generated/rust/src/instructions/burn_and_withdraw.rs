@@ -15,13 +15,16 @@ pub struct BurnAndWithdraw {
           pub owner: solana_program::pubkey::Pubkey,
           
               
+          pub token_record: solana_program::pubkey::Pubkey,
+          
+              
+          pub mint_authority: solana_program::pubkey::Pubkey,
+          
+              
           pub master_state: solana_program::pubkey::Pubkey,
           
               
           pub vault: solana_program::pubkey::Pubkey,
-          
-              
-          pub token_metadata_program: solana_program::pubkey::Pubkey,
           
               
           pub metadata: solana_program::pubkey::Pubkey,
@@ -33,6 +36,12 @@ pub struct BurnAndWithdraw {
           pub mint: solana_program::pubkey::Pubkey,
           
               
+          pub edition_marker: solana_program::pubkey::Pubkey,
+          
+              
+          pub collection_metadata: solana_program::pubkey::Pubkey,
+          
+              
           pub token_program: solana_program::pubkey::Pubkey,
           
               
@@ -42,10 +51,10 @@ pub struct BurnAndWithdraw {
           pub rent: solana_program::pubkey::Pubkey,
           
               
-          pub sysvar_instructions: solana_program::pubkey::Pubkey,
+          pub token_metadata_program: solana_program::pubkey::Pubkey,
           
               
-          pub edition_marker: solana_program::pubkey::Pubkey,
+          pub sysvar_instructions: solana_program::pubkey::Pubkey,
       }
 
 impl BurnAndWithdraw {
@@ -54,10 +63,18 @@ impl BurnAndWithdraw {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(15 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.owner,
             true
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.token_record,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.mint_authority,
+            false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.master_state,
@@ -65,10 +82,6 @@ impl BurnAndWithdraw {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.vault,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.token_metadata_program,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
@@ -81,6 +94,14 @@ impl BurnAndWithdraw {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.mint,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.edition_marker,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.collection_metadata,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -96,11 +117,11 @@ impl BurnAndWithdraw {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.sysvar_instructions,
+            self.token_metadata_program,
             false
           ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new(
-            self.edition_marker,
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.sysvar_instructions,
             false
           ));
                       accounts.extend_from_slice(remaining_accounts);
@@ -140,31 +161,37 @@ impl Default for BurnAndWithdrawInstructionData {
 /// ### Accounts:
 ///
                       ///   0. `[writable, signer]` owner
-                ///   1. `[writable]` master_state
-                ///   2. `[writable]` vault
-                ///   3. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
-                ///   4. `[writable]` metadata
-                ///   5. `[writable]` token_account
-                ///   6. `[writable]` mint
-                ///   7. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-                ///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   9. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
-          ///   10. `[]` sysvar_instructions
-                ///   11. `[writable]` edition_marker
+                ///   1. `[writable]` token_record
+                ///   2. `[writable]` mint_authority
+                ///   3. `[writable]` master_state
+                ///   4. `[writable]` vault
+                ///   5. `[writable]` metadata
+                ///   6. `[writable]` token_account
+                ///   7. `[writable]` mint
+                ///   8. `[writable]` edition_marker
+                ///   9. `[writable]` collection_metadata
+                ///   10. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+                ///   11. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   12. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
+                ///   13. `[optional]` token_metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
+          ///   14. `[]` sysvar_instructions
 #[derive(Clone, Debug, Default)]
 pub struct BurnAndWithdrawBuilder {
             owner: Option<solana_program::pubkey::Pubkey>,
+                token_record: Option<solana_program::pubkey::Pubkey>,
+                mint_authority: Option<solana_program::pubkey::Pubkey>,
                 master_state: Option<solana_program::pubkey::Pubkey>,
                 vault: Option<solana_program::pubkey::Pubkey>,
-                token_metadata_program: Option<solana_program::pubkey::Pubkey>,
                 metadata: Option<solana_program::pubkey::Pubkey>,
                 token_account: Option<solana_program::pubkey::Pubkey>,
                 mint: Option<solana_program::pubkey::Pubkey>,
+                edition_marker: Option<solana_program::pubkey::Pubkey>,
+                collection_metadata: Option<solana_program::pubkey::Pubkey>,
                 token_program: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 rent: Option<solana_program::pubkey::Pubkey>,
+                token_metadata_program: Option<solana_program::pubkey::Pubkey>,
                 sysvar_instructions: Option<solana_program::pubkey::Pubkey>,
-                edition_marker: Option<solana_program::pubkey::Pubkey>,
                 __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -178,6 +205,16 @@ impl BurnAndWithdrawBuilder {
                     self
     }
             #[inline(always)]
+    pub fn token_record(&mut self, token_record: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.token_record = Some(token_record);
+                    self
+    }
+            #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.mint_authority = Some(mint_authority);
+                    self
+    }
+            #[inline(always)]
     pub fn master_state(&mut self, master_state: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.master_state = Some(master_state);
                     self
@@ -185,12 +222,6 @@ impl BurnAndWithdrawBuilder {
             #[inline(always)]
     pub fn vault(&mut self, vault: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.vault = Some(vault);
-                    self
-    }
-            /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
-#[inline(always)]
-    pub fn token_metadata_program(&mut self, token_metadata_program: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.token_metadata_program = Some(token_metadata_program);
                     self
     }
             #[inline(always)]
@@ -206,6 +237,16 @@ impl BurnAndWithdrawBuilder {
             #[inline(always)]
     pub fn mint(&mut self, mint: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.mint = Some(mint);
+                    self
+    }
+            #[inline(always)]
+    pub fn edition_marker(&mut self, edition_marker: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.edition_marker = Some(edition_marker);
+                    self
+    }
+            #[inline(always)]
+    pub fn collection_metadata(&mut self, collection_metadata: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.collection_metadata = Some(collection_metadata);
                     self
     }
             /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
@@ -226,14 +267,15 @@ impl BurnAndWithdrawBuilder {
                         self.rent = Some(rent);
                     self
     }
-            #[inline(always)]
-    pub fn sysvar_instructions(&mut self, sysvar_instructions: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.sysvar_instructions = Some(sysvar_instructions);
+            /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
+#[inline(always)]
+    pub fn token_metadata_program(&mut self, token_metadata_program: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.token_metadata_program = Some(token_metadata_program);
                     self
     }
             #[inline(always)]
-    pub fn edition_marker(&mut self, edition_marker: solana_program::pubkey::Pubkey) -> &mut Self {
-                        self.edition_marker = Some(edition_marker);
+    pub fn sysvar_instructions(&mut self, sysvar_instructions: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.sysvar_instructions = Some(sysvar_instructions);
                     self
     }
             /// Add an additional account to the instruction.
@@ -252,17 +294,20 @@ impl BurnAndWithdrawBuilder {
   pub fn instruction(&self) -> solana_program::instruction::Instruction {
     let accounts = BurnAndWithdraw {
                               owner: self.owner.expect("owner is not set"),
+                                        token_record: self.token_record.expect("token_record is not set"),
+                                        mint_authority: self.mint_authority.expect("mint_authority is not set"),
                                         master_state: self.master_state.expect("master_state is not set"),
                                         vault: self.vault.expect("vault is not set"),
-                                        token_metadata_program: self.token_metadata_program.unwrap_or(solana_program::pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
                                         metadata: self.metadata.expect("metadata is not set"),
                                         token_account: self.token_account.expect("token_account is not set"),
                                         mint: self.mint.expect("mint is not set"),
+                                        edition_marker: self.edition_marker.expect("edition_marker is not set"),
+                                        collection_metadata: self.collection_metadata.expect("collection_metadata is not set"),
                                         token_program: self.token_program.unwrap_or(solana_program::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         rent: self.rent.unwrap_or(solana_program::pubkey!("SysvarRent111111111111111111111111111111111")),
+                                        token_metadata_program: self.token_metadata_program.unwrap_or(solana_program::pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
                                         sysvar_instructions: self.sysvar_instructions.expect("sysvar_instructions is not set"),
-                                        edition_marker: self.edition_marker.expect("edition_marker is not set"),
                       };
     
     accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -276,13 +321,16 @@ impl BurnAndWithdrawBuilder {
               pub owner: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
+              pub token_record: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
               pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub vault: &'b solana_program::account_info::AccountInfo<'a>,
-                
-                    
-              pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub metadata: &'b solana_program::account_info::AccountInfo<'a>,
@@ -294,6 +342,12 @@ impl BurnAndWithdrawBuilder {
               pub mint: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
+              pub edition_marker: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
+              pub collection_metadata: &'b solana_program::account_info::AccountInfo<'a>,
+                
+                    
               pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
@@ -303,10 +357,10 @@ impl BurnAndWithdrawBuilder {
               pub rent: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub sysvar_instructions: &'b solana_program::account_info::AccountInfo<'a>,
+              pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub edition_marker: &'b solana_program::account_info::AccountInfo<'a>,
+              pub sysvar_instructions: &'b solana_program::account_info::AccountInfo<'a>,
             }
 
 /// `burn_and_withdraw` CPI instruction.
@@ -318,13 +372,16 @@ pub struct BurnAndWithdrawCpi<'a, 'b> {
           pub owner: &'b solana_program::account_info::AccountInfo<'a>,
           
               
+          pub token_record: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
+          pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
           pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub vault: &'b solana_program::account_info::AccountInfo<'a>,
-          
-              
-          pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub metadata: &'b solana_program::account_info::AccountInfo<'a>,
@@ -336,6 +393,12 @@ pub struct BurnAndWithdrawCpi<'a, 'b> {
           pub mint: &'b solana_program::account_info::AccountInfo<'a>,
           
               
+          pub edition_marker: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
+          pub collection_metadata: &'b solana_program::account_info::AccountInfo<'a>,
+          
+              
           pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
@@ -345,10 +408,10 @@ pub struct BurnAndWithdrawCpi<'a, 'b> {
           pub rent: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub sysvar_instructions: &'b solana_program::account_info::AccountInfo<'a>,
+          pub token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub edition_marker: &'b solana_program::account_info::AccountInfo<'a>,
+          pub sysvar_instructions: &'b solana_program::account_info::AccountInfo<'a>,
         }
 
 impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
@@ -359,17 +422,20 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
     Self {
       __program: program,
               owner: accounts.owner,
+              token_record: accounts.token_record,
+              mint_authority: accounts.mint_authority,
               master_state: accounts.master_state,
               vault: accounts.vault,
-              token_metadata_program: accounts.token_metadata_program,
               metadata: accounts.metadata,
               token_account: accounts.token_account,
               mint: accounts.mint,
+              edition_marker: accounts.edition_marker,
+              collection_metadata: accounts.collection_metadata,
               token_program: accounts.token_program,
               system_program: accounts.system_program,
               rent: accounts.rent,
+              token_metadata_program: accounts.token_metadata_program,
               sysvar_instructions: accounts.sysvar_instructions,
-              edition_marker: accounts.edition_marker,
                 }
   }
   #[inline(always)]
@@ -391,10 +457,18 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(15 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.owner.key,
             true
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.token_record.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.mint_authority.key,
+            false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.master_state.key,
@@ -402,10 +476,6 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.vault.key,
-            false
-          ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.token_metadata_program.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
@@ -418,6 +488,14 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.mint.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.edition_marker.key,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.collection_metadata.key,
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -433,11 +511,11 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.sysvar_instructions.key,
+            *self.token_metadata_program.key,
             false
           ));
-                                          accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.edition_marker.key,
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.sysvar_instructions.key,
             false
           ));
                       remaining_accounts.iter().for_each(|remaining_account| {
@@ -454,20 +532,23 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(12 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(15 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.owner.clone());
+                        account_infos.push(self.token_record.clone());
+                        account_infos.push(self.mint_authority.clone());
                         account_infos.push(self.master_state.clone());
                         account_infos.push(self.vault.clone());
-                        account_infos.push(self.token_metadata_program.clone());
                         account_infos.push(self.metadata.clone());
                         account_infos.push(self.token_account.clone());
                         account_infos.push(self.mint.clone());
+                        account_infos.push(self.edition_marker.clone());
+                        account_infos.push(self.collection_metadata.clone());
                         account_infos.push(self.token_program.clone());
                         account_infos.push(self.system_program.clone());
                         account_infos.push(self.rent.clone());
+                        account_infos.push(self.token_metadata_program.clone());
                         account_infos.push(self.sysvar_instructions.clone());
-                        account_infos.push(self.edition_marker.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
     if signers_seeds.is_empty() {
@@ -483,17 +564,20 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
 /// ### Accounts:
 ///
                       ///   0. `[writable, signer]` owner
-                ///   1. `[writable]` master_state
-                ///   2. `[writable]` vault
-          ///   3. `[]` token_metadata_program
-                ///   4. `[writable]` metadata
-                ///   5. `[writable]` token_account
-                ///   6. `[writable]` mint
-          ///   7. `[]` token_program
-          ///   8. `[]` system_program
-          ///   9. `[]` rent
-          ///   10. `[]` sysvar_instructions
-                ///   11. `[writable]` edition_marker
+                ///   1. `[writable]` token_record
+                ///   2. `[writable]` mint_authority
+                ///   3. `[writable]` master_state
+                ///   4. `[writable]` vault
+                ///   5. `[writable]` metadata
+                ///   6. `[writable]` token_account
+                ///   7. `[writable]` mint
+                ///   8. `[writable]` edition_marker
+                ///   9. `[writable]` collection_metadata
+          ///   10. `[]` token_program
+          ///   11. `[]` system_program
+          ///   12. `[]` rent
+          ///   13. `[]` token_metadata_program
+          ///   14. `[]` sysvar_instructions
 #[derive(Clone, Debug)]
 pub struct BurnAndWithdrawCpiBuilder<'a, 'b> {
   instruction: Box<BurnAndWithdrawCpiBuilderInstruction<'a, 'b>>,
@@ -504,17 +588,20 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
     let instruction = Box::new(BurnAndWithdrawCpiBuilderInstruction {
       __program: program,
               owner: None,
+              token_record: None,
+              mint_authority: None,
               master_state: None,
               vault: None,
-              token_metadata_program: None,
               metadata: None,
               token_account: None,
               mint: None,
+              edition_marker: None,
+              collection_metadata: None,
               token_program: None,
               system_program: None,
               rent: None,
+              token_metadata_program: None,
               sysvar_instructions: None,
-              edition_marker: None,
                                 __remaining_accounts: Vec::new(),
     });
     Self { instruction }
@@ -525,6 +612,16 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
+    pub fn token_record(&mut self, token_record: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.token_record = Some(token_record);
+                    self
+    }
+      #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.mint_authority = Some(mint_authority);
+                    self
+    }
+      #[inline(always)]
     pub fn master_state(&mut self, master_state: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.master_state = Some(master_state);
                     self
@@ -532,11 +629,6 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.vault = Some(vault);
-                    self
-    }
-      #[inline(always)]
-    pub fn token_metadata_program(&mut self, token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.token_metadata_program = Some(token_metadata_program);
                     self
     }
       #[inline(always)]
@@ -555,6 +647,16 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
+    pub fn edition_marker(&mut self, edition_marker: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.edition_marker = Some(edition_marker);
+                    self
+    }
+      #[inline(always)]
+    pub fn collection_metadata(&mut self, collection_metadata: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.collection_metadata = Some(collection_metadata);
+                    self
+    }
+      #[inline(always)]
     pub fn token_program(&mut self, token_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.token_program = Some(token_program);
                     self
@@ -570,13 +672,13 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
-    pub fn sysvar_instructions(&mut self, sysvar_instructions: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.sysvar_instructions = Some(sysvar_instructions);
+    pub fn token_metadata_program(&mut self, token_metadata_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.token_metadata_program = Some(token_metadata_program);
                     self
     }
       #[inline(always)]
-    pub fn edition_marker(&mut self, edition_marker: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.edition_marker = Some(edition_marker);
+    pub fn sysvar_instructions(&mut self, sysvar_instructions: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.sysvar_instructions = Some(sysvar_instructions);
                     self
     }
             /// Add an additional account to the instruction.
@@ -606,11 +708,13 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
                   
           owner: self.instruction.owner.expect("owner is not set"),
                   
+          token_record: self.instruction.token_record.expect("token_record is not set"),
+                  
+          mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
+                  
           master_state: self.instruction.master_state.expect("master_state is not set"),
                   
           vault: self.instruction.vault.expect("vault is not set"),
-                  
-          token_metadata_program: self.instruction.token_metadata_program.expect("token_metadata_program is not set"),
                   
           metadata: self.instruction.metadata.expect("metadata is not set"),
                   
@@ -618,15 +722,19 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
                   
           mint: self.instruction.mint.expect("mint is not set"),
                   
+          edition_marker: self.instruction.edition_marker.expect("edition_marker is not set"),
+                  
+          collection_metadata: self.instruction.collection_metadata.expect("collection_metadata is not set"),
+                  
           token_program: self.instruction.token_program.expect("token_program is not set"),
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
           rent: self.instruction.rent.expect("rent is not set"),
                   
-          sysvar_instructions: self.instruction.sysvar_instructions.expect("sysvar_instructions is not set"),
+          token_metadata_program: self.instruction.token_metadata_program.expect("token_metadata_program is not set"),
                   
-          edition_marker: self.instruction.edition_marker.expect("edition_marker is not set"),
+          sysvar_instructions: self.instruction.sysvar_instructions.expect("sysvar_instructions is not set"),
                     };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
   }
@@ -636,17 +744,20 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
 struct BurnAndWithdrawCpiBuilderInstruction<'a, 'b> {
   __program: &'b solana_program::account_info::AccountInfo<'a>,
             owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                token_record: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                token_metadata_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                edition_marker: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                collection_metadata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 rent: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                token_metadata_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 sysvar_instructions: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                edition_marker: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,
 }
