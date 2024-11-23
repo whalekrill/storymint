@@ -235,7 +235,7 @@ describe('Storymint', () => {
     const finalRecipientBalance = await umi.rpc.getBalance(payer.publicKey)
     const balanceDifference = finalRecipientBalance.basisPoints - initialPayerBalance.basisPoints
     expect(balanceDifference).toBeGreaterThan(BigInt(990000000))
-    expect(balanceDifference).toBeLessThan(BigInt(1015000000))
+    expect(balanceDifference).toBeLessThan(BigInt(1010000000))
   })
 
   it('should transfer the asset to another user who can burn it and withdraw SOL', async () => {
@@ -290,7 +290,7 @@ describe('Storymint', () => {
     const finalRecipientBalance = await umi.rpc.getBalance(recipient.publicKey)
     const balanceDifference = finalRecipientBalance.basisPoints - initialRecipientBalance.basisPoints
     expect(balanceDifference).toBeGreaterThan(BigInt(990000000))
-    expect(balanceDifference).toBeLessThan(BigInt(1015000000))
+    expect(balanceDifference).toBeLessThan(BigInt(1010000000))
   })
 
   it('should fail with update authority', async () => {

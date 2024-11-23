@@ -319,8 +319,9 @@ pub mod storymint {
             .collection(ctx.accounts.collection.as_ref())
             .authority(Some(&ctx.accounts.authority.as_ref()))
             .payer(&ctx.accounts.payer.to_account_info())
+            .system_program(&ctx.accounts.system_program.to_account_info())
             .new_name(args.name.ok_or(CustomError::InvalidMetadataUpdate)?)
-            .new_name(args.uri)
+            .new_uri(args.uri)
             .invoke()?;
 
         Ok(())
