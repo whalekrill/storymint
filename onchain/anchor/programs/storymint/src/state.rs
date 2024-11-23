@@ -13,9 +13,9 @@ impl MasterState {
 #[account]
 #[derive(Default)]
 pub struct TokenVault {
-    pub mint: Pubkey,
+    pub asset: Pubkey,
 }
 
 impl TokenVault {
-    pub const SPACE: usize = 8 + 32; // discriminator + mint
+    pub const SPACE: usize = 8 + 32; // discriminator + asset
 }

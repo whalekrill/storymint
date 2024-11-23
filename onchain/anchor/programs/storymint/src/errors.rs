@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum CustomError {
+    #[msg("Invalid authority")]
+    InvalidAuthority,
     #[msg("Invalid vault balance")]
     InvalidVaultBalance,
     #[msg("Unauthorized metadata update")]
@@ -16,4 +18,6 @@ pub enum CustomError {
     Underflow,
     #[msg("Invalid update authority")]
     InvalidUpdateAuthority,
+    #[msg("Invalid metadata update")]
+    InvalidMetadataUpdate,
 }
