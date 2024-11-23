@@ -13,6 +13,7 @@ import {
   updateMetadata,
 } from '../../clients/generated/umi/src/instructions'
 import { getUpdateAuthority, initializeCollectionArgs, mintAssetArgs, burnAndWithdrawArgs } from './utils'
+import { COLLECTION_NAME, COLLECTION_URI } from './consts'
 
 jest.setTimeout(100000)
 
@@ -106,8 +107,8 @@ describe('Storymint', () => {
     }).sendAndConfirm(umi)
 
     const assetData = await fetchAssetV1(umi, asset.publicKey)
-    expect(assetData.name).toBe('Locked SOL NFT')
-    expect(assetData.uri).toBe('https://api.locked-sol.com/metadata/initial.json')
+    expect(assetData.name).toBe(COLLECTION_NAME)
+    expect(assetData.uri).toBe(COLLECTION_URI)
 
     const vaultSeeds = [Buffer.from('vault'), publicKeySerializer().serialize(asset)]
     const [vault] = umi.eddsa.findPda(publicKey(program.programId), vaultSeeds)
@@ -207,8 +208,8 @@ describe('Storymint', () => {
       mintAuthority,
     }).sendAndConfirm(umi)
 
+    const newName = 'Updated Storymint'
     const newUri = 'https://api.locked-sol.com/metadata/updated.json'
-    const newName = 'Updated LSOL NFT'
 
     await updateMetadata(umi, {
       asset: asset.publicKey,
