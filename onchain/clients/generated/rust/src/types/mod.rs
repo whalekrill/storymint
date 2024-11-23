@@ -5,55 +5,11 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-  pub(crate) mod r#add_blocker;
-  pub(crate) mod r#attribute;
-  pub(crate) mod r#attributes;
-  pub(crate) mod r#autograph;
-  pub(crate) mod r#autograph_signature;
-  pub(crate) mod r#burn_delegate;
-  pub(crate) mod r#creator;
-  pub(crate) mod r#edition;
-  pub(crate) mod r#freeze_delegate;
-  pub(crate) mod r#immutable_metadata;
-  pub(crate) mod r#master_edition;
-  pub(crate) mod r#mint_asset_args;
-  pub(crate) mod r#permanent_burn_delegate;
-  pub(crate) mod r#permanent_freeze_delegate;
-  pub(crate) mod r#permanent_transfer_delegate;
-  pub(crate) mod r#plugin;
-  pub(crate) mod r#plugin_authority;
-  pub(crate) mod r#plugin_authority_pair;
-  pub(crate) mod r#royalties;
-  pub(crate) mod r#rule_set;
-  pub(crate) mod r#transfer_delegate;
-  pub(crate) mod r#update_delegate;
+  pub(crate) mod r#collection_args;
+  pub(crate) mod r#key;
   pub(crate) mod r#update_metadata_args;
-  pub(crate) mod r#verified_creators;
-  pub(crate) mod r#verified_creators_signature;
 
-  pub use self::r#add_blocker::*;
-  pub use self::r#attribute::*;
-  pub use self::r#attributes::*;
-  pub use self::r#autograph::*;
-  pub use self::r#autograph_signature::*;
-  pub use self::r#burn_delegate::*;
-  pub use self::r#creator::*;
-  pub use self::r#edition::*;
-  pub use self::r#freeze_delegate::*;
-  pub use self::r#immutable_metadata::*;
-  pub use self::r#master_edition::*;
-  pub use self::r#mint_asset_args::*;
-  pub use self::r#permanent_burn_delegate::*;
-  pub use self::r#permanent_freeze_delegate::*;
-  pub use self::r#permanent_transfer_delegate::*;
-  pub use self::r#plugin::*;
-  pub use self::r#plugin_authority::*;
-  pub use self::r#plugin_authority_pair::*;
-  pub use self::r#royalties::*;
-  pub use self::r#rule_set::*;
-  pub use self::r#transfer_delegate::*;
-  pub use self::r#update_delegate::*;
+  pub use self::r#collection_args::*;
+  pub use self::r#key::*;
   pub use self::r#update_metadata_args::*;
-  pub use self::r#verified_creators::*;
-  pub use self::r#verified_creators_signature::*;
 

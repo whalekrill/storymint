@@ -14,22 +14,25 @@ import {
 } from '@solana/web3.js';
 import { LOCKED_SOL_PNFT_PROGRAM_ADDRESS } from '../programs';
 
+/** InvalidAuthority: Invalid authority */
+export const LOCKED_SOL_PNFT_ERROR__INVALID_AUTHORITY = 0x1770; // 6000
 /** InvalidVaultBalance: Invalid vault balance */
-export const LOCKED_SOL_PNFT_ERROR__INVALID_VAULT_BALANCE = 0x1770; // 6000
+export const LOCKED_SOL_PNFT_ERROR__INVALID_VAULT_BALANCE = 0x1771; // 6001
 /** UnauthorizedUpdate: Unauthorized metadata update */
-export const LOCKED_SOL_PNFT_ERROR__UNAUTHORIZED_UPDATE = 0x1771; // 6001
+export const LOCKED_SOL_PNFT_ERROR__UNAUTHORIZED_UPDATE = 0x1772; // 6002
 /** MaxSupplyReached: Maximum supply reached */
-export const LOCKED_SOL_PNFT_ERROR__MAX_SUPPLY_REACHED = 0x1772; // 6002
+export const LOCKED_SOL_PNFT_ERROR__MAX_SUPPLY_REACHED = 0x1773; // 6003
 /** InvalidCollection: Invalid collection data */
-export const LOCKED_SOL_PNFT_ERROR__INVALID_COLLECTION = 0x1773; // 6003
+export const LOCKED_SOL_PNFT_ERROR__INVALID_COLLECTION = 0x1774; // 6004
 /** Overflow: Arithmetic overflow */
-export const LOCKED_SOL_PNFT_ERROR__OVERFLOW = 0x1774; // 6004
+export const LOCKED_SOL_PNFT_ERROR__OVERFLOW = 0x1775; // 6005
 /** Underflow: Arithmetic underflow */
-export const LOCKED_SOL_PNFT_ERROR__UNDERFLOW = 0x1775; // 6005
+export const LOCKED_SOL_PNFT_ERROR__UNDERFLOW = 0x1776; // 6006
 /** InvalidUpdateAuthority: Invalid update authority */
-export const LOCKED_SOL_PNFT_ERROR__INVALID_UPDATE_AUTHORITY = 0x1776; // 6006
+export const LOCKED_SOL_PNFT_ERROR__INVALID_UPDATE_AUTHORITY = 0x1777; // 6007
 
 export type LockedSolPnftError =
+  | typeof LOCKED_SOL_PNFT_ERROR__INVALID_AUTHORITY
   | typeof LOCKED_SOL_PNFT_ERROR__INVALID_COLLECTION
   | typeof LOCKED_SOL_PNFT_ERROR__INVALID_UPDATE_AUTHORITY
   | typeof LOCKED_SOL_PNFT_ERROR__INVALID_VAULT_BALANCE
@@ -41,6 +44,7 @@ export type LockedSolPnftError =
 let lockedSolPnftErrorMessages: Record<LockedSolPnftError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   lockedSolPnftErrorMessages = {
+    [LOCKED_SOL_PNFT_ERROR__INVALID_AUTHORITY]: `Invalid authority`,
     [LOCKED_SOL_PNFT_ERROR__INVALID_COLLECTION]: `Invalid collection data`,
     [LOCKED_SOL_PNFT_ERROR__INVALID_UPDATE_AUTHORITY]: `Invalid update authority`,
     [LOCKED_SOL_PNFT_ERROR__INVALID_VAULT_BALANCE]: `Invalid vault balance`,

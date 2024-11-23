@@ -7,8 +7,6 @@
  */
 
 import {
-  addDecoderSizePrefix,
-  addEncoderSizePrefix,
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
@@ -18,10 +16,6 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU32Decoder,
-  getU32Encoder,
-  getUtf8Decoder,
-  getUtf8Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -44,6 +38,12 @@ import {
   getAccountMetaFactory,
   type ResolvedAccount,
 } from '../shared';
+import {
+  getCollectionArgsDecoder,
+  getCollectionArgsEncoder,
+  type CollectionArgs,
+  type CollectionArgsArgs,
+} from '../types';
 
 export const INITIALIZE_COLLECTION_DISCRIMINATOR = new Uint8Array([
   112, 62, 53, 139, 173, 152, 98, 93,
@@ -59,6 +59,7 @@ export type InitializeCollectionInstruction<
   TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountMasterState extends string | IAccountMeta<string> = string,
+  TAccountMintAuthority extends string | IAccountMeta<string> = string,
   TAccountCollection extends string | IAccountMeta<string> = string,
   TAccountUpdateAuthority extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
@@ -79,8 +80,12 @@ export type InitializeCollectionInstruction<
       TAccountMasterState extends string
         ? WritableAccount<TAccountMasterState>
         : TAccountMasterState,
+      TAccountMintAuthority extends string
+        ? WritableAccount<TAccountMintAuthority>
+        : TAccountMintAuthority,
       TAccountCollection extends string
-        ? WritableAccount<TAccountCollection>
+        ? WritableSignerAccount<TAccountCollection> &
+            IAccountSignerMeta<TAccountCollection>
         : TAccountCollection,
       TAccountUpdateAuthority extends string
         ? WritableSignerAccount<TAccountUpdateAuthority> &
@@ -98,21 +103,18 @@ export type InitializeCollectionInstruction<
 
 export type InitializeCollectionInstructionData = {
   discriminator: ReadonlyUint8Array;
-  name: string;
-  uri: string;
+  args: CollectionArgs;
 };
 
 export type InitializeCollectionInstructionDataArgs = {
-  name: string;
-  uri: string;
+  args: CollectionArgsArgs;
 };
 
 export function getInitializeCollectionInstructionDataEncoder(): Encoder<InitializeCollectionInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['name', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
-      ['uri', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
+      ['args', getCollectionArgsEncoder()],
     ]),
     (value) => ({
       ...value,
@@ -124,8 +126,7 @@ export function getInitializeCollectionInstructionDataEncoder(): Encoder<Initial
 export function getInitializeCollectionInstructionDataDecoder(): Decoder<InitializeCollectionInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['name', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
-    ['uri', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
+    ['args', getCollectionArgsDecoder()],
   ]);
 }
 
@@ -142,6 +143,7 @@ export function getInitializeCollectionInstructionDataCodec(): Codec<
 export type InitializeCollectionAsyncInput<
   TAccountPayer extends string = string,
   TAccountMasterState extends string = string,
+  TAccountMintAuthority extends string = string,
   TAccountCollection extends string = string,
   TAccountUpdateAuthority extends string = string,
   TAccountSystemProgram extends string = string,
@@ -149,17 +151,19 @@ export type InitializeCollectionAsyncInput<
 > = {
   payer: TransactionSigner<TAccountPayer>;
   masterState?: Address<TAccountMasterState>;
-  collection: Address<TAccountCollection>;
+  mintAuthority?: Address<TAccountMintAuthority>;
+  collection: TransactionSigner<TAccountCollection>;
+  /** CHECK Server authority */
   updateAuthority: TransactionSigner<TAccountUpdateAuthority>;
   systemProgram?: Address<TAccountSystemProgram>;
   mplCore?: Address<TAccountMplCore>;
-  name: InitializeCollectionInstructionDataArgs['name'];
-  uri: InitializeCollectionInstructionDataArgs['uri'];
+  args: InitializeCollectionInstructionDataArgs['args'];
 };
 
 export async function getInitializeCollectionInstructionAsync<
   TAccountPayer extends string,
   TAccountMasterState extends string,
+  TAccountMintAuthority extends string,
   TAccountCollection extends string,
   TAccountUpdateAuthority extends string,
   TAccountSystemProgram extends string,
@@ -169,6 +173,7 @@ export async function getInitializeCollectionInstructionAsync<
   input: InitializeCollectionAsyncInput<
     TAccountPayer,
     TAccountMasterState,
+    TAccountMintAuthority,
     TAccountCollection,
     TAccountUpdateAuthority,
     TAccountSystemProgram,
@@ -180,6 +185,7 @@ export async function getInitializeCollectionInstructionAsync<
     TProgramAddress,
     TAccountPayer,
     TAccountMasterState,
+    TAccountMintAuthority,
     TAccountCollection,
     TAccountUpdateAuthority,
     TAccountSystemProgram,
@@ -194,6 +200,7 @@ export async function getInitializeCollectionInstructionAsync<
   const originalAccounts = {
     payer: { value: input.payer ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
+    mintAuthority: { value: input.mintAuthority ?? null, isWritable: true },
     collection: { value: input.collection ?? null, isWritable: true },
     updateAuthority: { value: input.updateAuthority ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -217,6 +224,19 @@ export async function getInitializeCollectionInstructionAsync<
       ],
     });
   }
+  if (!accounts.mintAuthority.value) {
+    accounts.mintAuthority.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+          ])
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.collection.value)),
+      ],
+    });
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
@@ -231,6 +251,7 @@ export async function getInitializeCollectionInstructionAsync<
     accounts: [
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.masterState),
+      getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.collection),
       getAccountMeta(accounts.updateAuthority),
       getAccountMeta(accounts.systemProgram),
@@ -244,6 +265,7 @@ export async function getInitializeCollectionInstructionAsync<
     TProgramAddress,
     TAccountPayer,
     TAccountMasterState,
+    TAccountMintAuthority,
     TAccountCollection,
     TAccountUpdateAuthority,
     TAccountSystemProgram,
@@ -256,6 +278,7 @@ export async function getInitializeCollectionInstructionAsync<
 export type InitializeCollectionInput<
   TAccountPayer extends string = string,
   TAccountMasterState extends string = string,
+  TAccountMintAuthority extends string = string,
   TAccountCollection extends string = string,
   TAccountUpdateAuthority extends string = string,
   TAccountSystemProgram extends string = string,
@@ -263,17 +286,19 @@ export type InitializeCollectionInput<
 > = {
   payer: TransactionSigner<TAccountPayer>;
   masterState: Address<TAccountMasterState>;
-  collection: Address<TAccountCollection>;
+  mintAuthority: Address<TAccountMintAuthority>;
+  collection: TransactionSigner<TAccountCollection>;
+  /** CHECK Server authority */
   updateAuthority: TransactionSigner<TAccountUpdateAuthority>;
   systemProgram?: Address<TAccountSystemProgram>;
   mplCore?: Address<TAccountMplCore>;
-  name: InitializeCollectionInstructionDataArgs['name'];
-  uri: InitializeCollectionInstructionDataArgs['uri'];
+  args: InitializeCollectionInstructionDataArgs['args'];
 };
 
 export function getInitializeCollectionInstruction<
   TAccountPayer extends string,
   TAccountMasterState extends string,
+  TAccountMintAuthority extends string,
   TAccountCollection extends string,
   TAccountUpdateAuthority extends string,
   TAccountSystemProgram extends string,
@@ -283,6 +308,7 @@ export function getInitializeCollectionInstruction<
   input: InitializeCollectionInput<
     TAccountPayer,
     TAccountMasterState,
+    TAccountMintAuthority,
     TAccountCollection,
     TAccountUpdateAuthority,
     TAccountSystemProgram,
@@ -293,6 +319,7 @@ export function getInitializeCollectionInstruction<
   TProgramAddress,
   TAccountPayer,
   TAccountMasterState,
+  TAccountMintAuthority,
   TAccountCollection,
   TAccountUpdateAuthority,
   TAccountSystemProgram,
@@ -306,6 +333,7 @@ export function getInitializeCollectionInstruction<
   const originalAccounts = {
     payer: { value: input.payer ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
+    mintAuthority: { value: input.mintAuthority ?? null, isWritable: true },
     collection: { value: input.collection ?? null, isWritable: true },
     updateAuthority: { value: input.updateAuthority ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -334,6 +362,7 @@ export function getInitializeCollectionInstruction<
     accounts: [
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.masterState),
+      getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.collection),
       getAccountMeta(accounts.updateAuthority),
       getAccountMeta(accounts.systemProgram),
@@ -347,6 +376,7 @@ export function getInitializeCollectionInstruction<
     TProgramAddress,
     TAccountPayer,
     TAccountMasterState,
+    TAccountMintAuthority,
     TAccountCollection,
     TAccountUpdateAuthority,
     TAccountSystemProgram,
@@ -364,10 +394,12 @@ export type ParsedInitializeCollectionInstruction<
   accounts: {
     payer: TAccountMetas[0];
     masterState: TAccountMetas[1];
-    collection: TAccountMetas[2];
-    updateAuthority: TAccountMetas[3];
-    systemProgram: TAccountMetas[4];
-    mplCore: TAccountMetas[5];
+    mintAuthority: TAccountMetas[2];
+    collection: TAccountMetas[3];
+    /** CHECK Server authority */
+    updateAuthority: TAccountMetas[4];
+    systemProgram: TAccountMetas[5];
+    mplCore: TAccountMetas[6];
   };
   data: InitializeCollectionInstructionData;
 };
@@ -380,7 +412,7 @@ export function parseInitializeCollectionInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeCollectionInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -395,6 +427,7 @@ export function parseInitializeCollectionInstruction<
     accounts: {
       payer: getNextAccount(),
       masterState: getNextAccount(),
+      mintAuthority: getNextAccount(),
       collection: getNextAccount(),
       updateAuthority: getNextAccount(),
       systemProgram: getNextAccount(),

@@ -19,7 +19,6 @@ import {
   bytes,
   mapSerializer,
   publicKey as publicKeySerializer,
-  string,
   struct,
 } from '@metaplex-foundation/umi/serializers';
 import {
@@ -28,12 +27,19 @@ import {
   expectPublicKey,
   getAccountMetasAndSigners,
 } from '../shared';
+import {
+  CollectionArgs,
+  CollectionArgsArgs,
+  getCollectionArgsSerializer,
+} from '../types';
 
 // Accounts.
 export type InitializeCollectionInstructionAccounts = {
   payer: Signer;
   masterState?: PublicKey | Pda;
-  collection: PublicKey | Pda;
+  mintAuthority?: PublicKey | Pda;
+  collection: Signer;
+  /** CHECK Server authority */
   updateAuthority: Signer;
   systemProgram?: PublicKey | Pda;
   mplCore?: PublicKey | Pda;
@@ -42,13 +48,11 @@ export type InitializeCollectionInstructionAccounts = {
 // Data.
 export type InitializeCollectionInstructionData = {
   discriminator: Uint8Array;
-  name: string;
-  uri: string;
+  args: CollectionArgs;
 };
 
 export type InitializeCollectionInstructionDataArgs = {
-  name: string;
-  uri: string;
+  args: CollectionArgsArgs;
 };
 
 export function getInitializeCollectionInstructionDataSerializer(): Serializer<
@@ -63,8 +67,7 @@ export function getInitializeCollectionInstructionDataSerializer(): Serializer<
     struct<InitializeCollectionInstructionData>(
       [
         ['discriminator', bytes({ size: 8 })],
-        ['name', string()],
-        ['uri', string()],
+        ['args', getCollectionArgsSerializer()],
       ],
       { description: 'InitializeCollectionInstructionData' }
     ),
@@ -106,23 +109,28 @@ export function initializeCollection(
       isWritable: true as boolean,
       value: input.masterState ?? null,
     },
-    collection: {
+    mintAuthority: {
       index: 2,
+      isWritable: true as boolean,
+      value: input.mintAuthority ?? null,
+    },
+    collection: {
+      index: 3,
       isWritable: true as boolean,
       value: input.collection ?? null,
     },
     updateAuthority: {
-      index: 3,
+      index: 4,
       isWritable: true as boolean,
       value: input.updateAuthority ?? null,
     },
     systemProgram: {
-      index: 4,
+      index: 5,
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
     mplCore: {
-      index: 5,
+      index: 6,
       isWritable: false as boolean,
       value: input.mplCore ?? null,
     },
@@ -135,6 +143,18 @@ export function initializeCollection(
   if (!resolvedAccounts.masterState.value) {
     resolvedAccounts.masterState.value = context.eddsa.findPda(programId, [
       bytes().serialize(new Uint8Array([109, 97, 115, 116, 101, 114])),
+      publicKeySerializer().serialize(
+        expectPublicKey(resolvedAccounts.collection.value)
+      ),
+    ]);
+  }
+  if (!resolvedAccounts.mintAuthority.value) {
+    resolvedAccounts.mintAuthority.value = context.eddsa.findPda(programId, [
+      bytes().serialize(
+        new Uint8Array([
+          109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+        ])
+      ),
       publicKeySerializer().serialize(
         expectPublicKey(resolvedAccounts.collection.value)
       ),

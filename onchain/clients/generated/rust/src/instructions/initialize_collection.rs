@@ -7,6 +7,7 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use crate::generated::types::CollectionArgs;
 
 /// Accounts.
 pub struct InitializeCollection {
@@ -18,8 +19,13 @@ pub struct InitializeCollection {
           pub master_state: solana_program::pubkey::Pubkey,
           
               
-          pub collection: solana_program::pubkey::Pubkey,
+          pub mint_authority: solana_program::pubkey::Pubkey,
           
+              
+          pub collection: solana_program::pubkey::Pubkey,
+                /// CHECK Server authority
+
+    
               
           pub update_authority: solana_program::pubkey::Pubkey,
           
@@ -36,7 +42,7 @@ impl InitializeCollection {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, args: InitializeCollectionInstructionArgs, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer,
             true
@@ -46,8 +52,12 @@ impl InitializeCollection {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
-            self.collection,
+            self.mint_authority,
             false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            self.collection,
+            true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             self.update_authority,
@@ -77,13 +87,13 @@ impl InitializeCollection {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InitializeCollectionInstructionData {
             discriminator: [u8; 8],
-                  }
+            }
 
 impl InitializeCollectionInstructionData {
   pub fn new() -> Self {
     Self {
                         discriminator: [112, 62, 53, 139, 173, 152, 98, 93],
-                                              }
+                                }
   }
 }
 
@@ -96,8 +106,7 @@ impl Default for InitializeCollectionInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitializeCollectionInstructionArgs {
-                  pub name: String,
-                pub uri: String,
+                  pub args: CollectionArgs,
       }
 
 
@@ -107,20 +116,21 @@ pub struct InitializeCollectionInstructionArgs {
 ///
                       ///   0. `[writable, signer]` payer
                 ///   1. `[writable]` master_state
-                ///   2. `[writable]` collection
-                      ///   3. `[writable, signer]` update_authority
-                ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   5. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
+                ///   2. `[writable]` mint_authority
+                      ///   3. `[writable, signer]` collection
+                      ///   4. `[writable, signer]` update_authority
+                ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   6. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeCollectionBuilder {
             payer: Option<solana_program::pubkey::Pubkey>,
                 master_state: Option<solana_program::pubkey::Pubkey>,
+                mint_authority: Option<solana_program::pubkey::Pubkey>,
                 collection: Option<solana_program::pubkey::Pubkey>,
                 update_authority: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 mpl_core: Option<solana_program::pubkey::Pubkey>,
-                        name: Option<String>,
-                uri: Option<String>,
+                        args: Option<CollectionArgs>,
         __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -139,11 +149,17 @@ impl InitializeCollectionBuilder {
                     self
     }
             #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.mint_authority = Some(mint_authority);
+                    self
+    }
+            #[inline(always)]
     pub fn collection(&mut self, collection: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.collection = Some(collection);
                     self
     }
-            #[inline(always)]
+            /// CHECK Server authority
+#[inline(always)]
     pub fn update_authority(&mut self, update_authority: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.update_authority = Some(update_authority);
                     self
@@ -161,13 +177,8 @@ impl InitializeCollectionBuilder {
                     self
     }
                     #[inline(always)]
-      pub fn name(&mut self, name: String) -> &mut Self {
-        self.name = Some(name);
-        self
-      }
-                #[inline(always)]
-      pub fn uri(&mut self, uri: String) -> &mut Self {
-        self.uri = Some(uri);
+      pub fn args(&mut self, args: CollectionArgs) -> &mut Self {
+        self.args = Some(args);
         self
       }
         /// Add an additional account to the instruction.
@@ -187,14 +198,14 @@ impl InitializeCollectionBuilder {
     let accounts = InitializeCollection {
                               payer: self.payer.expect("payer is not set"),
                                         master_state: self.master_state.expect("master_state is not set"),
+                                        mint_authority: self.mint_authority.expect("mint_authority is not set"),
                                         collection: self.collection.expect("collection is not set"),
                                         update_authority: self.update_authority.expect("update_authority is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         mpl_core: self.mpl_core.unwrap_or(solana_program::pubkey!("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d")),
                       };
           let args = InitializeCollectionInstructionArgs {
-                                                              name: self.name.clone().expect("name is not set"),
-                                                                  uri: self.uri.clone().expect("uri is not set"),
+                                                              args: self.args.clone().expect("args is not set"),
                                     };
     
     accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -211,8 +222,13 @@ impl InitializeCollectionBuilder {
               pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub collection: &'b solana_program::account_info::AccountInfo<'a>,
+              pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
+                    
+              pub collection: &'b solana_program::account_info::AccountInfo<'a>,
+                        /// CHECK Server authority
+
+      
                     
               pub update_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 
@@ -235,8 +251,13 @@ pub struct InitializeCollectionCpi<'a, 'b> {
           pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub collection: &'b solana_program::account_info::AccountInfo<'a>,
+          pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
           
+              
+          pub collection: &'b solana_program::account_info::AccountInfo<'a>,
+                /// CHECK Server authority
+
+    
               
           pub update_authority: &'b solana_program::account_info::AccountInfo<'a>,
           
@@ -259,6 +280,7 @@ impl<'a, 'b> InitializeCollectionCpi<'a, 'b> {
       __program: program,
               payer: accounts.payer,
               master_state: accounts.master_state,
+              mint_authority: accounts.mint_authority,
               collection: accounts.collection,
               update_authority: accounts.update_authority,
               system_program: accounts.system_program,
@@ -285,7 +307,7 @@ impl<'a, 'b> InitializeCollectionCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true
@@ -295,8 +317,12 @@ impl<'a, 'b> InitializeCollectionCpi<'a, 'b> {
             false
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.collection.key,
+            *self.mint_authority.key,
             false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.collection.key,
+            true
           ));
                                           accounts.push(solana_program::instruction::AccountMeta::new(
             *self.update_authority.key,
@@ -326,10 +352,11 @@ impl<'a, 'b> InitializeCollectionCpi<'a, 'b> {
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.payer.clone());
                         account_infos.push(self.master_state.clone());
+                        account_infos.push(self.mint_authority.clone());
                         account_infos.push(self.collection.clone());
                         account_infos.push(self.update_authority.clone());
                         account_infos.push(self.system_program.clone());
@@ -350,10 +377,11 @@ impl<'a, 'b> InitializeCollectionCpi<'a, 'b> {
 ///
                       ///   0. `[writable, signer]` payer
                 ///   1. `[writable]` master_state
-                ///   2. `[writable]` collection
-                      ///   3. `[writable, signer]` update_authority
-          ///   4. `[]` system_program
-          ///   5. `[]` mpl_core
+                ///   2. `[writable]` mint_authority
+                      ///   3. `[writable, signer]` collection
+                      ///   4. `[writable, signer]` update_authority
+          ///   5. `[]` system_program
+          ///   6. `[]` mpl_core
 #[derive(Clone, Debug)]
 pub struct InitializeCollectionCpiBuilder<'a, 'b> {
   instruction: Box<InitializeCollectionCpiBuilderInstruction<'a, 'b>>,
@@ -365,12 +393,12 @@ impl<'a, 'b> InitializeCollectionCpiBuilder<'a, 'b> {
       __program: program,
               payer: None,
               master_state: None,
+              mint_authority: None,
               collection: None,
               update_authority: None,
               system_program: None,
               mpl_core: None,
-                                            name: None,
-                                uri: None,
+                                            args: None,
                     __remaining_accounts: Vec::new(),
     });
     Self { instruction }
@@ -386,11 +414,17 @@ impl<'a, 'b> InitializeCollectionCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.mint_authority = Some(mint_authority);
+                    self
+    }
+      #[inline(always)]
     pub fn collection(&mut self, collection: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.collection = Some(collection);
                     self
     }
-      #[inline(always)]
+      /// CHECK Server authority
+#[inline(always)]
     pub fn update_authority(&mut self, update_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.update_authority = Some(update_authority);
                     self
@@ -406,13 +440,8 @@ impl<'a, 'b> InitializeCollectionCpiBuilder<'a, 'b> {
                     self
     }
                     #[inline(always)]
-      pub fn name(&mut self, name: String) -> &mut Self {
-        self.instruction.name = Some(name);
-        self
-      }
-                #[inline(always)]
-      pub fn uri(&mut self, uri: String) -> &mut Self {
-        self.instruction.uri = Some(uri);
+      pub fn args(&mut self, args: CollectionArgs) -> &mut Self {
+        self.instruction.args = Some(args);
         self
       }
         /// Add an additional account to the instruction.
@@ -438,8 +467,7 @@ impl<'a, 'b> InitializeCollectionCpiBuilder<'a, 'b> {
   #[allow(clippy::vec_init_then_push)]
   pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program::entrypoint::ProgramResult {
           let args = InitializeCollectionInstructionArgs {
-                                                              name: self.instruction.name.clone().expect("name is not set"),
-                                                                  uri: self.instruction.uri.clone().expect("uri is not set"),
+                                                              args: self.instruction.args.clone().expect("args is not set"),
                                     };
         let instruction = InitializeCollectionCpi {
         __program: self.instruction.__program,
@@ -447,6 +475,8 @@ impl<'a, 'b> InitializeCollectionCpiBuilder<'a, 'b> {
           payer: self.instruction.payer.expect("payer is not set"),
                   
           master_state: self.instruction.master_state.expect("master_state is not set"),
+                  
+          mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
                   
           collection: self.instruction.collection.expect("collection is not set"),
                   
@@ -466,12 +496,12 @@ struct InitializeCollectionCpiBuilderInstruction<'a, 'b> {
   __program: &'b solana_program::account_info::AccountInfo<'a>,
             payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mpl_core: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                        name: Option<String>,
-                uri: Option<String>,
+                        args: Option<CollectionArgs>,
         /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,
 }

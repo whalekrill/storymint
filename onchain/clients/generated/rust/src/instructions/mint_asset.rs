@@ -7,7 +7,6 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
-use crate::generated::types::MintAssetArgs;
 
 /// Accounts.
 pub struct MintAsset {
@@ -30,21 +29,14 @@ pub struct MintAsset {
     
               
           pub collection: solana_program::pubkey::Pubkey,
-                /// The authority signing for creation (optional)
-
-    
+          
               
-          pub authority: Option<solana_program::pubkey::Pubkey>,
+          pub mint_authority: solana_program::pubkey::Pubkey,
                 /// The owner of the new asset
 
     
               
           pub owner: Option<solana_program::pubkey::Pubkey>,
-                /// The authority on the new asset
-
-    
-              
-          pub update_authority: Option<solana_program::pubkey::Pubkey>,
           
               
           pub system_program: solana_program::pubkey::Pubkey,
@@ -57,12 +49,12 @@ pub struct MintAsset {
       }
 
 impl MintAsset {
-  pub fn instruction(&self, args: MintAssetInstructionArgs) -> solana_program::instruction::Instruction {
-    self.instruction_with_remaining_accounts(args, &[])
+  pub fn instruction(&self) -> solana_program::instruction::Instruction {
+    self.instruction_with_remaining_accounts(&[])
   }
   #[allow(clippy::vec_init_then_push)]
-  pub fn instruction_with_remaining_accounts(&self, args: MintAssetInstructionArgs, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+  pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
+    let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer,
             true
@@ -83,31 +75,13 @@ impl MintAsset {
             self.collection,
             false
           ));
-                                                      if let Some(authority) = self.authority {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                authority,
-                true,
-              ));
-            } else {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
-                false,
-              ));
-            }
-                                                                if let Some(owner) = self.owner {
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.mint_authority,
+            false
+          ));
+                                                      if let Some(owner) = self.owner {
               accounts.push(solana_program::instruction::AccountMeta::new_readonly(
                 owner,
-                false,
-              ));
-            } else {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
-                false,
-              ));
-            }
-                                                                if let Some(update_authority) = self.update_authority {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                update_authority,
                 false,
               ));
             } else {
@@ -136,9 +110,7 @@ impl MintAsset {
             false
           ));
                       accounts.extend_from_slice(remaining_accounts);
-    let mut data = MintAssetInstructionData::new().try_to_vec().unwrap();
-          let mut args = args.try_to_vec().unwrap();
-      data.append(&mut args);
+    let data = MintAssetInstructionData::new().try_to_vec().unwrap();
     
     solana_program::instruction::Instruction {
       program_id: crate::LOCKED_SOL_PNFT_ID,
@@ -151,13 +123,13 @@ impl MintAsset {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct MintAssetInstructionData {
             discriminator: [u8; 8],
-            }
+      }
 
 impl MintAssetInstructionData {
   pub fn new() -> Self {
     Self {
                         discriminator: [84, 175, 211, 156, 56, 250, 104, 118],
-                                }
+                  }
   }
 }
 
@@ -167,11 +139,6 @@ impl Default for MintAssetInstructionData {
   }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct MintAssetInstructionArgs {
-                  pub args: MintAssetArgs,
-      }
 
 
 /// Instruction builder for `MintAsset`.
@@ -183,12 +150,11 @@ pub struct MintAssetInstructionArgs {
                       ///   2. `[writable, signer]` asset
                 ///   3. `[writable]` master_state
                 ///   4. `[writable]` collection
-                      ///   5. `[signer, optional]` authority
+          ///   5. `[]` mint_authority
                 ///   6. `[optional]` owner
-                ///   7. `[optional]` update_authority
-                ///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   9. `[optional]` log_wrapper
-                ///   10. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
+                ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+                ///   8. `[optional]` log_wrapper
+                ///   9. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
 #[derive(Clone, Debug, Default)]
 pub struct MintAssetBuilder {
             payer: Option<solana_program::pubkey::Pubkey>,
@@ -196,14 +162,12 @@ pub struct MintAssetBuilder {
                 asset: Option<solana_program::pubkey::Pubkey>,
                 master_state: Option<solana_program::pubkey::Pubkey>,
                 collection: Option<solana_program::pubkey::Pubkey>,
-                authority: Option<solana_program::pubkey::Pubkey>,
+                mint_authority: Option<solana_program::pubkey::Pubkey>,
                 owner: Option<solana_program::pubkey::Pubkey>,
-                update_authority: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
                 log_wrapper: Option<solana_program::pubkey::Pubkey>,
                 mpl_core: Option<solana_program::pubkey::Pubkey>,
-                        args: Option<MintAssetArgs>,
-        __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
+                __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
 impl MintAssetBuilder {
@@ -237,11 +201,9 @@ impl MintAssetBuilder {
                         self.collection = Some(collection);
                     self
     }
-            /// `[optional account]`
-/// The authority signing for creation (optional)
-#[inline(always)]
-    pub fn authority(&mut self, authority: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
-                        self.authority = authority;
+            #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.mint_authority = Some(mint_authority);
                     self
     }
             /// `[optional account]`
@@ -249,13 +211,6 @@ impl MintAssetBuilder {
 #[inline(always)]
     pub fn owner(&mut self, owner: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
                         self.owner = owner;
-                    self
-    }
-            /// `[optional account]`
-/// The authority on the new asset
-#[inline(always)]
-    pub fn update_authority(&mut self, update_authority: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
-                        self.update_authority = update_authority;
                     self
     }
             /// `[optional account, default to '11111111111111111111111111111111']`
@@ -276,12 +231,7 @@ impl MintAssetBuilder {
                         self.mpl_core = Some(mpl_core);
                     self
     }
-                    #[inline(always)]
-      pub fn args(&mut self, args: MintAssetArgs) -> &mut Self {
-        self.args = Some(args);
-        self
-      }
-        /// Add an additional account to the instruction.
+            /// Add an additional account to the instruction.
   #[inline(always)]
   pub fn add_remaining_account(&mut self, account: solana_program::instruction::AccountMeta) -> &mut Self {
     self.__remaining_accounts.push(account);
@@ -301,18 +251,14 @@ impl MintAssetBuilder {
                                         asset: self.asset.expect("asset is not set"),
                                         master_state: self.master_state.expect("master_state is not set"),
                                         collection: self.collection.expect("collection is not set"),
-                                        authority: self.authority,
+                                        mint_authority: self.mint_authority.expect("mint_authority is not set"),
                                         owner: self.owner,
-                                        update_authority: self.update_authority,
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
                                         log_wrapper: self.log_wrapper,
                                         mpl_core: self.mpl_core.unwrap_or(solana_program::pubkey!("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d")),
                       };
-          let args = MintAssetInstructionArgs {
-                                                              args: self.args.clone().expect("args is not set"),
-                                    };
     
-    accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
+    accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
   }
 }
 
@@ -337,21 +283,14 @@ impl MintAssetBuilder {
       
                     
               pub collection: &'b solana_program::account_info::AccountInfo<'a>,
-                        /// The authority signing for creation (optional)
-
-      
+                
                     
-              pub authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+              pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
                         /// The owner of the new asset
 
       
                     
               pub owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                        /// The authority on the new asset
-
-      
-                    
-              pub update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -386,21 +325,14 @@ pub struct MintAssetCpi<'a, 'b> {
     
               
           pub collection: &'b solana_program::account_info::AccountInfo<'a>,
-                /// The authority signing for creation (optional)
-
-    
+          
               
-          pub authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+          pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
                 /// The owner of the new asset
 
     
               
           pub owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                /// The authority on the new asset
-
-    
-              
-          pub update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
           
               
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -410,16 +342,13 @@ pub struct MintAssetCpi<'a, 'b> {
           
               
           pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
-            /// The arguments for the instruction.
-    pub __args: MintAssetInstructionArgs,
-  }
+        }
 
 impl<'a, 'b> MintAssetCpi<'a, 'b> {
   pub fn new(
     program: &'b solana_program::account_info::AccountInfo<'a>,
           accounts: MintAssetCpiAccounts<'a, 'b>,
-              args: MintAssetInstructionArgs,
-      ) -> Self {
+          ) -> Self {
     Self {
       __program: program,
               payer: accounts.payer,
@@ -427,14 +356,12 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
               asset: accounts.asset,
               master_state: accounts.master_state,
               collection: accounts.collection,
-              authority: accounts.authority,
+              mint_authority: accounts.mint_authority,
               owner: accounts.owner,
-              update_authority: accounts.update_authority,
               system_program: accounts.system_program,
               log_wrapper: accounts.log_wrapper,
               mpl_core: accounts.mpl_core,
-                    __args: args,
-          }
+                }
   }
   #[inline(always)]
   pub fn invoke(&self) -> solana_program::entrypoint::ProgramResult {
@@ -455,7 +382,7 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true
@@ -476,31 +403,13 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
             *self.collection.key,
             false
           ));
-                                          if let Some(authority) = self.authority {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              *authority.key,
-              true,
-            ));
-          } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
-              false,
-            ));
-          }
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.mint_authority.key,
+            false
+          ));
                                           if let Some(owner) = self.owner {
             accounts.push(solana_program::instruction::AccountMeta::new_readonly(
               *owner.key,
-              false,
-            ));
-          } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
-              false,
-            ));
-          }
-                                          if let Some(update_authority) = self.update_authority {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              *update_authority.key,
               false,
             ));
           } else {
@@ -535,30 +444,23 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
           is_writable: remaining_account.2,
       })
     });
-    let mut data = MintAssetInstructionData::new().try_to_vec().unwrap();
-          let mut args = self.__args.try_to_vec().unwrap();
-      data.append(&mut args);
+    let data = MintAssetInstructionData::new().try_to_vec().unwrap();
     
     let instruction = solana_program::instruction::Instruction {
       program_id: crate::LOCKED_SOL_PNFT_ID,
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(11 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.payer.clone());
                         account_infos.push(self.vault.clone());
                         account_infos.push(self.asset.clone());
                         account_infos.push(self.master_state.clone());
                         account_infos.push(self.collection.clone());
-                        if let Some(authority) = self.authority {
-          account_infos.push(authority.clone());
-        }
+                        account_infos.push(self.mint_authority.clone());
                         if let Some(owner) = self.owner {
           account_infos.push(owner.clone());
-        }
-                        if let Some(update_authority) = self.update_authority {
-          account_infos.push(update_authority.clone());
         }
                         account_infos.push(self.system_program.clone());
                         if let Some(log_wrapper) = self.log_wrapper {
@@ -584,12 +486,11 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
                       ///   2. `[writable, signer]` asset
                 ///   3. `[writable]` master_state
                 ///   4. `[writable]` collection
-                      ///   5. `[signer, optional]` authority
+          ///   5. `[]` mint_authority
                 ///   6. `[optional]` owner
-                ///   7. `[optional]` update_authority
-          ///   8. `[]` system_program
-                ///   9. `[optional]` log_wrapper
-          ///   10. `[]` mpl_core
+          ///   7. `[]` system_program
+                ///   8. `[optional]` log_wrapper
+          ///   9. `[]` mpl_core
 #[derive(Clone, Debug)]
 pub struct MintAssetCpiBuilder<'a, 'b> {
   instruction: Box<MintAssetCpiBuilderInstruction<'a, 'b>>,
@@ -604,14 +505,12 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
               asset: None,
               master_state: None,
               collection: None,
-              authority: None,
+              mint_authority: None,
               owner: None,
-              update_authority: None,
               system_program: None,
               log_wrapper: None,
               mpl_core: None,
-                                            args: None,
-                    __remaining_accounts: Vec::new(),
+                                __remaining_accounts: Vec::new(),
     });
     Self { instruction }
   }
@@ -642,11 +541,9 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                         self.instruction.collection = Some(collection);
                     self
     }
-      /// `[optional account]`
-/// The authority signing for creation (optional)
-#[inline(always)]
-    pub fn authority(&mut self, authority: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
-                        self.instruction.authority = authority;
+      #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.mint_authority = Some(mint_authority);
                     self
     }
       /// `[optional account]`
@@ -654,13 +551,6 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
 #[inline(always)]
     pub fn owner(&mut self, owner: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
                         self.instruction.owner = owner;
-                    self
-    }
-      /// `[optional account]`
-/// The authority on the new asset
-#[inline(always)]
-    pub fn update_authority(&mut self, update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
-                        self.instruction.update_authority = update_authority;
                     self
     }
       #[inline(always)]
@@ -679,12 +569,7 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                         self.instruction.mpl_core = Some(mpl_core);
                     self
     }
-                    #[inline(always)]
-      pub fn args(&mut self, args: MintAssetArgs) -> &mut Self {
-        self.instruction.args = Some(args);
-        self
-      }
-        /// Add an additional account to the instruction.
+            /// Add an additional account to the instruction.
   #[inline(always)]
   pub fn add_remaining_account(&mut self, account: &'b solana_program::account_info::AccountInfo<'a>, is_writable: bool, is_signer: bool) -> &mut Self {
     self.instruction.__remaining_accounts.push((account, is_writable, is_signer));
@@ -706,9 +591,6 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
   #[allow(clippy::clone_on_copy)]
   #[allow(clippy::vec_init_then_push)]
   pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program::entrypoint::ProgramResult {
-          let args = MintAssetInstructionArgs {
-                                                              args: self.instruction.args.clone().expect("args is not set"),
-                                    };
         let instruction = MintAssetCpi {
         __program: self.instruction.__program,
                   
@@ -722,19 +604,16 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                   
           collection: self.instruction.collection.expect("collection is not set"),
                   
-          authority: self.instruction.authority,
+          mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
                   
           owner: self.instruction.owner,
-                  
-          update_authority: self.instruction.update_authority,
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
           log_wrapper: self.instruction.log_wrapper,
                   
           mpl_core: self.instruction.mpl_core.expect("mpl_core is not set"),
-                          __args: args,
-            };
+                    };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
   }
 }
@@ -747,14 +626,12 @@ struct MintAssetCpiBuilderInstruction<'a, 'b> {
                 asset: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+                mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                update_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mpl_core: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                        args: Option<MintAssetArgs>,
-        /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
+                /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,
 }
 

@@ -15,95 +15,108 @@ type ProgramErrorConstructor = new (
 const codeToErrorMap: Map<number, ProgramErrorConstructor> = new Map();
 const nameToErrorMap: Map<string, ProgramErrorConstructor> = new Map();
 
+/** InvalidAuthority: Invalid authority */
+export class InvalidAuthorityError extends ProgramError {
+  override readonly name: string = 'InvalidAuthority';
+
+  readonly code: number = 0x1770; // 6000
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid authority', program, cause);
+  }
+}
+codeToErrorMap.set(0x1770, InvalidAuthorityError);
+nameToErrorMap.set('InvalidAuthority', InvalidAuthorityError);
+
 /** InvalidVaultBalance: Invalid vault balance */
 export class InvalidVaultBalanceError extends ProgramError {
   override readonly name: string = 'InvalidVaultBalance';
 
-  readonly code: number = 0x1770; // 6000
+  readonly code: number = 0x1771; // 6001
 
   constructor(program: Program, cause?: Error) {
     super('Invalid vault balance', program, cause);
   }
 }
-codeToErrorMap.set(0x1770, InvalidVaultBalanceError);
+codeToErrorMap.set(0x1771, InvalidVaultBalanceError);
 nameToErrorMap.set('InvalidVaultBalance', InvalidVaultBalanceError);
 
 /** UnauthorizedUpdate: Unauthorized metadata update */
 export class UnauthorizedUpdateError extends ProgramError {
   override readonly name: string = 'UnauthorizedUpdate';
 
-  readonly code: number = 0x1771; // 6001
+  readonly code: number = 0x1772; // 6002
 
   constructor(program: Program, cause?: Error) {
     super('Unauthorized metadata update', program, cause);
   }
 }
-codeToErrorMap.set(0x1771, UnauthorizedUpdateError);
+codeToErrorMap.set(0x1772, UnauthorizedUpdateError);
 nameToErrorMap.set('UnauthorizedUpdate', UnauthorizedUpdateError);
 
 /** MaxSupplyReached: Maximum supply reached */
 export class MaxSupplyReachedError extends ProgramError {
   override readonly name: string = 'MaxSupplyReached';
 
-  readonly code: number = 0x1772; // 6002
+  readonly code: number = 0x1773; // 6003
 
   constructor(program: Program, cause?: Error) {
     super('Maximum supply reached', program, cause);
   }
 }
-codeToErrorMap.set(0x1772, MaxSupplyReachedError);
+codeToErrorMap.set(0x1773, MaxSupplyReachedError);
 nameToErrorMap.set('MaxSupplyReached', MaxSupplyReachedError);
 
 /** InvalidCollection: Invalid collection data */
 export class InvalidCollectionError extends ProgramError {
   override readonly name: string = 'InvalidCollection';
 
-  readonly code: number = 0x1773; // 6003
+  readonly code: number = 0x1774; // 6004
 
   constructor(program: Program, cause?: Error) {
     super('Invalid collection data', program, cause);
   }
 }
-codeToErrorMap.set(0x1773, InvalidCollectionError);
+codeToErrorMap.set(0x1774, InvalidCollectionError);
 nameToErrorMap.set('InvalidCollection', InvalidCollectionError);
 
 /** Overflow: Arithmetic overflow */
 export class OverflowError extends ProgramError {
   override readonly name: string = 'Overflow';
 
-  readonly code: number = 0x1774; // 6004
+  readonly code: number = 0x1775; // 6005
 
   constructor(program: Program, cause?: Error) {
     super('Arithmetic overflow', program, cause);
   }
 }
-codeToErrorMap.set(0x1774, OverflowError);
+codeToErrorMap.set(0x1775, OverflowError);
 nameToErrorMap.set('Overflow', OverflowError);
 
 /** Underflow: Arithmetic underflow */
 export class UnderflowError extends ProgramError {
   override readonly name: string = 'Underflow';
 
-  readonly code: number = 0x1775; // 6005
+  readonly code: number = 0x1776; // 6006
 
   constructor(program: Program, cause?: Error) {
     super('Arithmetic underflow', program, cause);
   }
 }
-codeToErrorMap.set(0x1775, UnderflowError);
+codeToErrorMap.set(0x1776, UnderflowError);
 nameToErrorMap.set('Underflow', UnderflowError);
 
 /** InvalidUpdateAuthority: Invalid update authority */
 export class InvalidUpdateAuthorityError extends ProgramError {
   override readonly name: string = 'InvalidUpdateAuthority';
 
-  readonly code: number = 0x1776; // 6006
+  readonly code: number = 0x1777; // 6007
 
   constructor(program: Program, cause?: Error) {
     super('Invalid update authority', program, cause);
   }
 }
-codeToErrorMap.set(0x1776, InvalidUpdateAuthorityError);
+codeToErrorMap.set(0x1777, InvalidUpdateAuthorityError);
 nameToErrorMap.set('InvalidUpdateAuthority', InvalidUpdateAuthorityError);
 
 /**

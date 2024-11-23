@@ -10,27 +10,30 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum LockedSolPnftError {
-    /// 6000 - Invalid vault balance
+    /// 6000 - Invalid authority
+    #[error("Invalid authority")]
+    InvalidAuthority = 0x1770,
+    /// 6001 - Invalid vault balance
     #[error("Invalid vault balance")]
-    InvalidVaultBalance = 0x1770,
-    /// 6001 - Unauthorized metadata update
+    InvalidVaultBalance = 0x1771,
+    /// 6002 - Unauthorized metadata update
     #[error("Unauthorized metadata update")]
-    UnauthorizedUpdate = 0x1771,
-    /// 6002 - Maximum supply reached
+    UnauthorizedUpdate = 0x1772,
+    /// 6003 - Maximum supply reached
     #[error("Maximum supply reached")]
-    MaxSupplyReached = 0x1772,
-    /// 6003 - Invalid collection data
+    MaxSupplyReached = 0x1773,
+    /// 6004 - Invalid collection data
     #[error("Invalid collection data")]
-    InvalidCollection = 0x1773,
-    /// 6004 - Arithmetic overflow
+    InvalidCollection = 0x1774,
+    /// 6005 - Arithmetic overflow
     #[error("Arithmetic overflow")]
-    Overflow = 0x1774,
-    /// 6005 - Arithmetic underflow
+    Overflow = 0x1775,
+    /// 6006 - Arithmetic underflow
     #[error("Arithmetic underflow")]
-    Underflow = 0x1775,
-    /// 6006 - Invalid update authority
+    Underflow = 0x1776,
+    /// 6007 - Invalid update authority
     #[error("Invalid update authority")]
-    InvalidUpdateAuthority = 0x1776,
+    InvalidUpdateAuthority = 0x1777,
 }
 
 impl solana_program::program_error::PrintProgramError for LockedSolPnftError {

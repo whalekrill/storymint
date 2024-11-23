@@ -27,11 +27,6 @@ import {
   expectPublicKey,
   getAccountMetasAndSigners,
 } from '../shared';
-import {
-  MintAssetArgs,
-  MintAssetArgsArgs,
-  getMintAssetArgsSerializer,
-} from '../types';
 
 // Accounts.
 export type MintAssetInstructionAccounts = {
@@ -42,24 +37,18 @@ export type MintAssetInstructionAccounts = {
   masterState?: PublicKey | Pda;
   /** The collection this asset belongs to */
   collection: PublicKey | Pda;
-  /** The authority signing for creation (optional) */
-  authority?: Signer;
+  mintAuthority?: PublicKey | Pda;
   /** The owner of the new asset */
   owner?: PublicKey | Pda;
-  /** The authority on the new asset */
-  updateAuthority?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
   logWrapper?: PublicKey | Pda;
   mplCore?: PublicKey | Pda;
 };
 
 // Data.
-export type MintAssetInstructionData = {
-  discriminator: Uint8Array;
-  args: MintAssetArgs;
-};
+export type MintAssetInstructionData = { discriminator: Uint8Array };
 
-export type MintAssetInstructionDataArgs = { args: MintAssetArgsArgs };
+export type MintAssetInstructionDataArgs = {};
 
 export function getMintAssetInstructionDataSerializer(): Serializer<
   MintAssetInstructionDataArgs,
@@ -70,13 +59,9 @@ export function getMintAssetInstructionDataSerializer(): Serializer<
     any,
     MintAssetInstructionData
   >(
-    struct<MintAssetInstructionData>(
-      [
-        ['discriminator', bytes({ size: 8 })],
-        ['args', getMintAssetArgsSerializer()],
-      ],
-      { description: 'MintAssetInstructionData' }
-    ),
+    struct<MintAssetInstructionData>([['discriminator', bytes({ size: 8 })]], {
+      description: 'MintAssetInstructionData',
+    }),
     (value) => ({
       ...value,
       discriminator: new Uint8Array([84, 175, 211, 156, 56, 250, 104, 118]),
@@ -84,13 +69,10 @@ export function getMintAssetInstructionDataSerializer(): Serializer<
   ) as Serializer<MintAssetInstructionDataArgs, MintAssetInstructionData>;
 }
 
-// Args.
-export type MintAssetInstructionArgs = MintAssetInstructionDataArgs;
-
 // Instruction.
 export function mintAsset(
   context: Pick<Context, 'eddsa' | 'programs'>,
-  input: MintAssetInstructionAccounts & MintAssetInstructionArgs
+  input: MintAssetInstructionAccounts
 ): TransactionBuilder {
   // Program ID.
   const programId = context.programs.getPublicKey(
@@ -125,40 +107,32 @@ export function mintAsset(
       isWritable: true as boolean,
       value: input.collection ?? null,
     },
-    authority: {
+    mintAuthority: {
       index: 5,
       isWritable: false as boolean,
-      value: input.authority ?? null,
+      value: input.mintAuthority ?? null,
     },
     owner: {
       index: 6,
       isWritable: false as boolean,
       value: input.owner ?? null,
     },
-    updateAuthority: {
-      index: 7,
-      isWritable: false as boolean,
-      value: input.updateAuthority ?? null,
-    },
     systemProgram: {
-      index: 8,
+      index: 7,
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
     logWrapper: {
-      index: 9,
+      index: 8,
       isWritable: false as boolean,
       value: input.logWrapper ?? null,
     },
     mplCore: {
-      index: 10,
+      index: 9,
       isWritable: false as boolean,
       value: input.mplCore ?? null,
     },
   } satisfies ResolvedAccountsWithIndices;
-
-  // Arguments.
-  const resolvedArgs: MintAssetInstructionArgs = { ...input };
 
   // Default values.
   if (!resolvedAccounts.vault.value) {
@@ -172,6 +146,18 @@ export function mintAsset(
   if (!resolvedAccounts.masterState.value) {
     resolvedAccounts.masterState.value = context.eddsa.findPda(programId, [
       bytes().serialize(new Uint8Array([109, 97, 115, 116, 101, 114])),
+      publicKeySerializer().serialize(
+        expectPublicKey(resolvedAccounts.collection.value)
+      ),
+    ]);
+  }
+  if (!resolvedAccounts.mintAuthority.value) {
+    resolvedAccounts.mintAuthority.value = context.eddsa.findPda(programId, [
+      bytes().serialize(
+        new Uint8Array([
+          109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+        ])
+      ),
       publicKeySerializer().serialize(
         expectPublicKey(resolvedAccounts.collection.value)
       ),
@@ -205,9 +191,7 @@ export function mintAsset(
   );
 
   // Data.
-  const data = getMintAssetInstructionDataSerializer().serialize(
-    resolvedArgs as MintAssetInstructionDataArgs
-  );
+  const data = getMintAssetInstructionDataSerializer().serialize({});
 
   // Bytes Created On Chain.
   const bytesCreatedOnChain = 0;

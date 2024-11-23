@@ -27,7 +27,6 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
@@ -39,12 +38,6 @@ import {
   getAccountMetaFactory,
   type ResolvedAccount,
 } from '../shared';
-import {
-  getMintAssetArgsDecoder,
-  getMintAssetArgsEncoder,
-  type MintAssetArgs,
-  type MintAssetArgsArgs,
-} from '../types';
 
 export const MINT_ASSET_DISCRIMINATOR = new Uint8Array([
   84, 175, 211, 156, 56, 250, 104, 118,
@@ -61,9 +54,8 @@ export type MintAssetInstruction<
   TAccountAsset extends string | IAccountMeta<string> = string,
   TAccountMasterState extends string | IAccountMeta<string> = string,
   TAccountCollection extends string | IAccountMeta<string> = string,
-  TAccountAuthority extends string | IAccountMeta<string> = string,
+  TAccountMintAuthority extends string | IAccountMeta<string> = string,
   TAccountOwner extends string | IAccountMeta<string> = string,
-  TAccountUpdateAuthority extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -93,16 +85,12 @@ export type MintAssetInstruction<
       TAccountCollection extends string
         ? WritableAccount<TAccountCollection>
         : TAccountCollection,
-      TAccountAuthority extends string
-        ? ReadonlySignerAccount<TAccountAuthority> &
-            IAccountSignerMeta<TAccountAuthority>
-        : TAccountAuthority,
+      TAccountMintAuthority extends string
+        ? ReadonlyAccount<TAccountMintAuthority>
+        : TAccountMintAuthority,
       TAccountOwner extends string
         ? ReadonlyAccount<TAccountOwner>
         : TAccountOwner,
-      TAccountUpdateAuthority extends string
-        ? ReadonlyAccount<TAccountUpdateAuthority>
-        : TAccountUpdateAuthority,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -116,19 +104,13 @@ export type MintAssetInstruction<
     ]
   >;
 
-export type MintAssetInstructionData = {
-  discriminator: ReadonlyUint8Array;
-  args: MintAssetArgs;
-};
+export type MintAssetInstructionData = { discriminator: ReadonlyUint8Array };
 
-export type MintAssetInstructionDataArgs = { args: MintAssetArgsArgs };
+export type MintAssetInstructionDataArgs = {};
 
 export function getMintAssetInstructionDataEncoder(): Encoder<MintAssetInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([
-      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['args', getMintAssetArgsEncoder()],
-    ]),
+    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({ ...value, discriminator: MINT_ASSET_DISCRIMINATOR })
   );
 }
@@ -136,7 +118,6 @@ export function getMintAssetInstructionDataEncoder(): Encoder<MintAssetInstructi
 export function getMintAssetInstructionDataDecoder(): Decoder<MintAssetInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['args', getMintAssetArgsDecoder()],
   ]);
 }
 
@@ -156,9 +137,8 @@ export type MintAssetAsyncInput<
   TAccountAsset extends string = string,
   TAccountMasterState extends string = string,
   TAccountCollection extends string = string,
-  TAccountAuthority extends string = string,
+  TAccountMintAuthority extends string = string,
   TAccountOwner extends string = string,
-  TAccountUpdateAuthority extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
@@ -170,16 +150,12 @@ export type MintAssetAsyncInput<
   masterState?: Address<TAccountMasterState>;
   /** The collection this asset belongs to */
   collection: Address<TAccountCollection>;
-  /** The authority signing for creation (optional) */
-  authority?: TransactionSigner<TAccountAuthority>;
+  mintAuthority?: Address<TAccountMintAuthority>;
   /** The owner of the new asset */
   owner?: Address<TAccountOwner>;
-  /** The authority on the new asset */
-  updateAuthority?: Address<TAccountUpdateAuthority>;
   systemProgram?: Address<TAccountSystemProgram>;
   logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
-  args: MintAssetInstructionDataArgs['args'];
 };
 
 export async function getMintAssetInstructionAsync<
@@ -188,9 +164,8 @@ export async function getMintAssetInstructionAsync<
   TAccountAsset extends string,
   TAccountMasterState extends string,
   TAccountCollection extends string,
-  TAccountAuthority extends string,
+  TAccountMintAuthority extends string,
   TAccountOwner extends string,
-  TAccountUpdateAuthority extends string,
   TAccountSystemProgram extends string,
   TAccountLogWrapper extends string,
   TAccountMplCore extends string,
@@ -202,9 +177,8 @@ export async function getMintAssetInstructionAsync<
     TAccountAsset,
     TAccountMasterState,
     TAccountCollection,
-    TAccountAuthority,
+    TAccountMintAuthority,
     TAccountOwner,
-    TAccountUpdateAuthority,
     TAccountSystemProgram,
     TAccountLogWrapper,
     TAccountMplCore
@@ -218,9 +192,8 @@ export async function getMintAssetInstructionAsync<
     TAccountAsset,
     TAccountMasterState,
     TAccountCollection,
-    TAccountAuthority,
+    TAccountMintAuthority,
     TAccountOwner,
-    TAccountUpdateAuthority,
     TAccountSystemProgram,
     TAccountLogWrapper,
     TAccountMplCore
@@ -237,12 +210,8 @@ export async function getMintAssetInstructionAsync<
     asset: { value: input.asset ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
     collection: { value: input.collection ?? null, isWritable: true },
-    authority: { value: input.authority ?? null, isWritable: false },
+    mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     owner: { value: input.owner ?? null, isWritable: false },
-    updateAuthority: {
-      value: input.updateAuthority ?? null,
-      isWritable: false,
-    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
@@ -251,9 +220,6 @@ export async function getMintAssetInstructionAsync<
     keyof typeof originalAccounts,
     ResolvedAccount
   >;
-
-  // Original args.
-  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.vault.value) {
@@ -270,6 +236,19 @@ export async function getMintAssetInstructionAsync<
       programAddress,
       seeds: [
         getBytesEncoder().encode(new Uint8Array([109, 97, 115, 116, 101, 114])),
+        getAddressEncoder().encode(expectAddress(accounts.collection.value)),
+      ],
+    });
+  }
+  if (!accounts.mintAuthority.value) {
+    accounts.mintAuthority.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+          ])
+        ),
         getAddressEncoder().encode(expectAddress(accounts.collection.value)),
       ],
     });
@@ -291,17 +270,14 @@ export async function getMintAssetInstructionAsync<
       getAccountMeta(accounts.asset),
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.collection),
-      getAccountMeta(accounts.authority),
+      getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.owner),
-      getAccountMeta(accounts.updateAuthority),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
-    data: getMintAssetInstructionDataEncoder().encode(
-      args as MintAssetInstructionDataArgs
-    ),
+    data: getMintAssetInstructionDataEncoder().encode({}),
   } as MintAssetInstruction<
     TProgramAddress,
     TAccountPayer,
@@ -309,9 +285,8 @@ export async function getMintAssetInstructionAsync<
     TAccountAsset,
     TAccountMasterState,
     TAccountCollection,
-    TAccountAuthority,
+    TAccountMintAuthority,
     TAccountOwner,
-    TAccountUpdateAuthority,
     TAccountSystemProgram,
     TAccountLogWrapper,
     TAccountMplCore
@@ -326,9 +301,8 @@ export type MintAssetInput<
   TAccountAsset extends string = string,
   TAccountMasterState extends string = string,
   TAccountCollection extends string = string,
-  TAccountAuthority extends string = string,
+  TAccountMintAuthority extends string = string,
   TAccountOwner extends string = string,
-  TAccountUpdateAuthority extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
@@ -340,16 +314,12 @@ export type MintAssetInput<
   masterState: Address<TAccountMasterState>;
   /** The collection this asset belongs to */
   collection: Address<TAccountCollection>;
-  /** The authority signing for creation (optional) */
-  authority?: TransactionSigner<TAccountAuthority>;
+  mintAuthority: Address<TAccountMintAuthority>;
   /** The owner of the new asset */
   owner?: Address<TAccountOwner>;
-  /** The authority on the new asset */
-  updateAuthority?: Address<TAccountUpdateAuthority>;
   systemProgram?: Address<TAccountSystemProgram>;
   logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
-  args: MintAssetInstructionDataArgs['args'];
 };
 
 export function getMintAssetInstruction<
@@ -358,9 +328,8 @@ export function getMintAssetInstruction<
   TAccountAsset extends string,
   TAccountMasterState extends string,
   TAccountCollection extends string,
-  TAccountAuthority extends string,
+  TAccountMintAuthority extends string,
   TAccountOwner extends string,
-  TAccountUpdateAuthority extends string,
   TAccountSystemProgram extends string,
   TAccountLogWrapper extends string,
   TAccountMplCore extends string,
@@ -372,9 +341,8 @@ export function getMintAssetInstruction<
     TAccountAsset,
     TAccountMasterState,
     TAccountCollection,
-    TAccountAuthority,
+    TAccountMintAuthority,
     TAccountOwner,
-    TAccountUpdateAuthority,
     TAccountSystemProgram,
     TAccountLogWrapper,
     TAccountMplCore
@@ -387,9 +355,8 @@ export function getMintAssetInstruction<
   TAccountAsset,
   TAccountMasterState,
   TAccountCollection,
-  TAccountAuthority,
+  TAccountMintAuthority,
   TAccountOwner,
-  TAccountUpdateAuthority,
   TAccountSystemProgram,
   TAccountLogWrapper,
   TAccountMplCore
@@ -405,12 +372,8 @@ export function getMintAssetInstruction<
     asset: { value: input.asset ?? null, isWritable: true },
     masterState: { value: input.masterState ?? null, isWritable: true },
     collection: { value: input.collection ?? null, isWritable: true },
-    authority: { value: input.authority ?? null, isWritable: false },
+    mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     owner: { value: input.owner ?? null, isWritable: false },
-    updateAuthority: {
-      value: input.updateAuthority ?? null,
-      isWritable: false,
-    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
@@ -419,9 +382,6 @@ export function getMintAssetInstruction<
     keyof typeof originalAccounts,
     ResolvedAccount
   >;
-
-  // Original args.
-  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.systemProgram.value) {
@@ -441,17 +401,14 @@ export function getMintAssetInstruction<
       getAccountMeta(accounts.asset),
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.collection),
-      getAccountMeta(accounts.authority),
+      getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.owner),
-      getAccountMeta(accounts.updateAuthority),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
-    data: getMintAssetInstructionDataEncoder().encode(
-      args as MintAssetInstructionDataArgs
-    ),
+    data: getMintAssetInstructionDataEncoder().encode({}),
   } as MintAssetInstruction<
     TProgramAddress,
     TAccountPayer,
@@ -459,9 +416,8 @@ export function getMintAssetInstruction<
     TAccountAsset,
     TAccountMasterState,
     TAccountCollection,
-    TAccountAuthority,
+    TAccountMintAuthority,
     TAccountOwner,
-    TAccountUpdateAuthority,
     TAccountSystemProgram,
     TAccountLogWrapper,
     TAccountMplCore
@@ -483,15 +439,12 @@ export type ParsedMintAssetInstruction<
     masterState: TAccountMetas[3];
     /** The collection this asset belongs to */
     collection: TAccountMetas[4];
-    /** The authority signing for creation (optional) */
-    authority?: TAccountMetas[5] | undefined;
+    mintAuthority: TAccountMetas[5];
     /** The owner of the new asset */
     owner?: TAccountMetas[6] | undefined;
-    /** The authority on the new asset */
-    updateAuthority?: TAccountMetas[7] | undefined;
-    systemProgram: TAccountMetas[8];
-    logWrapper?: TAccountMetas[9] | undefined;
-    mplCore: TAccountMetas[10];
+    systemProgram: TAccountMetas[7];
+    logWrapper?: TAccountMetas[8] | undefined;
+    mplCore: TAccountMetas[9];
   };
   data: MintAssetInstructionData;
 };
@@ -504,7 +457,7 @@ export function parseMintAssetInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedMintAssetInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 11) {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -528,9 +481,8 @@ export function parseMintAssetInstruction<
       asset: getNextAccount(),
       masterState: getNextAccount(),
       collection: getNextAccount(),
-      authority: getNextOptionalAccount(),
+      mintAuthority: getNextAccount(),
       owner: getNextOptionalAccount(),
-      updateAuthority: getNextOptionalAccount(),
       systemProgram: getNextAccount(),
       logWrapper: getNextOptionalAccount(),
       mplCore: getNextAccount(),

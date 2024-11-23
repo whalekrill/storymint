@@ -6,5 +6,6 @@
  * @see https://github.com/kinobi-so/kinobi
  */
 
+export * from './baseCollectionV1';
 export * from './masterState';
 export * from './tokenVault';

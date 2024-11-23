@@ -24,6 +24,7 @@ export const LOCKED_SOL_PNFT_PROGRAM_ADDRESS =
   '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr' as Address<'3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'>;
 
 export enum LockedSolPnftAccount {
+  BaseCollectionV1,
   MasterState,
   TokenVault,
 }
@@ -32,6 +33,17 @@ export function identifyLockedSolPnftAccount(
   account: { data: ReadonlyUint8Array } | ReadonlyUint8Array
 ): LockedSolPnftAccount {
   const data = 'data' in account ? account.data : account;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0])
+      ),
+      0
+    )
+  ) {
+    return LockedSolPnftAccount.BaseCollectionV1;
+  }
   if (
     containsBytes(
       data,

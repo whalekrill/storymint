@@ -7,7 +7,7 @@ skip-lint = false
 mainnet = []
 
 [programs.localnet]
-locked_sol_pnft = "3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr"
+storymint = "3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr"
 
 [registry]
 url = "https://api.apr.dev"
@@ -17,7 +17,7 @@ cluster = "Localnet"
 wallet = "../../keys/devnet.json"
 
 [scripts]
-test = " ../node_modules/.bin/jest --preset ts-jest"
+test = " ../node_modules/.bin/jest --detectOpenHandles --preset ts-jest"
 build-local = """
 solana config get | grep -q 'RPC URL: https://api.mainnet' \
 && MAINNET_SERVER_AUTHORITY='TODO' cargo build \
@@ -34,8 +34,8 @@ address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
 program = "fixtures/mpl_core.so"
 
 [[migrations]]
-name = "initialize_master"
-script = "migrations/01_initialize_master.ts"
+name = "initialize_collection"
+script = "migrations/01_initialize_collection.ts"
 
 [test.validator]
 bind_address = "127.0.0.1"

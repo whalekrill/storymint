@@ -5,9 +5,11 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
+  pub(crate) mod r#base_collection_v1;
   pub(crate) mod r#master_state;
   pub(crate) mod r#token_vault;
 
+  pub use self::r#base_collection_v1::*;
   pub use self::r#master_state::*;
   pub use self::r#token_vault::*;
 

@@ -6,28 +6,6 @@
  * @see https://github.com/kinobi-so/kinobi
  */
 
-export * from './addBlocker';
-export * from './attribute';
-export * from './attributes';
-export * from './autograph';
-export * from './autographSignature';
-export * from './burnDelegate';
-export * from './creator';
-export * from './edition';
-export * from './freezeDelegate';
-export * from './immutableMetadata';
-export * from './masterEdition';
-export * from './mintAssetArgs';
-export * from './permanentBurnDelegate';
-export * from './permanentFreezeDelegate';
-export * from './permanentTransferDelegate';
-export * from './plugin';
-export * from './pluginAuthority';
-export * from './pluginAuthorityPair';
-export * from './royalties';
-export * from './ruleSet';
-export * from './transferDelegate';
-export * from './updateDelegate';
+export * from './collectionArgs';
+export * from './key';
 export * from './updateMetadataArgs';
-export * from './verifiedCreators';
-export * from './verifiedCreatorsSignature';
