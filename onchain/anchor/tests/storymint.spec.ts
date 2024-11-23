@@ -1,11 +1,11 @@
 import * as anchor from '@coral-xyz/anchor'
 import { Program } from '@coral-xyz/anchor'
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
-import { mplCore, fetchAssetV1 } from '@metaplex-foundation/mpl-core'
-import { keypairIdentity, publicKey, sol, generateSigner } from '@metaplex-foundation/umi'
+import { mplCore, fetchAssetV1, transferV1 } from '@metaplex-foundation/mpl-core'
+import { keypairIdentity, publicKey, sol, transactionBuilder, generateSigner } from '@metaplex-foundation/umi'
 import { SendTransactionError } from '@solana/web3.js'
 import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
-import { LockedSolPnft } from '../target/types/locked_sol_pnft'
+import { Storymint } from '../target/types/storymint'
 import {
   burnAndWithdraw,
   initializeCollection,
@@ -17,7 +17,7 @@ import { getUpdateAuthority, initializeCollectionArgs, mintAssetArgs, burnAndWit
 jest.setTimeout(100000)
 
 describe('Storymint', () => {
-  const program = anchor.workspace.LockedSolPnft as Program<LockedSolPnft>
+  const program = anchor.workspace.Storymint as Program<Storymint>
   const umi = createUmi('http://127.0.0.1:8899').use(mplCore())
 
   const payer = generateSigner(umi)
@@ -28,8 +28,9 @@ describe('Storymint', () => {
 
   beforeAll(async () => {
     await umi.rpc.airdrop(payer.publicKey, sol(100))
+    await umi.rpc.airdrop(updateAuthority.publicKey, sol(1))
     await initializeCollection(umi, {
-      payer,
+      payer: updateAuthority,
       collection,
       updateAuthority,
       ...initializeCollectionArgs(umi, publicKey(program.programId), collection),
@@ -207,7 +208,41 @@ describe('Storymint', () => {
   it('should burn asset and withdraw SOL', async () => {
     const { asset, mintAuthority, vault } = burnAndWithdrawArgs(umi, publicKey(program.programId), collection)
 
+    await mintAsset(umi, {
+      payer,
+      collection: collection.publicKey,
+      owner: payer.publicKey,
+      asset,
+      mintAuthority,
+    }).sendAndConfirm(umi)
+
     const initialPayerBalance = await umi.rpc.getBalance(payer.publicKey)
+    const vaultBalance = await umi.rpc.getBalance(vault)
+    expect(vaultBalance.basisPoints).toBeGreaterThan(BigInt(1000000000))
+    expect(vaultBalance.basisPoints).toBeLessThan(BigInt(1010000000))
+
+    await burnAndWithdraw(umi, {
+      owner: payer,
+      collection: collection.publicKey,
+      asset: asset.publicKey,
+      vault,
+    }).sendAndConfirm(umi)
+
+    const vaultAccount = await umi.rpc.getAccount(vault)
+    expect(vaultAccount.exists).toBe(false)
+
+    // Verify owner received the SOL
+    const finalRecipientBalance = await umi.rpc.getBalance(payer.publicKey)
+    const balanceDifference = finalRecipientBalance.basisPoints - initialPayerBalance.basisPoints
+    expect(balanceDifference).toBeGreaterThan(BigInt(990000000))
+    expect(balanceDifference).toBeLessThan(BigInt(1015000000))
+  })
+
+  it('should transfer the asset to another user who can burn it and withdraw SOL', async () => {
+    const recipient = generateSigner(umi)
+    await umi.rpc.airdrop(recipient.publicKey, sol(100))
+
+    const { asset, mintAuthority, vault } = burnAndWithdrawArgs(umi, publicKey(program.programId), collection)
 
     await mintAsset(umi, {
       payer,
@@ -217,26 +252,45 @@ describe('Storymint', () => {
       mintAuthority,
     }).sendAndConfirm(umi)
 
-    const initialVaultBalance = await umi.rpc.getBalance(vault)
-    expect(initialVaultBalance.basisPoints).toBeGreaterThan(BigInt(1000000000))
+    const initialRecipientBalance = await umi.rpc.getBalance(recipient.publicKey)
+    const vaultBalance = await umi.rpc.getBalance(vault)
+    expect(vaultBalance.basisPoints).toBeGreaterThan(BigInt(1000000000))
+    expect(vaultBalance.basisPoints).toBeLessThan(BigInt(1010000000))
 
+    // Build transfer transaction
+    const builder = transactionBuilder().add(
+      transferV1(umi, {
+        asset: asset.publicKey,
+        authority: payer,
+        newOwner: recipient.publicKey,
+        collection: collection.publicKey,
+        payer,
+      }),
+    )
+
+    // Send and confirm transfer
+    await builder.sendAndConfirm(umi)
+
+    // Verify recipient is new owner
+    const assetData = await fetchAssetV1(umi, asset.publicKey)
+    expect(assetData.owner).toEqual(recipient.publicKey)
+
+    // Recipient burns NFT and withdraws SOL
     await burnAndWithdraw(umi, {
-      owner: payer,
+      owner: recipient,
       collection: collection.publicKey,
       asset: asset.publicKey,
       vault,
     }).sendAndConfirm(umi)
 
-    const assetAccount = await umi.rpc.getAccount(asset.publicKey)
-    expect(assetAccount.exists).toBe(false)
-
     const vaultAccount = await umi.rpc.getAccount(vault)
     expect(vaultAccount.exists).toBe(false)
 
-    const finalPayerBalance = await umi.rpc.getBalance(payer.publicKey)
-    const balanceDifference = finalPayerBalance.basisPoints - initialPayerBalance.basisPoints
+    // Verify recipient received the SOL
+    const finalRecipientBalance = await umi.rpc.getBalance(recipient.publicKey)
+    const balanceDifference = finalRecipientBalance.basisPoints - initialRecipientBalance.basisPoints
     expect(balanceDifference).toBeGreaterThan(BigInt(990000000))
-    expect(balanceDifference).toBeLessThan(BigInt(1000000000))
+    expect(balanceDifference).toBeLessThan(BigInt(1015000000))
   })
 
   it('should fail with update authority', async () => {

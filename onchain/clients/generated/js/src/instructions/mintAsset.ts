@@ -32,7 +32,7 @@ import {
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/web3.js';
-import { LOCKED_SOL_PNFT_PROGRAM_ADDRESS } from '../programs';
+import { STORYMINT_PROGRAM_ADDRESS } from '../programs';
 import {
   expectAddress,
   getAccountMetaFactory,
@@ -48,7 +48,7 @@ export function getMintAssetDiscriminatorBytes() {
 }
 
 export type MintAssetInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
   TAccountAsset extends string | IAccountMeta<string> = string,
@@ -59,7 +59,6 @@ export type MintAssetInstruction<
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
-  TAccountLogWrapper extends string | IAccountMeta<string> = string,
   TAccountMplCore extends
     | string
     | IAccountMeta<string> = 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d',
@@ -94,9 +93,6 @@ export type MintAssetInstruction<
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      TAccountLogWrapper extends string
-        ? ReadonlyAccount<TAccountLogWrapper>
-        : TAccountLogWrapper,
       TAccountMplCore extends string
         ? ReadonlyAccount<TAccountMplCore>
         : TAccountMplCore,
@@ -140,7 +136,6 @@ export type MintAssetAsyncInput<
   TAccountMintAuthority extends string = string,
   TAccountOwner extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
 > = {
   payer: TransactionSigner<TAccountPayer>;
@@ -148,13 +143,10 @@ export type MintAssetAsyncInput<
   /** The new asset being created */
   asset: TransactionSigner<TAccountAsset>;
   masterState?: Address<TAccountMasterState>;
-  /** The collection this asset belongs to */
   collection: Address<TAccountCollection>;
   mintAuthority?: Address<TAccountMintAuthority>;
-  /** The owner of the new asset */
-  owner?: Address<TAccountOwner>;
+  owner: Address<TAccountOwner>;
   systemProgram?: Address<TAccountSystemProgram>;
-  logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
 };
 
@@ -167,9 +159,8 @@ export async function getMintAssetInstructionAsync<
   TAccountMintAuthority extends string,
   TAccountOwner extends string,
   TAccountSystemProgram extends string,
-  TAccountLogWrapper extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: MintAssetAsyncInput<
     TAccountPayer,
@@ -180,7 +171,6 @@ export async function getMintAssetInstructionAsync<
     TAccountMintAuthority,
     TAccountOwner,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
@@ -195,13 +185,11 @@ export async function getMintAssetInstructionAsync<
     TAccountMintAuthority,
     TAccountOwner,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -213,7 +201,6 @@ export async function getMintAssetInstructionAsync<
     mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     owner: { value: input.owner ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -273,7 +260,6 @@ export async function getMintAssetInstructionAsync<
       getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.owner),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
@@ -288,7 +274,6 @@ export async function getMintAssetInstructionAsync<
     TAccountMintAuthority,
     TAccountOwner,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >;
 
@@ -304,7 +289,6 @@ export type MintAssetInput<
   TAccountMintAuthority extends string = string,
   TAccountOwner extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
 > = {
   payer: TransactionSigner<TAccountPayer>;
@@ -312,13 +296,10 @@ export type MintAssetInput<
   /** The new asset being created */
   asset: TransactionSigner<TAccountAsset>;
   masterState: Address<TAccountMasterState>;
-  /** The collection this asset belongs to */
   collection: Address<TAccountCollection>;
   mintAuthority: Address<TAccountMintAuthority>;
-  /** The owner of the new asset */
-  owner?: Address<TAccountOwner>;
+  owner: Address<TAccountOwner>;
   systemProgram?: Address<TAccountSystemProgram>;
-  logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
 };
 
@@ -331,9 +312,8 @@ export function getMintAssetInstruction<
   TAccountMintAuthority extends string,
   TAccountOwner extends string,
   TAccountSystemProgram extends string,
-  TAccountLogWrapper extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: MintAssetInput<
     TAccountPayer,
@@ -344,7 +324,6 @@ export function getMintAssetInstruction<
     TAccountMintAuthority,
     TAccountOwner,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
@@ -358,12 +337,10 @@ export function getMintAssetInstruction<
   TAccountMintAuthority,
   TAccountOwner,
   TAccountSystemProgram,
-  TAccountLogWrapper,
   TAccountMplCore
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -375,7 +352,6 @@ export function getMintAssetInstruction<
     mintAuthority: { value: input.mintAuthority ?? null, isWritable: false },
     owner: { value: input.owner ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -404,7 +380,6 @@ export function getMintAssetInstruction<
       getAccountMeta(accounts.mintAuthority),
       getAccountMeta(accounts.owner),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
@@ -419,7 +394,6 @@ export function getMintAssetInstruction<
     TAccountMintAuthority,
     TAccountOwner,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >;
 
@@ -427,7 +401,7 @@ export function getMintAssetInstruction<
 }
 
 export type ParsedMintAssetInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
@@ -437,14 +411,11 @@ export type ParsedMintAssetInstruction<
     /** The new asset being created */
     asset: TAccountMetas[2];
     masterState: TAccountMetas[3];
-    /** The collection this asset belongs to */
     collection: TAccountMetas[4];
     mintAuthority: TAccountMetas[5];
-    /** The owner of the new asset */
-    owner?: TAccountMetas[6] | undefined;
+    owner: TAccountMetas[6];
     systemProgram: TAccountMetas[7];
-    logWrapper?: TAccountMetas[8] | undefined;
-    mplCore: TAccountMetas[9];
+    mplCore: TAccountMetas[8];
   };
   data: MintAssetInstructionData;
 };
@@ -457,7 +428,7 @@ export function parseMintAssetInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedMintAssetInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 10) {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -466,12 +437,6 @@ export function parseMintAssetInstruction<
     const accountMeta = instruction.accounts![accountIndex]!;
     accountIndex += 1;
     return accountMeta;
-  };
-  const getNextOptionalAccount = () => {
-    const accountMeta = getNextAccount();
-    return accountMeta.address === LOCKED_SOL_PNFT_PROGRAM_ADDRESS
-      ? undefined
-      : accountMeta;
   };
   return {
     programAddress: instruction.programAddress,
@@ -482,9 +447,8 @@ export function parseMintAssetInstruction<
       masterState: getNextAccount(),
       collection: getNextAccount(),
       mintAuthority: getNextAccount(),
-      owner: getNextOptionalAccount(),
+      owner: getNextAccount(),
       systemProgram: getNextAccount(),
-      logWrapper: getNextOptionalAccount(),
       mplCore: getNextAccount(),
     },
     data: getMintAssetInstructionDataDecoder().decode(instruction.data),

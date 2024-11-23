@@ -32,7 +32,7 @@ import {
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/web3.js';
-import { LOCKED_SOL_PNFT_PROGRAM_ADDRESS } from '../programs';
+import { STORYMINT_PROGRAM_ADDRESS } from '../programs';
 import {
   expectAddress,
   getAccountMetaFactory,
@@ -56,7 +56,7 @@ export function getInitializeCollectionDiscriminatorBytes() {
 }
 
 export type InitializeCollectionInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountMasterState extends string | IAccountMeta<string> = string,
   TAccountMintAuthority extends string | IAccountMeta<string> = string,
@@ -168,7 +168,7 @@ export async function getInitializeCollectionInstructionAsync<
   TAccountUpdateAuthority extends string,
   TAccountSystemProgram extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: InitializeCollectionAsyncInput<
     TAccountPayer,
@@ -193,8 +193,7 @@ export async function getInitializeCollectionInstructionAsync<
   >
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -303,7 +302,7 @@ export function getInitializeCollectionInstruction<
   TAccountUpdateAuthority extends string,
   TAccountSystemProgram extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: InitializeCollectionInput<
     TAccountPayer,
@@ -326,8 +325,7 @@ export function getInitializeCollectionInstruction<
   TAccountMplCore
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -387,7 +385,7 @@ export function getInitializeCollectionInstruction<
 }
 
 export type ParsedInitializeCollectionInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;

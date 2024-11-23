@@ -15,7 +15,7 @@ use borsh::BorshDeserialize;
 pub struct TokenVault {
 pub discriminator: [u8; 8],
 #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
-pub mint: Pubkey,
+pub asset: Pubkey,
 }
 
 
@@ -52,7 +52,7 @@ impl anchor_lang::AccountSerialize for TokenVault {}
 #[cfg(feature = "anchor")]
 impl anchor_lang::Owner for TokenVault {
     fn owner() -> Pubkey {
-      crate::LOCKED_SOL_PNFT_ID
+      crate::STORYMINT_ID
     }
 }
 

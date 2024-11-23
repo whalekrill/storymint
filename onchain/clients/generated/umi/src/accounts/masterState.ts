@@ -123,7 +123,7 @@ export function getMasterStateGpaBuilder(
   context: Pick<Context, 'rpc' | 'programs'>
 ) {
   const programId = context.programs.getPublicKey(
-    'lockedSolPnft',
+    'storymint',
     '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
   );
   return gpaBuilder(context, programId)

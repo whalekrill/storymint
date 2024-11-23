@@ -25,11 +25,11 @@ import {
   type OptionOrNullable,
 } from '@solana/web3.js';
 
-export type UpdateMetadataArgs = { name: Option<string>; uri: Option<string> };
+export type UpdateMetadataArgs = { name: Option<string>; uri: string };
 
 export type UpdateMetadataArgsArgs = {
   name: OptionOrNullable<string>;
-  uri: OptionOrNullable<string>;
+  uri: string;
 };
 
 export function getUpdateMetadataArgsEncoder(): Encoder<UpdateMetadataArgsArgs> {
@@ -38,10 +38,7 @@ export function getUpdateMetadataArgsEncoder(): Encoder<UpdateMetadataArgsArgs> 
       'name',
       getOptionEncoder(addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())),
     ],
-    [
-      'uri',
-      getOptionEncoder(addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())),
-    ],
+    ['uri', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
   ]);
 }
 
@@ -51,10 +48,7 @@ export function getUpdateMetadataArgsDecoder(): Decoder<UpdateMetadataArgs> {
       'name',
       getOptionDecoder(addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())),
     ],
-    [
-      'uri',
-      getOptionDecoder(addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())),
-    ],
+    ['uri', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
   ]);
 }
 

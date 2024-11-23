@@ -14,11 +14,11 @@ import {
   struct,
 } from '@metaplex-foundation/umi/serializers';
 
-export type UpdateMetadataArgs = { name: Option<string>; uri: Option<string> };
+export type UpdateMetadataArgs = { name: Option<string>; uri: string };
 
 export type UpdateMetadataArgsArgs = {
   name: OptionOrNullable<string>;
-  uri: OptionOrNullable<string>;
+  uri: string;
 };
 
 export function getUpdateMetadataArgsSerializer(): Serializer<
@@ -28,7 +28,7 @@ export function getUpdateMetadataArgsSerializer(): Serializer<
   return struct<UpdateMetadataArgs>(
     [
       ['name', option(string())],
-      ['uri', option(string())],
+      ['uri', string()],
     ],
     { description: 'UpdateMetadataArgs' }
   ) as Serializer<UpdateMetadataArgsArgs, UpdateMetadataArgs>;

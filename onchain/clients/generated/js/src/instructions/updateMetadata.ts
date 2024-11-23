@@ -30,7 +30,7 @@ import {
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/web3.js';
-import { LOCKED_SOL_PNFT_PROGRAM_ADDRESS } from '../programs';
+import { STORYMINT_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 import {
   getUpdateMetadataArgsDecoder,
@@ -50,7 +50,7 @@ export function getUpdateMetadataDiscriminatorBytes() {
 }
 
 export type UpdateMetadataInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountAsset extends string | IAccountMeta<string> = string,
   TAccountCollection extends string | IAccountMeta<string> = string,
   TAccountAuthority extends string | IAccountMeta<string> = string,
@@ -58,7 +58,6 @@ export type UpdateMetadataInstruction<
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
-  TAccountLogWrapper extends string | IAccountMeta<string> = string,
   TAccountMplCore extends
     | string
     | IAccountMeta<string> = 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d',
@@ -84,9 +83,6 @@ export type UpdateMetadataInstruction<
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      TAccountLogWrapper extends string
-        ? ReadonlyAccount<TAccountLogWrapper>
-        : TAccountLogWrapper,
       TAccountMplCore extends string
         ? ReadonlyAccount<TAccountMplCore>
         : TAccountMplCore,
@@ -136,7 +132,6 @@ export type UpdateMetadataInput<
   TAccountAuthority extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
 > = {
   /** The asset to update */
@@ -146,7 +141,6 @@ export type UpdateMetadataInput<
   authority: TransactionSigner<TAccountAuthority>;
   payer: TransactionSigner<TAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
-  logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
   args: UpdateMetadataInstructionDataArgs['args'];
 };
@@ -157,9 +151,8 @@ export function getUpdateMetadataInstruction<
   TAccountAuthority extends string,
   TAccountPayer extends string,
   TAccountSystemProgram extends string,
-  TAccountLogWrapper extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: UpdateMetadataInput<
     TAccountAsset,
@@ -167,7 +160,6 @@ export function getUpdateMetadataInstruction<
     TAccountAuthority,
     TAccountPayer,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
@@ -178,12 +170,10 @@ export function getUpdateMetadataInstruction<
   TAccountAuthority,
   TAccountPayer,
   TAccountSystemProgram,
-  TAccountLogWrapper,
   TAccountMplCore
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -192,7 +182,6 @@ export function getUpdateMetadataInstruction<
     authority: { value: input.authority ?? null, isWritable: true },
     payer: { value: input.payer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -221,7 +210,6 @@ export function getUpdateMetadataInstruction<
       getAccountMeta(accounts.authority),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
@@ -235,7 +223,6 @@ export function getUpdateMetadataInstruction<
     TAccountAuthority,
     TAccountPayer,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >;
 
@@ -243,7 +230,7 @@ export function getUpdateMetadataInstruction<
 }
 
 export type ParsedUpdateMetadataInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
@@ -255,8 +242,7 @@ export type ParsedUpdateMetadataInstruction<
     authority: TAccountMetas[2];
     payer: TAccountMetas[3];
     systemProgram: TAccountMetas[4];
-    logWrapper?: TAccountMetas[5] | undefined;
-    mplCore: TAccountMetas[6];
+    mplCore: TAccountMetas[5];
   };
   data: UpdateMetadataInstructionData;
 };
@@ -269,7 +255,7 @@ export function parseUpdateMetadataInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedUpdateMetadataInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -281,7 +267,7 @@ export function parseUpdateMetadataInstruction<
   };
   const getNextOptionalAccount = () => {
     const accountMeta = getNextAccount();
-    return accountMeta.address === LOCKED_SOL_PNFT_PROGRAM_ADDRESS
+    return accountMeta.address === STORYMINT_PROGRAM_ADDRESS
       ? undefined
       : accountMeta;
   };
@@ -293,7 +279,6 @@ export function parseUpdateMetadataInstruction<
       authority: getNextAccount(),
       payer: getNextAccount(),
       systemProgram: getNextAccount(),
-      logWrapper: getNextOptionalAccount(),
       mplCore: getNextAccount(),
     },
     data: getUpdateMetadataInstructionDataDecoder().decode(instruction.data),

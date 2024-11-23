@@ -93,7 +93,7 @@ export function initializeCollection(
 ): TransactionBuilder {
   // Program ID.
   const programId = context.programs.getPublicKey(
-    'lockedSolPnft',
+    'storymint',
     '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
   );
 

@@ -32,7 +32,7 @@ import {
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/web3.js';
-import { LOCKED_SOL_PNFT_PROGRAM_ADDRESS } from '../programs';
+import { STORYMINT_PROGRAM_ADDRESS } from '../programs';
 import {
   expectAddress,
   getAccountMetaFactory,
@@ -50,7 +50,7 @@ export function getBurnAndWithdrawDiscriminatorBytes() {
 }
 
 export type BurnAndWithdrawInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountOwner extends string | IAccountMeta<string> = string,
   TAccountAsset extends string | IAccountMeta<string> = string,
   TAccountCollection extends string | IAccountMeta<string> = string,
@@ -59,7 +59,6 @@ export type BurnAndWithdrawInstruction<
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
-  TAccountLogWrapper extends string | IAccountMeta<string> = string,
   TAccountMplCore extends
     | string
     | IAccountMeta<string> = 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d',
@@ -87,9 +86,6 @@ export type BurnAndWithdrawInstruction<
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      TAccountLogWrapper extends string
-        ? ReadonlyAccount<TAccountLogWrapper>
-        : TAccountLogWrapper,
       TAccountMplCore extends string
         ? ReadonlyAccount<TAccountMplCore>
         : TAccountMplCore,
@@ -133,7 +129,6 @@ export type BurnAndWithdrawAsyncInput<
   TAccountMasterState extends string = string,
   TAccountVault extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
@@ -142,7 +137,6 @@ export type BurnAndWithdrawAsyncInput<
   masterState?: Address<TAccountMasterState>;
   vault?: Address<TAccountVault>;
   systemProgram?: Address<TAccountSystemProgram>;
-  logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
 };
 
@@ -153,9 +147,8 @@ export async function getBurnAndWithdrawInstructionAsync<
   TAccountMasterState extends string,
   TAccountVault extends string,
   TAccountSystemProgram extends string,
-  TAccountLogWrapper extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: BurnAndWithdrawAsyncInput<
     TAccountOwner,
@@ -164,7 +157,6 @@ export async function getBurnAndWithdrawInstructionAsync<
     TAccountMasterState,
     TAccountVault,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
@@ -177,13 +169,11 @@ export async function getBurnAndWithdrawInstructionAsync<
     TAccountMasterState,
     TAccountVault,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -193,7 +183,6 @@ export async function getBurnAndWithdrawInstructionAsync<
     masterState: { value: input.masterState ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -238,7 +227,6 @@ export async function getBurnAndWithdrawInstructionAsync<
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
@@ -251,7 +239,6 @@ export async function getBurnAndWithdrawInstructionAsync<
     TAccountMasterState,
     TAccountVault,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >;
 
@@ -265,7 +252,6 @@ export type BurnAndWithdrawInput<
   TAccountMasterState extends string = string,
   TAccountVault extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountLogWrapper extends string = string,
   TAccountMplCore extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
@@ -274,7 +260,6 @@ export type BurnAndWithdrawInput<
   masterState: Address<TAccountMasterState>;
   vault: Address<TAccountVault>;
   systemProgram?: Address<TAccountSystemProgram>;
-  logWrapper?: Address<TAccountLogWrapper>;
   mplCore?: Address<TAccountMplCore>;
 };
 
@@ -285,9 +270,8 @@ export function getBurnAndWithdrawInstruction<
   TAccountMasterState extends string,
   TAccountVault extends string,
   TAccountSystemProgram extends string,
-  TAccountLogWrapper extends string,
   TAccountMplCore extends string,
-  TProgramAddress extends Address = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgramAddress extends Address = typeof STORYMINT_PROGRAM_ADDRESS,
 >(
   input: BurnAndWithdrawInput<
     TAccountOwner,
@@ -296,7 +280,6 @@ export function getBurnAndWithdrawInstruction<
     TAccountMasterState,
     TAccountVault,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >,
   config?: { programAddress?: TProgramAddress }
@@ -308,12 +291,10 @@ export function getBurnAndWithdrawInstruction<
   TAccountMasterState,
   TAccountVault,
   TAccountSystemProgram,
-  TAccountLogWrapper,
   TAccountMplCore
 > {
   // Program address.
-  const programAddress =
-    config?.programAddress ?? LOCKED_SOL_PNFT_PROGRAM_ADDRESS;
+  const programAddress = config?.programAddress ?? STORYMINT_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
@@ -323,7 +304,6 @@ export function getBurnAndWithdrawInstruction<
     masterState: { value: input.masterState ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    logWrapper: { value: input.logWrapper ?? null, isWritable: false },
     mplCore: { value: input.mplCore ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -350,7 +330,6 @@ export function getBurnAndWithdrawInstruction<
       getAccountMeta(accounts.masterState),
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.logWrapper),
       getAccountMeta(accounts.mplCore),
     ],
     programAddress,
@@ -363,7 +342,6 @@ export function getBurnAndWithdrawInstruction<
     TAccountMasterState,
     TAccountVault,
     TAccountSystemProgram,
-    TAccountLogWrapper,
     TAccountMplCore
   >;
 
@@ -371,7 +349,7 @@ export function getBurnAndWithdrawInstruction<
 }
 
 export type ParsedBurnAndWithdrawInstruction<
-  TProgram extends string = typeof LOCKED_SOL_PNFT_PROGRAM_ADDRESS,
+  TProgram extends string = typeof STORYMINT_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
@@ -382,8 +360,7 @@ export type ParsedBurnAndWithdrawInstruction<
     masterState: TAccountMetas[3];
     vault: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
-    logWrapper?: TAccountMetas[6] | undefined;
-    mplCore: TAccountMetas[7];
+    mplCore: TAccountMetas[6];
   };
   data: BurnAndWithdrawInstructionData;
 };
@@ -396,7 +373,7 @@ export function parseBurnAndWithdrawInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedBurnAndWithdrawInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -405,12 +382,6 @@ export function parseBurnAndWithdrawInstruction<
     const accountMeta = instruction.accounts![accountIndex]!;
     accountIndex += 1;
     return accountMeta;
-  };
-  const getNextOptionalAccount = () => {
-    const accountMeta = getNextAccount();
-    return accountMeta.address === LOCKED_SOL_PNFT_PROGRAM_ADDRESS
-      ? undefined
-      : accountMeta;
   };
   return {
     programAddress: instruction.programAddress,
@@ -421,7 +392,6 @@ export function parseBurnAndWithdrawInstruction<
       masterState: getNextAccount(),
       vault: getNextAccount(),
       systemProgram: getNextAccount(),
-      logWrapper: getNextOptionalAccount(),
       mplCore: getNextAccount(),
     },
     data: getBurnAndWithdrawInstructionDataDecoder().decode(instruction.data),

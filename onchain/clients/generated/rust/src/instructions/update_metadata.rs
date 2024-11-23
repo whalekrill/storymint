@@ -32,9 +32,6 @@ pub struct UpdateMetadata {
           pub system_program: solana_program::pubkey::Pubkey,
           
               
-          pub log_wrapper: Option<solana_program::pubkey::Pubkey>,
-          
-              
           pub mpl_core: solana_program::pubkey::Pubkey,
       }
 
@@ -44,7 +41,7 @@ impl UpdateMetadata {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, args: UpdateMetadataInstructionArgs, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.asset,
             false
@@ -56,7 +53,7 @@ impl UpdateMetadata {
               ));
             } else {
               accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
+                crate::STORYMINT_ID,
                 false,
               ));
             }
@@ -72,18 +69,7 @@ impl UpdateMetadata {
             self.system_program,
             false
           ));
-                                                      if let Some(log_wrapper) = self.log_wrapper {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                log_wrapper,
-                false,
-              ));
-            } else {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
-                false,
-              ));
-            }
-                                                    accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.mpl_core,
             false
           ));
@@ -93,7 +79,7 @@ impl UpdateMetadata {
       data.append(&mut args);
     
     solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     }
@@ -135,8 +121,7 @@ pub struct UpdateMetadataInstructionArgs {
                       ///   2. `[writable, signer]` authority
                       ///   3. `[writable, signer]` payer
                 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   5. `[optional]` log_wrapper
-                ///   6. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
+                ///   5. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
 #[derive(Clone, Debug, Default)]
 pub struct UpdateMetadataBuilder {
             asset: Option<solana_program::pubkey::Pubkey>,
@@ -144,7 +129,6 @@ pub struct UpdateMetadataBuilder {
                 authority: Option<solana_program::pubkey::Pubkey>,
                 payer: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
-                log_wrapper: Option<solana_program::pubkey::Pubkey>,
                 mpl_core: Option<solana_program::pubkey::Pubkey>,
                         args: Option<UpdateMetadataArgs>,
         __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -183,12 +167,6 @@ impl UpdateMetadataBuilder {
                         self.system_program = Some(system_program);
                     self
     }
-            /// `[optional account]`
-#[inline(always)]
-    pub fn log_wrapper(&mut self, log_wrapper: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
-                        self.log_wrapper = log_wrapper;
-                    self
-    }
             /// `[optional account, default to 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d']`
 #[inline(always)]
     pub fn mpl_core(&mut self, mpl_core: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -220,7 +198,6 @@ impl UpdateMetadataBuilder {
                                         authority: self.authority.expect("authority is not set"),
                                         payer: self.payer.expect("payer is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
-                                        log_wrapper: self.log_wrapper,
                                         mpl_core: self.mpl_core.unwrap_or(solana_program::pubkey!("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d")),
                       };
           let args = UpdateMetadataInstructionArgs {
@@ -254,9 +231,6 @@ impl UpdateMetadataBuilder {
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                
-                    
               pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
             }
 
@@ -285,9 +259,6 @@ pub struct UpdateMetadataCpi<'a, 'b> {
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-          
-              
           pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
             /// The arguments for the instruction.
     pub __args: UpdateMetadataInstructionArgs,
@@ -306,7 +277,6 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
               authority: accounts.authority,
               payer: accounts.payer,
               system_program: accounts.system_program,
-              log_wrapper: accounts.log_wrapper,
               mpl_core: accounts.mpl_core,
                     __args: args,
           }
@@ -330,7 +300,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.asset.key,
             false
@@ -342,7 +312,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
             ));
           } else {
             accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
+              crate::STORYMINT_ID,
               false,
             ));
           }
@@ -358,17 +328,6 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
             *self.system_program.key,
             false
           ));
-                                          if let Some(log_wrapper) = self.log_wrapper {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              *log_wrapper.key,
-              false,
-            ));
-          } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
-              false,
-            ));
-          }
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.mpl_core.key,
             false
@@ -385,11 +344,11 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
       data.append(&mut args);
     
     let instruction = solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.asset.clone());
                         if let Some(collection) = self.collection {
@@ -398,9 +357,6 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
                         account_infos.push(self.authority.clone());
                         account_infos.push(self.payer.clone());
                         account_infos.push(self.system_program.clone());
-                        if let Some(log_wrapper) = self.log_wrapper {
-          account_infos.push(log_wrapper.clone());
-        }
                         account_infos.push(self.mpl_core.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
@@ -421,8 +377,7 @@ impl<'a, 'b> UpdateMetadataCpi<'a, 'b> {
                       ///   2. `[writable, signer]` authority
                       ///   3. `[writable, signer]` payer
           ///   4. `[]` system_program
-                ///   5. `[optional]` log_wrapper
-          ///   6. `[]` mpl_core
+          ///   5. `[]` mpl_core
 #[derive(Clone, Debug)]
 pub struct UpdateMetadataCpiBuilder<'a, 'b> {
   instruction: Box<UpdateMetadataCpiBuilderInstruction<'a, 'b>>,
@@ -437,7 +392,6 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
               authority: None,
               payer: None,
               system_program: None,
-              log_wrapper: None,
               mpl_core: None,
                                             args: None,
                     __remaining_accounts: Vec::new(),
@@ -470,12 +424,6 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn system_program(&mut self, system_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.system_program = Some(system_program);
-                    self
-    }
-      /// `[optional account]`
-#[inline(always)]
-    pub fn log_wrapper(&mut self, log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
-                        self.instruction.log_wrapper = log_wrapper;
                     self
     }
       #[inline(always)]
@@ -526,8 +474,6 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
-          log_wrapper: self.instruction.log_wrapper,
-                  
           mpl_core: self.instruction.mpl_core.expect("mpl_core is not set"),
                           __args: args,
             };
@@ -543,7 +489,6 @@ struct UpdateMetadataCpiBuilderInstruction<'a, 'b> {
                 authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mpl_core: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                         args: Option<UpdateMetadataArgs>,
         /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

@@ -58,7 +58,7 @@ impl anchor_lang::AccountSerialize for BaseCollectionV1 {}
 #[cfg(feature = "anchor")]
 impl anchor_lang::Owner for BaseCollectionV1 {
     fn owner() -> Pubkey {
-      crate::LOCKED_SOL_PNFT_ID
+      crate::STORYMINT_ID
     }
 }
 

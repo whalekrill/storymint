@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use mpl_core::accounts::BaseCollectionV1;
-use mpl_core::instructions::{CreateCollectionV2CpiBuilder, CreateV2CpiBuilder};
+use mpl_core::instructions::{
+    BurnV1CpiBuilder, CreateCollectionV2CpiBuilder, CreateV2CpiBuilder, UpdateV1CpiBuilder,
+};
 use mpl_core::types::{Plugin, PluginAuthority, PluginAuthorityPair, UpdateDelegate};
 
 declare_id!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
@@ -19,7 +21,6 @@ pub const SELLER_FEE_BASIS_POINTS: u16 = 0;
 
 const VAULT_AMOUNT: u64 = 1_000_000_000; // 1 SOL
 const MAX_SUPPLY: u64 = 10_000;
-pub const METADATA_SIZE: usize = 679;
 
 #[derive(Accounts)]
 pub struct InitializeCollection<'info> {
@@ -30,7 +31,7 @@ pub struct InitializeCollection<'info> {
         init,
         payer = payer,
         space = MasterState::SPACE,
-        seeds = ["master".as_bytes(), collection.key().as_ref()],
+        seeds = [b"master", collection.key().as_ref()],
         bump
     )]
     pub master_state: Account<'info, MasterState>,
@@ -38,7 +39,7 @@ pub struct InitializeCollection<'info> {
     /// CHECK: PDA that will be approved as collection delegate
     #[account(
         mut,
-        seeds = ["mint_authority".as_bytes(), collection.key().as_ref()],
+        seeds = [b"mint_authority", collection.key().as_ref()],
         bump
     )]
     pub mint_authority: UncheckedAccount<'info>,
@@ -72,7 +73,7 @@ pub struct MintAsset<'info> {
         init,
         payer = payer,
         space = TokenVault::SPACE,
-        seeds = ["vault".as_bytes(), asset.key().as_ref()],
+        seeds = [b"vault", asset.key().as_ref()],
         bump,
     )]
     pub vault: Account<'info, TokenVault>,
@@ -83,19 +84,18 @@ pub struct MintAsset<'info> {
 
     #[account(
         mut,
-        seeds = ["master".as_bytes(), collection.key().as_ref()],
+        seeds = [b"master", collection.key().as_ref()],
         bump,
         constraint = master_state.total_minted < MAX_SUPPLY @ CustomError::MaxSupplyReached,
         has_one = collection @ CustomError::InvalidCollection
     )]
     pub master_state: Account<'info, MasterState>,
 
-    /// The collection this asset belongs to
-    /// CHECK: Checked in mpl-core
+    /// CHECK: Collection of the asset
     #[account(mut)]
     pub collection: Account<'info, BaseCollectionV1>,
 
-    /// CHECK: PDA that serves as mint authority
+    /// CHECK: PDA mint authority
     #[account(
         seeds = [
             b"mint_authority",
@@ -105,14 +105,10 @@ pub struct MintAsset<'info> {
     )]
     pub mint_authority: AccountInfo<'info>,
 
-    /// The owner of the new asset
-    /// CHECK: Checked in mpl-core
-    pub owner: Option<AccountInfo<'info>>,
+    /// CHECK: Asset owner
+    pub owner: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
-
-    /// CHECK: SPL Noop program
-    pub log_wrapper: Option<AccountInfo<'info>>,
 
     /// CHECK: MPL Core program
     #[account(address = mpl_core::ID)]
@@ -143,9 +139,6 @@ pub struct UpdateMetadata<'info> {
 
     pub system_program: Program<'info, System>,
 
-    /// CHECK: SPL Noop program
-    pub log_wrapper: Option<AccountInfo<'info>>,
-
     /// CHECK: MPL Core program
     #[account(address = mpl_core::ID)]
     pub mpl_core: AccountInfo<'info>,
@@ -154,7 +147,7 @@ pub struct UpdateMetadata<'info> {
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateMetadataArgs {
     pub name: Option<String>,
-    pub uri: Option<String>,
+    pub uri: String,
 }
 
 #[derive(Accounts)]
@@ -162,7 +155,7 @@ pub struct BurnAndWithdraw<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// CHECK: Asset being burned, checked by MPL Core
+    /// CHECK: Asset to be burned
     #[account(mut)]
     pub asset: AccountInfo<'info>,
 
@@ -172,23 +165,21 @@ pub struct BurnAndWithdraw<'info> {
 
     #[account(
         mut,
-        seeds = ["master".as_bytes(), collection.key().as_ref()],
-        bump
+        seeds = [b"master", collection.key().as_ref()],
+        bump,
+        has_one = collection @ CustomError::InvalidCollection
     )]
     pub master_state: Account<'info, MasterState>,
 
     #[account(
         mut,
-        seeds = ["vault".as_bytes(), asset.key().as_ref()],
+        seeds = [b"vault", asset.key().as_ref()],
         bump,
         close = owner
     )]
     pub vault: Account<'info, TokenVault>,
 
     pub system_program: Program<'info, System>,
-
-    /// CHECK: SPL Noop program
-    pub log_wrapper: Option<AccountInfo<'info>>,
 
     /// CHECK: MPL Core program
     #[account(address = mpl_core::ID)]
@@ -208,21 +199,11 @@ impl MasterState {
 #[account]
 #[derive(Default)]
 pub struct TokenVault {
-    pub mint: Pubkey,
+    pub asset: Pubkey,
 }
 
 impl TokenVault {
     pub const SPACE: usize = 8 + 32; // discriminator + mint
-
-    pub fn validate_balance(&self, account_info: &AccountInfo, rent: &Rent) -> Result<()> {
-        let required_balance = VAULT_AMOUNT + rent.minimum_balance(Self::SPACE);
-        require_eq!(
-            account_info.lamports(),
-            required_balance,
-            CustomError::InvalidVaultBalance
-        );
-        Ok(())
-    }
 }
 
 #[error_code]
@@ -243,6 +224,8 @@ pub enum CustomError {
     Underflow,
     #[msg("Invalid update authority")]
     InvalidUpdateAuthority,
+    #[msg("Invalid metadata update")]
+    InvalidMetadataUpdate,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -285,8 +268,8 @@ pub mod storymint {
 
     pub fn mint_asset(ctx: Context<MintAsset>) -> Result<()> {
         let rent = Rent::get()?;
-        let rent_costs = utils::calculate_rent(&rent, true);
-        let total_required = rent_costs.vault + rent_costs.mint + rent_costs.metadata;
+        let vault_rent = rent.minimum_balance(TokenVault::SPACE);
+        let total_required = VAULT_AMOUNT + vault_rent;
 
         system_program::transfer(
             CpiContext::new(
@@ -299,7 +282,7 @@ pub mod storymint {
             total_required,
         )?;
 
-        ctx.accounts.vault.mint = ctx.accounts.asset.key();
+        ctx.accounts.vault.asset = ctx.accounts.asset.key();
 
         let collection = ctx.accounts.collection.key();
         let authority_seeds = [
@@ -331,52 +314,25 @@ pub mod storymint {
     }
 
     pub fn update_metadata(ctx: Context<UpdateMetadata>, args: UpdateMetadataArgs) -> Result<()> {
-        mpl_core::instructions::UpdateV1Cpi {
-            asset: &ctx.accounts.asset.to_account_info(),
-            collection: ctx.accounts.collection.as_ref(),
-            authority: Some(ctx.accounts.authority.as_ref()),
-            payer: &ctx.accounts.payer.to_account_info(),
-            system_program: &ctx.accounts.system_program.to_account_info(),
-            log_wrapper: ctx.accounts.log_wrapper.as_ref(),
-            __program: &ctx.accounts.mpl_core,
-            __args: mpl_core::instructions::UpdateV1InstructionArgs {
-                new_name: args.name,
-                new_uri: args.uri,
-                new_update_authority: None,
-            },
-        }
-        .invoke()?;
+        UpdateV1CpiBuilder::new(&ctx.accounts.mpl_core)
+            .asset(&ctx.accounts.asset.to_account_info())
+            .collection(ctx.accounts.collection.as_ref())
+            .authority(Some(&ctx.accounts.authority.as_ref()))
+            .payer(&ctx.accounts.payer.to_account_info())
+            .new_name(args.name.ok_or(CustomError::InvalidMetadataUpdate)?)
+            .new_name(args.uri)
+            .invoke()?;
 
         Ok(())
     }
 
     pub fn burn_and_withdraw(ctx: Context<BurnAndWithdraw>) -> Result<()> {
         // Burn the asset
-        mpl_core::instructions::BurnV1Cpi {
-            asset: &ctx.accounts.asset.to_account_info(),
-            collection: Some(ctx.accounts.collection.as_ref()),
-            authority: Some(ctx.accounts.owner.as_ref()),
-            payer: &ctx.accounts.owner.to_account_info(),
-            system_program: Some(&ctx.accounts.system_program.to_account_info()),
-            log_wrapper: ctx.accounts.log_wrapper.as_ref(),
-            __program: &ctx.accounts.mpl_core,
-            __args: mpl_core::instructions::BurnV1InstructionArgs {
-                compression_proof: None,
-            },
-        }
-        .invoke()?;
-
-        // Return SOL from vault
-        system_program::transfer(
-            CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                system_program::Transfer {
-                    from: ctx.accounts.vault.to_account_info(),
-                    to: ctx.accounts.owner.to_account_info(),
-                },
-            ),
-            VAULT_AMOUNT,
-        )?;
+        BurnV1CpiBuilder::new(&ctx.accounts.mpl_core)
+            .payer(&ctx.accounts.owner)
+            .asset(&ctx.accounts.asset)
+            .collection(Some(&ctx.accounts.collection))
+            .invoke()?;
 
         // Update collection stats
         ctx.accounts.master_state.total_minted = ctx
@@ -386,32 +342,16 @@ pub mod storymint {
             .checked_sub(1)
             .ok_or(CustomError::Underflow)?;
 
+        // Transfer the vault balance to the owner
+        let vault = ctx.accounts.vault.to_account_info();
+        let owner = ctx.accounts.owner.to_account_info();
+
+        let vault_lamports = vault.lamports();
+        **vault.try_borrow_mut_lamports()? = 0;
+        **owner.try_borrow_mut_lamports()? = owner
+            .lamports()
+            .checked_add(vault_lamports)
+            .ok_or(CustomError::Overflow)?;
         Ok(())
-    }
-}
-
-mod utils {
-    use super::*;
-
-    pub const MINT_SPACE: usize = 82;
-
-    pub struct ProgramRent {
-        pub vault: u64,
-        pub mint: u64,
-        pub metadata: u64,
-    }
-
-    pub fn calculate_rent(rent: &Rent, include_vault_amount: bool) -> ProgramRent {
-        let vault = if include_vault_amount {
-            VAULT_AMOUNT + rent.minimum_balance(TokenVault::SPACE)
-        } else {
-            rent.minimum_balance(TokenVault::SPACE)
-        };
-
-        ProgramRent {
-            vault,
-            mint: rent.minimum_balance(MINT_SPACE),
-            metadata: rent.minimum_balance(METADATA_SIZE),
-        }
     }
 }

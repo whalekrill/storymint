@@ -35,13 +35,10 @@ export type MintAssetInstructionAccounts = {
   /** The new asset being created */
   asset: Signer;
   masterState?: PublicKey | Pda;
-  /** The collection this asset belongs to */
   collection: PublicKey | Pda;
   mintAuthority?: PublicKey | Pda;
-  /** The owner of the new asset */
-  owner?: PublicKey | Pda;
+  owner: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
-  logWrapper?: PublicKey | Pda;
   mplCore?: PublicKey | Pda;
 };
 
@@ -76,7 +73,7 @@ export function mintAsset(
 ): TransactionBuilder {
   // Program ID.
   const programId = context.programs.getPublicKey(
-    'lockedSolPnft',
+    'storymint',
     '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
   );
 
@@ -122,13 +119,8 @@ export function mintAsset(
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
-    logWrapper: {
-      index: 8,
-      isWritable: false as boolean,
-      value: input.logWrapper ?? null,
-    },
     mplCore: {
-      index: 9,
+      index: 8,
       isWritable: false as boolean,
       value: input.mplCore ?? null,
     },

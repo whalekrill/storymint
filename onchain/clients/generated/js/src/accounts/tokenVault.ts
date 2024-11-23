@@ -43,15 +43,15 @@ export function getTokenVaultDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(TOKEN_VAULT_DISCRIMINATOR);
 }
 
-export type TokenVault = { discriminator: ReadonlyUint8Array; mint: Address };
+export type TokenVault = { discriminator: ReadonlyUint8Array; asset: Address };
 
-export type TokenVaultArgs = { mint: Address };
+export type TokenVaultArgs = { asset: Address };
 
 export function getTokenVaultEncoder(): Encoder<TokenVaultArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['mint', getAddressEncoder()],
+      ['asset', getAddressEncoder()],
     ]),
     (value) => ({ ...value, discriminator: TOKEN_VAULT_DISCRIMINATOR })
   );
@@ -60,7 +60,7 @@ export function getTokenVaultEncoder(): Encoder<TokenVaultArgs> {
 export function getTokenVaultDecoder(): Decoder<TokenVault> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['mint', getAddressDecoder()],
+    ['asset', getAddressDecoder()],
   ]);
 }
 

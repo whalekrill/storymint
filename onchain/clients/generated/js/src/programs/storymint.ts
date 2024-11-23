@@ -20,18 +20,18 @@ import {
   type ParsedUpdateMetadataInstruction,
 } from '../instructions';
 
-export const LOCKED_SOL_PNFT_PROGRAM_ADDRESS =
+export const STORYMINT_PROGRAM_ADDRESS =
   '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr' as Address<'3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'>;
 
-export enum LockedSolPnftAccount {
+export enum StorymintAccount {
   BaseCollectionV1,
   MasterState,
   TokenVault,
 }
 
-export function identifyLockedSolPnftAccount(
+export function identifyStorymintAccount(
   account: { data: ReadonlyUint8Array } | ReadonlyUint8Array
-): LockedSolPnftAccount {
+): StorymintAccount {
   const data = 'data' in account ? account.data : account;
   if (
     containsBytes(
@@ -42,7 +42,7 @@ export function identifyLockedSolPnftAccount(
       0
     )
   ) {
-    return LockedSolPnftAccount.BaseCollectionV1;
+    return StorymintAccount.BaseCollectionV1;
   }
   if (
     containsBytes(
@@ -53,7 +53,7 @@ export function identifyLockedSolPnftAccount(
       0
     )
   ) {
-    return LockedSolPnftAccount.MasterState;
+    return StorymintAccount.MasterState;
   }
   if (
     containsBytes(
@@ -64,23 +64,23 @@ export function identifyLockedSolPnftAccount(
       0
     )
   ) {
-    return LockedSolPnftAccount.TokenVault;
+    return StorymintAccount.TokenVault;
   }
   throw new Error(
-    'The provided account could not be identified as a lockedSolPnft account.'
+    'The provided account could not be identified as a storymint account.'
   );
 }
 
-export enum LockedSolPnftInstruction {
+export enum StorymintInstruction {
   BurnAndWithdraw,
   InitializeCollection,
   MintAsset,
   UpdateMetadata,
 }
 
-export function identifyLockedSolPnftInstruction(
+export function identifyStorymintInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array
-): LockedSolPnftInstruction {
+): StorymintInstruction {
   const data = 'data' in instruction ? instruction.data : instruction;
   if (
     containsBytes(
@@ -91,7 +91,7 @@ export function identifyLockedSolPnftInstruction(
       0
     )
   ) {
-    return LockedSolPnftInstruction.BurnAndWithdraw;
+    return StorymintInstruction.BurnAndWithdraw;
   }
   if (
     containsBytes(
@@ -102,7 +102,7 @@ export function identifyLockedSolPnftInstruction(
       0
     )
   ) {
-    return LockedSolPnftInstruction.InitializeCollection;
+    return StorymintInstruction.InitializeCollection;
   }
   if (
     containsBytes(
@@ -113,7 +113,7 @@ export function identifyLockedSolPnftInstruction(
       0
     )
   ) {
-    return LockedSolPnftInstruction.MintAsset;
+    return StorymintInstruction.MintAsset;
   }
   if (
     containsBytes(
@@ -124,25 +124,25 @@ export function identifyLockedSolPnftInstruction(
       0
     )
   ) {
-    return LockedSolPnftInstruction.UpdateMetadata;
+    return StorymintInstruction.UpdateMetadata;
   }
   throw new Error(
-    'The provided instruction could not be identified as a lockedSolPnft instruction.'
+    'The provided instruction could not be identified as a storymint instruction.'
   );
 }
 
-export type ParsedLockedSolPnftInstruction<
+export type ParsedStorymintInstruction<
   TProgram extends string = '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr',
 > =
   | ({
-      instructionType: LockedSolPnftInstruction.BurnAndWithdraw;
+      instructionType: StorymintInstruction.BurnAndWithdraw;
     } & ParsedBurnAndWithdrawInstruction<TProgram>)
   | ({
-      instructionType: LockedSolPnftInstruction.InitializeCollection;
+      instructionType: StorymintInstruction.InitializeCollection;
     } & ParsedInitializeCollectionInstruction<TProgram>)
   | ({
-      instructionType: LockedSolPnftInstruction.MintAsset;
+      instructionType: StorymintInstruction.MintAsset;
     } & ParsedMintAssetInstruction<TProgram>)
   | ({
-      instructionType: LockedSolPnftInstruction.UpdateMetadata;
+      instructionType: StorymintInstruction.UpdateMetadata;
     } & ParsedUpdateMetadataInstruction<TProgram>);

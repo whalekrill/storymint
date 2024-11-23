@@ -5,7 +5,7 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-      pub(crate) mod locked_sol_pnft;
+      pub(crate) mod storymint;
   
-      pub use self::locked_sol_pnft::LockedSolPnftError;
+      pub use self::storymint::StorymintError;
   

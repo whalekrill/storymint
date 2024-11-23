@@ -9,7 +9,7 @@ use num_derive::FromPrimitive;
 use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
-pub enum LockedSolPnftError {
+pub enum StorymintError {
     /// 6000 - Invalid authority
     #[error("Invalid authority")]
     InvalidAuthority = 0x1770,
@@ -34,9 +34,12 @@ pub enum LockedSolPnftError {
     /// 6007 - Invalid update authority
     #[error("Invalid update authority")]
     InvalidUpdateAuthority = 0x1777,
+    /// 6008 - Invalid metadata update
+    #[error("Invalid metadata update")]
+    InvalidMetadataUpdate = 0x1778,
 }
 
-impl solana_program::program_error::PrintProgramError for LockedSolPnftError {
+impl solana_program::program_error::PrintProgramError for StorymintError {
     fn print<E>(&self) {
         solana_program::msg!(&self.to_string());
     }

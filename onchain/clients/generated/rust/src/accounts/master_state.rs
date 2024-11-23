@@ -53,7 +53,7 @@ impl anchor_lang::AccountSerialize for MasterState {}
 #[cfg(feature = "anchor")]
 impl anchor_lang::Owner for MasterState {
     fn owner() -> Pubkey {
-      crate::LOCKED_SOL_PNFT_ID
+      crate::STORYMINT_ID
     }
 }
 

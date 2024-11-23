@@ -30,9 +30,6 @@ pub struct BurnAndWithdraw {
           pub system_program: solana_program::pubkey::Pubkey,
           
               
-          pub log_wrapper: Option<solana_program::pubkey::Pubkey>,
-          
-              
           pub mpl_core: solana_program::pubkey::Pubkey,
       }
 
@@ -42,7 +39,7 @@ impl BurnAndWithdraw {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.owner,
             true
@@ -67,18 +64,7 @@ impl BurnAndWithdraw {
             self.system_program,
             false
           ));
-                                                      if let Some(log_wrapper) = self.log_wrapper {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                log_wrapper,
-                false,
-              ));
-            } else {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
-                false,
-              ));
-            }
-                                                    accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.mpl_core,
             false
           ));
@@ -86,7 +72,7 @@ impl BurnAndWithdraw {
     let data = BurnAndWithdrawInstructionData::new().try_to_vec().unwrap();
     
     solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     }
@@ -124,8 +110,7 @@ impl Default for BurnAndWithdrawInstructionData {
                 ///   3. `[writable]` master_state
                 ///   4. `[writable]` vault
                 ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   6. `[optional]` log_wrapper
-                ///   7. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
+                ///   6. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
 #[derive(Clone, Debug, Default)]
 pub struct BurnAndWithdrawBuilder {
             owner: Option<solana_program::pubkey::Pubkey>,
@@ -134,7 +119,6 @@ pub struct BurnAndWithdrawBuilder {
                 master_state: Option<solana_program::pubkey::Pubkey>,
                 vault: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
-                log_wrapper: Option<solana_program::pubkey::Pubkey>,
                 mpl_core: Option<solana_program::pubkey::Pubkey>,
                 __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -174,12 +158,6 @@ impl BurnAndWithdrawBuilder {
                         self.system_program = Some(system_program);
                     self
     }
-            /// `[optional account]`
-#[inline(always)]
-    pub fn log_wrapper(&mut self, log_wrapper: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
-                        self.log_wrapper = log_wrapper;
-                    self
-    }
             /// `[optional account, default to 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d']`
 #[inline(always)]
     pub fn mpl_core(&mut self, mpl_core: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -207,7 +185,6 @@ impl BurnAndWithdrawBuilder {
                                         master_state: self.master_state.expect("master_state is not set"),
                                         vault: self.vault.expect("vault is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
-                                        log_wrapper: self.log_wrapper,
                                         mpl_core: self.mpl_core.unwrap_or(solana_program::pubkey!("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d")),
                       };
     
@@ -237,9 +214,6 @@ impl BurnAndWithdrawBuilder {
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
-              pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                
-                    
               pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
             }
 
@@ -267,9 +241,6 @@ pub struct BurnAndWithdrawCpi<'a, 'b> {
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
           
               
-          pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-          
-              
           pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
         }
 
@@ -286,7 +257,6 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
               master_state: accounts.master_state,
               vault: accounts.vault,
               system_program: accounts.system_program,
-              log_wrapper: accounts.log_wrapper,
               mpl_core: accounts.mpl_core,
                 }
   }
@@ -309,7 +279,7 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.owner.key,
             true
@@ -334,17 +304,6 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
             *self.system_program.key,
             false
           ));
-                                          if let Some(log_wrapper) = self.log_wrapper {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              *log_wrapper.key,
-              false,
-            ));
-          } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
-              false,
-            ));
-          }
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.mpl_core.key,
             false
@@ -359,11 +318,11 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
     let data = BurnAndWithdrawInstructionData::new().try_to_vec().unwrap();
     
     let instruction = solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.owner.clone());
                         account_infos.push(self.asset.clone());
@@ -371,9 +330,6 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
                         account_infos.push(self.master_state.clone());
                         account_infos.push(self.vault.clone());
                         account_infos.push(self.system_program.clone());
-                        if let Some(log_wrapper) = self.log_wrapper {
-          account_infos.push(log_wrapper.clone());
-        }
                         account_infos.push(self.mpl_core.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
@@ -395,8 +351,7 @@ impl<'a, 'b> BurnAndWithdrawCpi<'a, 'b> {
                 ///   3. `[writable]` master_state
                 ///   4. `[writable]` vault
           ///   5. `[]` system_program
-                ///   6. `[optional]` log_wrapper
-          ///   7. `[]` mpl_core
+          ///   6. `[]` mpl_core
 #[derive(Clone, Debug)]
 pub struct BurnAndWithdrawCpiBuilder<'a, 'b> {
   instruction: Box<BurnAndWithdrawCpiBuilderInstruction<'a, 'b>>,
@@ -412,7 +367,6 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
               master_state: None,
               vault: None,
               system_program: None,
-              log_wrapper: None,
               mpl_core: None,
                                 __remaining_accounts: Vec::new(),
     });
@@ -446,12 +400,6 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
       #[inline(always)]
     pub fn system_program(&mut self, system_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.system_program = Some(system_program);
-                    self
-    }
-      /// `[optional account]`
-#[inline(always)]
-    pub fn log_wrapper(&mut self, log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
-                        self.instruction.log_wrapper = log_wrapper;
                     self
     }
       #[inline(always)]
@@ -496,8 +444,6 @@ impl<'a, 'b> BurnAndWithdrawCpiBuilder<'a, 'b> {
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
                   
-          log_wrapper: self.instruction.log_wrapper,
-                  
           mpl_core: self.instruction.mpl_core.expect("mpl_core is not set"),
                     };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
@@ -513,7 +459,6 @@ struct BurnAndWithdrawCpiBuilderInstruction<'a, 'b> {
                 master_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mpl_core: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,

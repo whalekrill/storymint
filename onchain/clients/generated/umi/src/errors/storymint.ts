@@ -119,11 +119,24 @@ export class InvalidUpdateAuthorityError extends ProgramError {
 codeToErrorMap.set(0x1777, InvalidUpdateAuthorityError);
 nameToErrorMap.set('InvalidUpdateAuthority', InvalidUpdateAuthorityError);
 
+/** InvalidMetadataUpdate: Invalid metadata update */
+export class InvalidMetadataUpdateError extends ProgramError {
+  override readonly name: string = 'InvalidMetadataUpdate';
+
+  readonly code: number = 0x1778; // 6008
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid metadata update', program, cause);
+  }
+}
+codeToErrorMap.set(0x1778, InvalidMetadataUpdateError);
+nameToErrorMap.set('InvalidMetadataUpdate', InvalidMetadataUpdateError);
+
 /**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  */
-export function getLockedSolPnftErrorFromCode(
+export function getStorymintErrorFromCode(
   code: number,
   program: Program,
   cause?: Error
@@ -136,7 +149,7 @@ export function getLockedSolPnftErrorFromCode(
  * Attempts to resolve a custom program error from the provided error name, i.e. 'Unauthorized'.
  * @category Errors
  */
-export function getLockedSolPnftErrorFromName(
+export function getStorymintErrorFromName(
   name: string,
   program: Program,
   cause?: Error

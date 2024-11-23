@@ -77,7 +77,7 @@ impl InitializeCollection {
       data.append(&mut args);
     
     solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     }
@@ -348,7 +348,7 @@ impl<'a, 'b> InitializeCollectionCpi<'a, 'b> {
       data.append(&mut args);
     
     let instruction = solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     };

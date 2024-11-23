@@ -36,7 +36,6 @@ export type BurnAndWithdrawInstructionAccounts = {
   masterState?: PublicKey | Pda;
   vault?: PublicKey | Pda;
   systemProgram?: PublicKey | Pda;
-  logWrapper?: PublicKey | Pda;
   mplCore?: PublicKey | Pda;
 };
 
@@ -75,7 +74,7 @@ export function burnAndWithdraw(
 ): TransactionBuilder {
   // Program ID.
   const programId = context.programs.getPublicKey(
-    'lockedSolPnft',
+    'storymint',
     '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
   );
 
@@ -111,13 +110,8 @@ export function burnAndWithdraw(
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
-    logWrapper: {
-      index: 6,
-      isWritable: false as boolean,
-      value: input.logWrapper ?? null,
-    },
     mplCore: {
-      index: 7,
+      index: 6,
       isWritable: false as boolean,
       value: input.mplCore ?? null,
     },

@@ -1,7 +1,7 @@
 import { AnchorIdl, rootNodeFromAnchorWithoutDefaultVisitor } from '@kinobi-so/nodes-from-anchor'
 import { renderJavaScriptUmiVisitor, renderJavaScriptVisitor, renderRustVisitor } from '@kinobi-so/renderers'
 import { visit } from '@kinobi-so/visitors-core'
-import anchorIdl from '../anchor/target/idl/locked_sol_pnft.json'
+import anchorIdl from '../anchor/target/idl/storymint.json'
 
 async function generateClients() {
   const node = rootNodeFromAnchorWithoutDefaultVisitor(anchorIdl as AnchorIdl)

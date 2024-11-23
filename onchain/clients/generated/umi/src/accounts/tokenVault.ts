@@ -31,10 +31,10 @@ export type TokenVault = Account<TokenVaultAccountData>;
 
 export type TokenVaultAccountData = {
   discriminator: Uint8Array;
-  mint: PublicKey;
+  asset: PublicKey;
 };
 
-export type TokenVaultAccountDataArgs = { mint: PublicKey };
+export type TokenVaultAccountDataArgs = { asset: PublicKey };
 
 export function getTokenVaultAccountDataSerializer(): Serializer<
   TokenVaultAccountDataArgs,
@@ -44,7 +44,7 @@ export function getTokenVaultAccountDataSerializer(): Serializer<
     struct<TokenVaultAccountData>(
       [
         ['discriminator', bytes({ size: 8 })],
-        ['mint', publicKeySerializer()],
+        ['asset', publicKeySerializer()],
       ],
       { description: 'TokenVaultAccountData' }
     ),
@@ -117,13 +117,13 @@ export function getTokenVaultGpaBuilder(
   context: Pick<Context, 'rpc' | 'programs'>
 ) {
   const programId = context.programs.getPublicKey(
-    'lockedSolPnft',
+    'storymint',
     '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
   );
   return gpaBuilder(context, programId)
-    .registerFields<{ discriminator: Uint8Array; mint: PublicKey }>({
+    .registerFields<{ discriminator: Uint8Array; asset: PublicKey }>({
       discriminator: [0, bytes({ size: 8 })],
-      mint: [8, publicKeySerializer()],
+      asset: [8, publicKeySerializer()],
     })
     .deserializeUsing<TokenVault>((account) => deserializeTokenVault(account))
     .whereField(

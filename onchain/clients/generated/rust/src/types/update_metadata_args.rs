@@ -12,7 +12,7 @@ use borsh::BorshDeserialize;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UpdateMetadataArgs {
 pub name: Option<String>,
-pub uri: Option<String>,
+pub uri: String,
 }
 
 

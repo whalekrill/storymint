@@ -40,7 +40,6 @@ export type UpdateMetadataInstructionAccounts = {
   authority: Signer;
   payer: Signer;
   systemProgram?: PublicKey | Pda;
-  logWrapper?: PublicKey | Pda;
   mplCore?: PublicKey | Pda;
 };
 
@@ -90,7 +89,7 @@ export function updateMetadata(
 ): TransactionBuilder {
   // Program ID.
   const programId = context.programs.getPublicKey(
-    'lockedSolPnft',
+    'storymint',
     '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
   );
 
@@ -121,13 +120,8 @@ export function updateMetadata(
       isWritable: false as boolean,
       value: input.systemProgram ?? null,
     },
-    logWrapper: {
-      index: 5,
-      isWritable: false as boolean,
-      value: input.logWrapper ?? null,
-    },
     mplCore: {
-      index: 6,
+      index: 5,
       isWritable: false as boolean,
       value: input.mplCore ?? null,
     },

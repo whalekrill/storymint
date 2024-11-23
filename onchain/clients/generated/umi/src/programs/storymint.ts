@@ -13,22 +13,22 @@ import {
   PublicKey,
 } from '@metaplex-foundation/umi';
 import {
-  getLockedSolPnftErrorFromCode,
-  getLockedSolPnftErrorFromName,
+  getStorymintErrorFromCode,
+  getStorymintErrorFromName,
 } from '../errors';
 
-export const LOCKED_SOL_PNFT_PROGRAM_ID =
+export const STORYMINT_PROGRAM_ID =
   '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr' as PublicKey<'3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'>;
 
-export function createLockedSolPnftProgram(): Program {
+export function createStorymintProgram(): Program {
   return {
-    name: 'lockedSolPnft',
-    publicKey: LOCKED_SOL_PNFT_PROGRAM_ID,
+    name: 'storymint',
+    publicKey: STORYMINT_PROGRAM_ID,
     getErrorFromCode(code: number, cause?: Error) {
-      return getLockedSolPnftErrorFromCode(code, this, cause);
+      return getStorymintErrorFromCode(code, this, cause);
     },
     getErrorFromName(name: string, cause?: Error) {
-      return getLockedSolPnftErrorFromName(name, this, cause);
+      return getStorymintErrorFromName(name, this, cause);
     },
     isOnCluster() {
       return true;
@@ -36,20 +36,20 @@ export function createLockedSolPnftProgram(): Program {
   };
 }
 
-export function getLockedSolPnftProgram<T extends Program = Program>(
+export function getStorymintProgram<T extends Program = Program>(
   context: Pick<Context, 'programs'>,
   clusterFilter?: ClusterFilter
 ): T {
-  return context.programs.get<T>('lockedSolPnft', clusterFilter);
+  return context.programs.get<T>('storymint', clusterFilter);
 }
 
-export function getLockedSolPnftProgramId(
+export function getStorymintProgramId(
   context: Pick<Context, 'programs'>,
   clusterFilter?: ClusterFilter
 ): PublicKey {
   return context.programs.getPublicKey(
-    'lockedSolPnft',
-    LOCKED_SOL_PNFT_PROGRAM_ID,
+    'storymint',
+    STORYMINT_PROGRAM_ID,
     clusterFilter
   );
 }

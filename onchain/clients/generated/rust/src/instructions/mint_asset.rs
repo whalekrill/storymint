@@ -24,25 +24,18 @@ pub struct MintAsset {
           
               
           pub master_state: solana_program::pubkey::Pubkey,
-                /// The collection this asset belongs to
-
-    
+          
               
           pub collection: solana_program::pubkey::Pubkey,
           
               
           pub mint_authority: solana_program::pubkey::Pubkey,
-                /// The owner of the new asset
-
-    
+          
               
-          pub owner: Option<solana_program::pubkey::Pubkey>,
+          pub owner: solana_program::pubkey::Pubkey,
           
               
           pub system_program: solana_program::pubkey::Pubkey,
-          
-              
-          pub log_wrapper: Option<solana_program::pubkey::Pubkey>,
           
               
           pub mpl_core: solana_program::pubkey::Pubkey,
@@ -54,7 +47,7 @@ impl MintAsset {
   }
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_program::instruction::AccountMeta]) -> solana_program::instruction::Instruction {
-    let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer,
             true
@@ -79,33 +72,15 @@ impl MintAsset {
             self.mint_authority,
             false
           ));
-                                                      if let Some(owner) = self.owner {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                owner,
-                false,
-              ));
-            } else {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
-                false,
-              ));
-            }
-                                                    accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.owner,
+            false
+          ));
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
             false
           ));
-                                                      if let Some(log_wrapper) = self.log_wrapper {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                log_wrapper,
-                false,
-              ));
-            } else {
-              accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::LOCKED_SOL_PNFT_ID,
-                false,
-              ));
-            }
-                                                    accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.mpl_core,
             false
           ));
@@ -113,7 +88,7 @@ impl MintAsset {
     let data = MintAssetInstructionData::new().try_to_vec().unwrap();
     
     solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     }
@@ -151,10 +126,9 @@ impl Default for MintAssetInstructionData {
                 ///   3. `[writable]` master_state
                 ///   4. `[writable]` collection
           ///   5. `[]` mint_authority
-                ///   6. `[optional]` owner
+          ///   6. `[]` owner
                 ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
-                ///   8. `[optional]` log_wrapper
-                ///   9. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
+                ///   8. `[optional]` mpl_core (default to `CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`)
 #[derive(Clone, Debug, Default)]
 pub struct MintAssetBuilder {
             payer: Option<solana_program::pubkey::Pubkey>,
@@ -165,7 +139,6 @@ pub struct MintAssetBuilder {
                 mint_authority: Option<solana_program::pubkey::Pubkey>,
                 owner: Option<solana_program::pubkey::Pubkey>,
                 system_program: Option<solana_program::pubkey::Pubkey>,
-                log_wrapper: Option<solana_program::pubkey::Pubkey>,
                 mpl_core: Option<solana_program::pubkey::Pubkey>,
                 __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -195,8 +168,7 @@ impl MintAssetBuilder {
                         self.master_state = Some(master_state);
                     self
     }
-            /// The collection this asset belongs to
-#[inline(always)]
+            #[inline(always)]
     pub fn collection(&mut self, collection: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.collection = Some(collection);
                     self
@@ -206,23 +178,15 @@ impl MintAssetBuilder {
                         self.mint_authority = Some(mint_authority);
                     self
     }
-            /// `[optional account]`
-/// The owner of the new asset
-#[inline(always)]
-    pub fn owner(&mut self, owner: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
-                        self.owner = owner;
+            #[inline(always)]
+    pub fn owner(&mut self, owner: solana_program::pubkey::Pubkey) -> &mut Self {
+                        self.owner = Some(owner);
                     self
     }
             /// `[optional account, default to '11111111111111111111111111111111']`
 #[inline(always)]
     pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.system_program = Some(system_program);
-                    self
-    }
-            /// `[optional account]`
-#[inline(always)]
-    pub fn log_wrapper(&mut self, log_wrapper: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
-                        self.log_wrapper = log_wrapper;
                     self
     }
             /// `[optional account, default to 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d']`
@@ -252,9 +216,8 @@ impl MintAssetBuilder {
                                         master_state: self.master_state.expect("master_state is not set"),
                                         collection: self.collection.expect("collection is not set"),
                                         mint_authority: self.mint_authority.expect("mint_authority is not set"),
-                                        owner: self.owner,
+                                        owner: self.owner.expect("owner is not set"),
                                         system_program: self.system_program.unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
-                                        log_wrapper: self.log_wrapper,
                                         mpl_core: self.mpl_core.unwrap_or(solana_program::pubkey!("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d")),
                       };
     
@@ -278,25 +241,18 @@ impl MintAssetBuilder {
                 
                     
               pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
-                        /// The collection this asset belongs to
-
-      
+                
                     
               pub collection: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
-                        /// The owner of the new asset
-
-      
+                
                     
-              pub owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+              pub owner: &'b solana_program::account_info::AccountInfo<'a>,
                 
                     
               pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
-                
-                    
-              pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 
                     
               pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
@@ -320,25 +276,18 @@ pub struct MintAssetCpi<'a, 'b> {
           
               
           pub master_state: &'b solana_program::account_info::AccountInfo<'a>,
-                /// The collection this asset belongs to
-
-    
+          
               
           pub collection: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub mint_authority: &'b solana_program::account_info::AccountInfo<'a>,
-                /// The owner of the new asset
-
-    
+          
               
-          pub owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+          pub owner: &'b solana_program::account_info::AccountInfo<'a>,
           
               
           pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
-          
-              
-          pub log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
           
               
           pub mpl_core: &'b solana_program::account_info::AccountInfo<'a>,
@@ -359,7 +308,6 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
               mint_authority: accounts.mint_authority,
               owner: accounts.owner,
               system_program: accounts.system_program,
-              log_wrapper: accounts.log_wrapper,
               mpl_core: accounts.mpl_core,
                 }
   }
@@ -382,7 +330,7 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program::entrypoint::ProgramResult {
-    let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
                             accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true
@@ -407,32 +355,14 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
             *self.mint_authority.key,
             false
           ));
-                                          if let Some(owner) = self.owner {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              *owner.key,
-              false,
-            ));
-          } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
-              false,
-            ));
-          }
+                                          accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.owner.key,
+            false
+          ));
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false
           ));
-                                          if let Some(log_wrapper) = self.log_wrapper {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              *log_wrapper.key,
-              false,
-            ));
-          } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-              crate::LOCKED_SOL_PNFT_ID,
-              false,
-            ));
-          }
                                           accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.mpl_core.key,
             false
@@ -447,11 +377,11 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
     let data = MintAssetInstructionData::new().try_to_vec().unwrap();
     
     let instruction = solana_program::instruction::Instruction {
-      program_id: crate::LOCKED_SOL_PNFT_ID,
+      program_id: crate::STORYMINT_ID,
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.payer.clone());
                         account_infos.push(self.vault.clone());
@@ -459,13 +389,8 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
                         account_infos.push(self.master_state.clone());
                         account_infos.push(self.collection.clone());
                         account_infos.push(self.mint_authority.clone());
-                        if let Some(owner) = self.owner {
-          account_infos.push(owner.clone());
-        }
+                        account_infos.push(self.owner.clone());
                         account_infos.push(self.system_program.clone());
-                        if let Some(log_wrapper) = self.log_wrapper {
-          account_infos.push(log_wrapper.clone());
-        }
                         account_infos.push(self.mpl_core.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
@@ -487,10 +412,9 @@ impl<'a, 'b> MintAssetCpi<'a, 'b> {
                 ///   3. `[writable]` master_state
                 ///   4. `[writable]` collection
           ///   5. `[]` mint_authority
-                ///   6. `[optional]` owner
+          ///   6. `[]` owner
           ///   7. `[]` system_program
-                ///   8. `[optional]` log_wrapper
-          ///   9. `[]` mpl_core
+          ///   8. `[]` mpl_core
 #[derive(Clone, Debug)]
 pub struct MintAssetCpiBuilder<'a, 'b> {
   instruction: Box<MintAssetCpiBuilderInstruction<'a, 'b>>,
@@ -508,7 +432,6 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
               mint_authority: None,
               owner: None,
               system_program: None,
-              log_wrapper: None,
               mpl_core: None,
                                 __remaining_accounts: Vec::new(),
     });
@@ -535,8 +458,7 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                         self.instruction.master_state = Some(master_state);
                     self
     }
-      /// The collection this asset belongs to
-#[inline(always)]
+      #[inline(always)]
     pub fn collection(&mut self, collection: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.collection = Some(collection);
                     self
@@ -546,22 +468,14 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                         self.instruction.mint_authority = Some(mint_authority);
                     self
     }
-      /// `[optional account]`
-/// The owner of the new asset
-#[inline(always)]
-    pub fn owner(&mut self, owner: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
-                        self.instruction.owner = owner;
+      #[inline(always)]
+    pub fn owner(&mut self, owner: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.owner = Some(owner);
                     self
     }
       #[inline(always)]
     pub fn system_program(&mut self, system_program: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.system_program = Some(system_program);
-                    self
-    }
-      /// `[optional account]`
-#[inline(always)]
-    pub fn log_wrapper(&mut self, log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
-                        self.instruction.log_wrapper = log_wrapper;
                     self
     }
       #[inline(always)]
@@ -606,11 +520,9 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                   
           mint_authority: self.instruction.mint_authority.expect("mint_authority is not set"),
                   
-          owner: self.instruction.owner,
+          owner: self.instruction.owner.expect("owner is not set"),
                   
           system_program: self.instruction.system_program.expect("system_program is not set"),
-                  
-          log_wrapper: self.instruction.log_wrapper,
                   
           mpl_core: self.instruction.mpl_core.expect("mpl_core is not set"),
                     };
@@ -629,7 +541,6 @@ struct MintAssetCpiBuilderInstruction<'a, 'b> {
                 mint_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 owner: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-                log_wrapper: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 mpl_core: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_program::account_info::AccountInfo<'a>, bool, bool)>,

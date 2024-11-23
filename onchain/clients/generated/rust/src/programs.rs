@@ -8,6 +8,6 @@
 use solana_program::{pubkey, pubkey::Pubkey};
 
 
-  /// `locked_sol_pnft` program ID.
-  pub const LOCKED_SOL_PNFT_ID: Pubkey = pubkey!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
+  /// `storymint` program ID.
+  pub const STORYMINT_ID: Pubkey = pubkey!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
 
