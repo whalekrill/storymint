@@ -1,25 +1,27 @@
 // Migrations are an early feature. Currently, they're nothing more than this
 // single deploy script that's invoked from the CLI, injecting a provider
 // configured from the workspace's Anchor.toml.
-import * as anchor from '@coral-xyz/anchor'
-import { Program } from '@coral-xyz/anchor'
-import { LockedSolPnft } from '../target/types/locked_sol_pnft'
-import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
-import { createSignerFromKeypair, keypairIdentity, publicKey, generateSigner } from '@metaplex-foundation/umi'
-import { mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata'
-import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
-import { Keypair } from '@solana/web3.js'
-import { PublicKey as web3PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, AccountLayout } from '@solana/spl-token'
-import { initializeMasterEdition } from '../../clients/generated/umi/src/instructions'
 import * as fs from 'fs'
 import * as path from 'path'
+import * as anchor from '@coral-xyz/anchor'
+import { Program } from '@coral-xyz/anchor'
+import { Storymint } from '../target/types/storymint'
+import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
+import { createSignerFromKeypair, keypairIdentity, generateSigner, publicKey } from '@metaplex-foundation/umi'
+import { mplCore } from '@metaplex-foundation/mpl-core'
+import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/serializers'
+import { Keypair } from '@solana/web3.js'
+import { initializeCollection } from '../../clients/generated/umi/src/instructions'
+import { MPL_TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata'
 
 module.exports = async function (provider: anchor.Provider) {
+  const program = anchor.workspace.Storymint as Program<Storymint>
+  const programId = program.programId
+
   const umi = createUmi(provider.connection.rpcEndpoint, {
     commitment: provider.connection.commitment,
   })
-  umi.use(mplTokenMetadata())
+  umi.use(mplCore())
 
   const keypairPath = path.join(__dirname, '../keys/update-authority-devnet.json')
   const secretKey = JSON.parse(fs.readFileSync(keypairPath, 'utf-8'))
@@ -29,55 +31,45 @@ module.exports = async function (provider: anchor.Provider) {
     publicKey: publicKey(keyPair.publicKey.toString()),
     secretKey: keyPair.secretKey,
   })
-  const payer = generateSigner(umi)
-  umi.use(keypairIdentity(payer))
+  umi.use(keypairIdentity(updateAuthority))
 
-  const program = anchor.workspace.LockedSolPnft as Program<LockedSolPnft>
-  const metadataProgramId = umi.programs.getPublicKey('mplTokenMetadata')
+  const collection = generateSigner(umi)
 
   console.log('Initializing master edition...')
 
-  const [masterMint] = umi.eddsa.findPda(publicKey(program.programId), [Buffer.from('master_mint')])
-
-  const [masterMetadata] = umi.eddsa.findPda(metadataProgramId, [
-    Buffer.from('metadata'),
-    publicKeySerializer().serialize(metadataProgramId),
-    publicKeySerializer().serialize(masterMint),
+  // Find PDA for mint authority
+  const mintAuthority = umi.eddsa.findPda(publicKey(programId), [
+    Buffer.from('mint_authority'),
+    publicKeySerializer().serialize(collection.publicKey),
   ])
 
-  const [masterEdition] = umi.eddsa.findPda(metadataProgramId, [
+  // Get metadata account address
+  const [collectionMetadata] = umi.eddsa.findPda(publicKey(MPL_TOKEN_METADATA_PROGRAM_ID), [
     Buffer.from('metadata'),
-    publicKeySerializer().serialize(metadataProgramId),
-    publicKeySerializer().serialize(masterMint),
-    Buffer.from('edition'),
+    publicKeySerializer().serialize(collection.publicKey),
   ])
 
-  const associatedTokenAccount = await getAssociatedTokenAddress(
-    new web3PublicKey(masterMint.toString()),
-    new web3PublicKey(updateAuthority.publicKey.toString()),
-    true,
-  )
-  const authorityToken = publicKey(associatedTokenAccount.toString())
+  // Get collection authority record PDA
+  const [collectionAuthorityRecord] = umi.eddsa.findPda(publicKey(MPL_TOKEN_METADATA_PROGRAM_ID), [
+    Buffer.from('metadata'),
+    publicKeySerializer().serialize(collection.publicKey),
+    Buffer.from('collection_authority'),
+    publicKeySerializer().serialize(mintAuthority),
+  ])
 
-  await initializeMasterEdition(umi, {
-    payer,
-    masterMint,
-    masterMetadata,
-    masterEdition,
+  const initializeCollectionArgs = {
+    collectionMetadata,
+    collectionAuthorityRecord,
+    mintAuthority,
+    args: { name: 'Storymint', uri: 'https://api.locked-sol.com/metadata/initial.json' },
+  }
+
+  await initializeCollection(umi, {
+    payer: updateAuthority,
+    collection,
     updateAuthority,
-    authorityToken,
+    ...initializeCollectionArgs,
   }).sendAndConfirm(umi)
 
-  const tokenAccountInfo = await umi.rpc.getAccount(publicKey(associatedTokenAccount.toString()))
-  if (!tokenAccountInfo.exists) {
-    throw new Error('Token account does not exist')
-  }
-  const decodedAccount = AccountLayout.decode(tokenAccountInfo.data)
-  const balance = BigInt(decodedAccount.amount.toString())
-
-  if (balance == BigInt(1)) {
-    console.log('Master edition initialized successfully!')
-  } else {
-    throw new Error(`Expected balance of 1, got ${balance}`)
-  }
+  console.log('Done initializing master edition.')
 }

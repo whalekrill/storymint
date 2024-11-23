@@ -134,9 +134,7 @@ export type UpdateMetadataInput<
   TAccountSystemProgram extends string = string,
   TAccountMplCore extends string = string,
 > = {
-  /** The asset to update */
   asset: Address<TAccountAsset>;
-  /** The collection this asset belongs to (optional) */
   collection?: Address<TAccountCollection>;
   authority: TransactionSigner<TAccountAuthority>;
   payer: TransactionSigner<TAccountPayer>;
@@ -235,9 +233,7 @@ export type ParsedUpdateMetadataInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    /** The asset to update */
     asset: TAccountMetas[0];
-    /** The collection this asset belongs to (optional) */
     collection?: TAccountMetas[1] | undefined;
     authority: TAccountMetas[2];
     payer: TAccountMetas[3];

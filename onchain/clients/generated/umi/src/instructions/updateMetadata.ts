@@ -33,9 +33,7 @@ import {
 
 // Accounts.
 export type UpdateMetadataInstructionAccounts = {
-  /** The asset to update */
   asset: PublicKey | Pda;
-  /** The collection this asset belongs to (optional) */
   collection?: PublicKey | Pda;
   authority: Signer;
   payer: Signer;

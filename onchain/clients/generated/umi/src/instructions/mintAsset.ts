@@ -32,7 +32,6 @@ import {
 export type MintAssetInstructionAccounts = {
   payer: Signer;
   vault?: PublicKey | Pda;
-  /** The new asset being created */
   asset: Signer;
   masterState?: PublicKey | Pda;
   collection: PublicKey | Pda;

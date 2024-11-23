@@ -11,14 +11,10 @@ use crate::generated::types::UpdateMetadataArgs;
 
 /// Accounts.
 pub struct UpdateMetadata {
-            /// The asset to update
-
-    
+      
               
           pub asset: solana_program::pubkey::Pubkey,
-                /// The collection this asset belongs to (optional)
-
-    
+          
               
           pub collection: Option<solana_program::pubkey::Pubkey>,
           
@@ -138,14 +134,12 @@ impl UpdateMetadataBuilder {
   pub fn new() -> Self {
     Self::default()
   }
-            /// The asset to update
-#[inline(always)]
+            #[inline(always)]
     pub fn asset(&mut self, asset: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.asset = Some(asset);
                     self
     }
             /// `[optional account]`
-/// The collection this asset belongs to (optional)
 #[inline(always)]
     pub fn collection(&mut self, collection: Option<solana_program::pubkey::Pubkey>) -> &mut Self {
                         self.collection = collection;
@@ -210,14 +204,10 @@ impl UpdateMetadataBuilder {
 
   /// `update_metadata` CPI accounts.
   pub struct UpdateMetadataCpiAccounts<'a, 'b> {
-                  /// The asset to update
-
-      
+          
                     
               pub asset: &'b solana_program::account_info::AccountInfo<'a>,
-                        /// The collection this asset belongs to (optional)
-
-      
+                
                     
               pub collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
                 
@@ -238,14 +228,10 @@ impl UpdateMetadataBuilder {
 pub struct UpdateMetadataCpi<'a, 'b> {
   /// The program to invoke.
   pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-            /// The asset to update
-
-    
+      
               
           pub asset: &'b solana_program::account_info::AccountInfo<'a>,
-                /// The collection this asset belongs to (optional)
-
-    
+          
               
           pub collection: Option<&'b solana_program::account_info::AccountInfo<'a>>,
           
@@ -398,14 +384,12 @@ impl<'a, 'b> UpdateMetadataCpiBuilder<'a, 'b> {
     });
     Self { instruction }
   }
-      /// The asset to update
-#[inline(always)]
+      #[inline(always)]
     pub fn asset(&mut self, asset: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.asset = Some(asset);
                     self
     }
       /// `[optional account]`
-/// The collection this asset belongs to (optional)
 #[inline(always)]
     pub fn collection(&mut self, collection: Option<&'b solana_program::account_info::AccountInfo<'a>>) -> &mut Self {
                         self.instruction.collection = collection;

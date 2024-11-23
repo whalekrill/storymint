@@ -11,6 +11,7 @@ import {
   createSignerFromKeypair,
 } from '@metaplex-foundation/umi'
 import { Keypair } from '@solana/web3.js'
+import { MPL_TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata'
 
 export function getUpdateAuthority(umi: Umi) {
   const keypairPath = path.join(__dirname, '../../../keys/update-authority-devnet.json')
@@ -30,13 +31,13 @@ export function initializeCollectionArgs(umi: Umi, programId: PublicKey, collect
   ])
 
   // Get metadata account address
-  const [collectionMetadata] = umi.eddsa.findPda(publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'), [
+  const [collectionMetadata] = umi.eddsa.findPda(publicKey(MPL_TOKEN_METADATA_PROGRAM_ID), [
     Buffer.from('metadata'),
     publicKeySerializer().serialize(collection.publicKey),
   ])
 
   // Get collection authority record PDA
-  const [collectionAuthorityRecord] = umi.eddsa.findPda(publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'), [
+  const [collectionAuthorityRecord] = umi.eddsa.findPda(publicKey(MPL_TOKEN_METADATA_PROGRAM_ID), [
     Buffer.from('metadata'),
     publicKeySerializer().serialize(collection.publicKey),
     Buffer.from('collection_authority'),

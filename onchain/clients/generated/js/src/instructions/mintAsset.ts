@@ -140,7 +140,6 @@ export type MintAssetAsyncInput<
 > = {
   payer: TransactionSigner<TAccountPayer>;
   vault?: Address<TAccountVault>;
-  /** The new asset being created */
   asset: TransactionSigner<TAccountAsset>;
   masterState?: Address<TAccountMasterState>;
   collection: Address<TAccountCollection>;
@@ -293,7 +292,6 @@ export type MintAssetInput<
 > = {
   payer: TransactionSigner<TAccountPayer>;
   vault: Address<TAccountVault>;
-  /** The new asset being created */
   asset: TransactionSigner<TAccountAsset>;
   masterState: Address<TAccountMasterState>;
   collection: Address<TAccountCollection>;
@@ -408,7 +406,6 @@ export type ParsedMintAssetInstruction<
   accounts: {
     payer: TAccountMetas[0];
     vault: TAccountMetas[1];
-    /** The new asset being created */
     asset: TAccountMetas[2];
     masterState: TAccountMetas[3];
     collection: TAccountMetas[4];

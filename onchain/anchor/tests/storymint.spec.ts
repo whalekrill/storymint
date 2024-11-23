@@ -119,7 +119,7 @@ describe('Storymint', () => {
     expect(vaultBalance.basisPoints).toBeGreaterThan(BigInt(1000000000))
   })
 
-  it('should update master state total minted', async () => {
+  it('should increment master state total minted', async () => {
     const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
       Buffer.from('master'),
       publicKeySerializer().serialize(collection),
@@ -143,6 +143,59 @@ describe('Storymint', () => {
     }
   })
 
+  it('should handle concurrent mints correctly', async () => {
+    // Create multiple mint transactions without waiting for confirmation
+    const mintPromises = Array(5)
+      .fill(0)
+      .map(async () => {
+        const { asset, mintAuthority } = mintAssetArgs(umi, publicKey(program.programId), collection)
+
+        return mintAsset(umi, {
+          payer,
+          collection: collection.publicKey,
+          owner: payer.publicKey,
+          asset,
+          mintAuthority,
+        }).sendAndConfirm(umi)
+      })
+
+    const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('master'),
+      publicKeySerializer().serialize(collection),
+    ])
+
+    const initialState = await umi.rpc.getAccount(masterState)
+    const initialTotal = initialState.exists ? Number(initialState.data.slice(40, 48)) : 0
+
+    // Execute all mints concurrently
+    await Promise.all(mintPromises)
+
+    // Verify master state total_minted is exactly 5 more than before
+    const state = await umi.rpc.getAccount(masterState)
+    const totalMinted = state.exists ? Number(state.data.slice(40, 48)) : 0
+    expect(totalMinted).toBe(initialTotal + 5)
+  })
+
+  it('should fail to mint an asset without a collection', async () => {
+    const { asset, mintAuthority } = mintAssetArgs(umi, publicKey(program.programId), collection)
+
+    const wrongCollection = generateSigner(umi)
+
+    try {
+      await mintAsset(umi, {
+        payer,
+        collection: wrongCollection.publicKey,
+        owner: payer.publicKey,
+        asset,
+        mintAuthority,
+      }).sendAndConfirm(umi)
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        expect(error.message).toContain('The program expected this account to be already initialized.')
+      }
+    }
+  })
+
   it('should update metadata URI and name', async () => {
     const { asset, mintAuthority } = mintAssetArgs(umi, publicKey(program.programId), collection)
 
@@ -153,6 +206,50 @@ describe('Storymint', () => {
       asset,
       mintAuthority,
     }).sendAndConfirm(umi)
+
+    const newUri = 'https://api.locked-sol.com/metadata/updated.json'
+    const newName = 'Updated LSOL NFT'
+
+    await updateMetadata(umi, {
+      asset: asset.publicKey,
+      collection: collection.publicKey,
+      authority: updateAuthority,
+      payer,
+      args: {
+        name: newName,
+        uri: newUri,
+      },
+    }).sendAndConfirm(umi)
+
+    const assetData = await fetchAssetV1(umi, asset.publicKey)
+    expect(assetData.name).toBe(newName)
+    expect(assetData.uri).toBe(newUri)
+  })
+
+  it('should update metadata after transfer to another user', async () => {
+    const { asset, mintAuthority } = mintAssetArgs(umi, publicKey(program.programId), collection)
+    const recipient = generateSigner(umi)
+
+    await mintAsset(umi, {
+      payer,
+      collection: collection.publicKey,
+      owner: payer.publicKey,
+      asset,
+      mintAuthority,
+    }).sendAndConfirm(umi)
+
+    // Transfer to new owner
+    await transactionBuilder()
+      .add(
+        transferV1(umi, {
+          asset: asset.publicKey,
+          authority: payer,
+          newOwner: recipient.publicKey,
+          collection: collection.publicKey,
+          payer,
+        }),
+      )
+      .sendAndConfirm(umi)
 
     const newUri = 'https://api.locked-sol.com/metadata/updated.json'
     const newName = 'Updated LSOL NFT'
@@ -238,6 +335,40 @@ describe('Storymint', () => {
     expect(balanceDifference).toBeLessThan(BigInt(1010000000))
   })
 
+  it('should decrement master state total minted', async () => {
+    const { asset, mintAuthority, vault } = burnAndWithdrawArgs(umi, publicKey(program.programId), collection)
+
+    const [masterState] = umi.eddsa.findPda(publicKey(program.programId), [
+      Buffer.from('master'),
+      publicKeySerializer().serialize(collection),
+    ])
+
+    await mintAsset(umi, {
+      payer,
+      collection: collection.publicKey,
+      owner: payer.publicKey,
+      asset,
+      mintAuthority,
+    }).sendAndConfirm(umi)
+
+    const afterState = await umi.rpc.getAccount(masterState)
+    const afterMinted = afterState.exists ? Number(afterState.data.slice(40, 48)) : 0
+
+    await burnAndWithdraw(umi, {
+      owner: payer,
+      collection: collection.publicKey,
+      asset: asset.publicKey,
+      vault,
+    }).sendAndConfirm(umi)
+
+    const newMasterState = await umi.rpc.getAccount(masterState)
+    expect(newMasterState.exists).toBe(true)
+    if (newMasterState.exists) {
+      const afterBurned = Number(newMasterState.data.slice(40, 48))
+      expect(afterBurned).toBe(afterMinted - 1)
+    }
+  })
+
   it('should transfer the asset to another user who can burn it and withdraw SOL', async () => {
     const recipient = generateSigner(umi)
     await umi.rpc.airdrop(recipient.publicKey, sol(100))
@@ -293,7 +424,54 @@ describe('Storymint', () => {
     expect(balanceDifference).toBeLessThan(BigInt(1010000000))
   })
 
-  it('should fail with update authority', async () => {
+  it('should fail to burn by the original owner, after transfer to another user', async () => {
+    const recipient = generateSigner(umi)
+    await umi.rpc.airdrop(recipient.publicKey, sol(100))
+
+    const { asset, mintAuthority, vault } = burnAndWithdrawArgs(umi, publicKey(program.programId), collection)
+
+    await mintAsset(umi, {
+      payer,
+      collection: collection.publicKey,
+      owner: payer.publicKey,
+      asset,
+      mintAuthority,
+    }).sendAndConfirm(umi)
+
+    // Build transfer transaction
+    const builder = transactionBuilder().add(
+      transferV1(umi, {
+        asset: asset.publicKey,
+        authority: payer,
+        newOwner: recipient.publicKey,
+        collection: collection.publicKey,
+        payer,
+      }),
+    )
+
+    // Send and confirm transfer
+    await builder.sendAndConfirm(umi)
+
+    // Verify recipient is new owner
+    const assetData = await fetchAssetV1(umi, asset.publicKey)
+    expect(assetData.owner).toEqual(recipient.publicKey)
+
+    try {
+      await burnAndWithdraw(umi, {
+        owner: payer,
+        collection: collection.publicKey,
+        asset: asset.publicKey,
+        vault,
+      }).sendAndConfirm(umi)
+      fail('Should have thrown error')
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        expect(error.message).toContain('Neither the asset or any plugins have approved this operation')
+      }
+    }
+  })
+
+  it('should fail to burn with update authority', async () => {
     const { asset, mintAuthority, vault } = burnAndWithdrawArgs(umi, publicKey(program.programId), collection)
 
     await mintAsset(umi, {
@@ -319,7 +497,7 @@ describe('Storymint', () => {
     }
   })
 
-  it('should fail with wrong owner', async () => {
+  it('should fail to burn with wrong owner', async () => {
     const wrongOwner = generateSigner(umi)
 
     const { asset, mintAuthority, vault } = burnAndWithdrawArgs(umi, publicKey(program.programId), collection)

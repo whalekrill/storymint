@@ -16,9 +16,7 @@ pub struct MintAsset {
           
               
           pub vault: solana_program::pubkey::Pubkey,
-                /// The new asset being created
-
-    
+          
               
           pub asset: solana_program::pubkey::Pubkey,
           
@@ -157,8 +155,7 @@ impl MintAssetBuilder {
                         self.vault = Some(vault);
                     self
     }
-            /// The new asset being created
-#[inline(always)]
+            #[inline(always)]
     pub fn asset(&mut self, asset: solana_program::pubkey::Pubkey) -> &mut Self {
                         self.asset = Some(asset);
                     self
@@ -233,9 +230,7 @@ impl MintAssetBuilder {
                 
                     
               pub vault: &'b solana_program::account_info::AccountInfo<'a>,
-                        /// The new asset being created
-
-      
+                
                     
               pub asset: &'b solana_program::account_info::AccountInfo<'a>,
                 
@@ -268,9 +263,7 @@ pub struct MintAssetCpi<'a, 'b> {
           
               
           pub vault: &'b solana_program::account_info::AccountInfo<'a>,
-                /// The new asset being created
-
-    
+          
               
           pub asset: &'b solana_program::account_info::AccountInfo<'a>,
           
@@ -447,8 +440,7 @@ impl<'a, 'b> MintAssetCpiBuilder<'a, 'b> {
                         self.instruction.vault = Some(vault);
                     self
     }
-      /// The new asset being created
-#[inline(always)]
+      #[inline(always)]
     pub fn asset(&mut self, asset: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.asset = Some(asset);
                     self
