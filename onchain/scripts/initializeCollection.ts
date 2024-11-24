@@ -16,7 +16,6 @@ import { publicKey as publicKeySerializer } from '@metaplex-foundation/umi/seria
 import { SendTransactionError, Keypair } from '@solana/web3.js'
 import { initializeCollection } from '../clients/generated/umi/src/instructions'
 import { createStorymintProgram } from '../clients/generated/umi/src/'
-import { MPL_TOKEN_METADATA_PROGRAM_ID, mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata'
 
 async function getUpdateAuthority(umi: Umi) {
   try {
@@ -35,6 +34,8 @@ async function getUpdateAuthority(umi: Umi) {
 }
 
 async function getProgramAddresses(umi: Umi, programId: PublicKey, collection: KeypairSigner) {
+  const MPL_TOKEN_METADATA_PROGRAM_ID = publicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
+
   const mintAuthority = umi.eddsa.findPda(publicKey(programId), [
     Buffer.from('mint_authority'),
     publicKeySerializer().serialize(collection.publicKey),
@@ -65,7 +66,6 @@ async function initialize() {
 
     const umi = createUmi(process.env.CLUSTER_URL)
       .use(mplCore())
-      .use(mplTokenMetadata())
       .use({
         install(umi) {
           umi.programs.add(createStorymintProgram())

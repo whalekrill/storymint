@@ -28,6 +28,25 @@ def start_proxy(ctx: Any) -> None:
 
 
 @task
+def update_cors_policy(ctx: Any) -> None:
+    """Update CORS policy."""
+    from google.cloud import storage
+
+    storage_client = storage.Client()
+    bucket_name = config("GCS_BUCKET_NAME")
+    bucket = storage_client.get_bucket(bucket_name)
+    bucket.cors = [
+        {
+            "origin": ["*"],
+            "method": ["GET"],
+            "responseHeader": ["Content-Type"],
+            "maxAgeSeconds": 3600,
+        }
+    ]
+    bucket.patch()
+
+
+@task
 def build(ctx: Any) -> None:
     """Build the project."""
     delete_database(ctx)
