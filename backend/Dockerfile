@@ -17,7 +17,7 @@ COPY media /storymint/media
 
 RUN pip install --no-cache-dir wheel
 RUN pip install $WHEEL
-RUN pip install --no-cache-dir $POETRY_EXPORT sentry-sdk
+RUN pip install --no-cache-dir $POETRY_EXPORT sentry-sdk[django]
 RUN rm $WHEEL
 
 ENTRYPOINT ["gunicorn", "--chdir", "/storymint", "--bind", "0.0.0.0:8080", "--timeout", "0", "--preload", "demo.wsgi:application"]

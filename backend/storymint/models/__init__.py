@@ -1,9 +1,8 @@
+from .characters import Character, CharacterChoice
+from .metadata import Metadata
 from .users import CustomUser
 from .world import (
-    CharacterAttribute,
-    CharacterChoice,
     Choice,
-    Faction,
     Node,
     Story,
     StoryPath,
@@ -11,11 +10,11 @@ from .world import (
 )
 
 __all__ = [
-    "CustomUser",
-    "CharacterAttribute",
+    "Character",
     "CharacterChoice",
+    "Metadata",
+    "CustomUser",
     "Choice",
-    "Faction",
     "Node",
     "Story",
     "StoryPath",

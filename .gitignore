@@ -9,6 +9,8 @@ test-ledger
 .env
 *.pyc
 *.sqlite3
+dist/
+cloud-tools/
+keys/
 static/
 media/
-keys/

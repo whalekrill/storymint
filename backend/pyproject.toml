@@ -3,7 +3,6 @@ name = "storymint"
 version = "0.1.0"
 description = "School of Solana Project"
 authors = ["krill <hey@sol-warrior.com>"]
-readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/heysolwarrior/storymint"
 repository = "https://github.com/heysolwarrior/storymint"
@@ -25,7 +24,7 @@ invoke = "*"
 ipython = "*"
 psycopg2-binary = "*"
 python-decouple = "*"
-sentry-sdk = "*"
+sentry-sdk = {version = "*", extras = ["django"]}
 solathon = "*"
 whitenoise = "*"
 
