@@ -50,7 +50,7 @@ class StorymintMetadataAdmin(SemanticModelAdmin):
     def metadata_url(self, obj: Metadata) -> str:
         """Metadata URL."""
         if obj.metadata:
-            url = get_storage_url(obj.metadata)
+            url = get_storage_url(obj.metadata, prefix="metadata")
             return format_html(f'<a href="{url}">{url}</a>')
         else:
             return "-"

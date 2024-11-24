@@ -61,7 +61,10 @@ module.exports = async function (provider: anchor.Provider) {
     collectionMetadata,
     collectionAuthorityRecord,
     mintAuthority,
-    args: { name: 'Storymint', uri: 'https://api.locked-sol.com/metadata/initial.json' },
+    args: {
+      name: 'Storymint',
+      uri: 'https://storage.googleapis.com/storymint/metadata/d251b52f-51a4-46bd-ad0a-2e3eca0c90cb.json',
+    },
   }
 
   await initializeCollection(umi, {
@@ -71,5 +74,5 @@ module.exports = async function (provider: anchor.Provider) {
     ...initializeCollectionArgs,
   }).sendAndConfirm(umi)
 
-  console.log('Done initializing master edition.')
+  console.log(`Done initializing collection ${collection.publicKey.toString()}`)
 }
