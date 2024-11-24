@@ -1,4 +1,3 @@
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
@@ -33,16 +32,16 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      plugins: [
-        NodeGlobalsPolyfillPlugin({
-          process: true,
-        }),
-      ],
-    },
-  },
-  plugins: [viteTsconfigPaths(), react(), nodePolyfills()],
+  plugins: [
+    viteTsconfigPaths(),
+    react(),
+    nodePolyfills({
+      protocolImports: true,
+      globals: {
+        process: true,
+      },
+    }),
+  ],
   server: {
     proxy: {
       '^/api/.*': {

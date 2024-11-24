@@ -1,11 +1,11 @@
+import { ReactNode, useCallback} from 'react'
 import { WalletError } from '@solana/wallet-adapter-base'
 import {
   ConnectionProvider,
   WalletProvider,
 } from '@solana/wallet-adapter-react'
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import type { Adapter } from '@solana/wallet-adapter-base'
-import { ReactNode, useCallback} from 'react'
+// import type { Adapter } from '@solana/wallet-adapter-base'
 // import { signInWithSolana } from './signInWithSolana'
 
 import('@solana/wallet-adapter-react-ui/styles.css')
@@ -20,15 +20,15 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
   }, [])
   
   // region custom
-  const useAutoSignIn = useCallback(async (adapter: Adapter) => {
-    // return await signInWithSolana(adapter)
-    return false
-  }, [])
+  // const useAutoSignIn = useCallback(async (adapter: Adapter) => {
+  //   return await signInWithSolana(adapter)
+  // }, [])
   // endregion
+  // <WalletProvider wallets={[]} onError={onError} autoConnect={useAutoSignIn}>
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={[]} onError={onError} autoConnect={useAutoSignIn}>
+      <WalletProvider wallets={[]} onError={onError} autoConnect={true}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

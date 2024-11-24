@@ -1,6 +1,6 @@
 import { ReactNode, Suspense, useEffect, useRef } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ExplorerLink } from './explorer-link'
 
 import { WalletButton } from '../solana/solana-provider'
