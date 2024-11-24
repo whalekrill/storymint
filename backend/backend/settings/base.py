@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # 3rd party
     "corsheaders",
     "django_filters",
+    "django_svelte_jsoneditor",
     "rest_framework",
     "rest_framework_simplejwt",
     "whitenoise",
@@ -107,7 +108,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTHENTICATION_BACKENDS = ("storymint.backends.SolanaAuthenticationBackend",)
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    "storymint.backends.SolanaAuthenticationBackend",
+)
 
 # REST Framework
 

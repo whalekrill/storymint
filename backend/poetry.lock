@@ -511,6 +511,20 @@ s3 = ["boto3 (>=1.4.4)"]
 sftp = ["paramiko (>=1.15)"]
 
 [[package]]
+name = "django-svelte-jsoneditor"
+version = "0.4.2"
+description = "A widget for django's JSONField using the latest-and-greatest Json Editor"
+optional = false
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "django_svelte_jsoneditor-0.4.2-py3-none-any.whl", hash = "sha256:bfa715a796e5c8a0c3d0edf5b064b21417c65e101fa131ee4a7beb670bbef53c"},
+    {file = "django_svelte_jsoneditor-0.4.2.tar.gz", hash = "sha256:1cc73511297bc6e11d5bbd151543da22a36e67dcc6f652d92943174b88153024"},
+]
+
+[package.dependencies]
+django = {version = ">=3.1", markers = "python_version >= \"3.10\" and python_version < \"4.0\""}
+
+[[package]]
 name = "djangorestframework"
 version = "3.15.2"
 description = "Web APIs for Django, made easy."
@@ -2016,4 +2030,4 @@ brotli = ["brotli"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "436afe1227b4b9ea2d99ab597bfa4d27fb3a5d305d2112fd351be69c9a968b89"
+content-hash = "ad3826604f4d22adbb032a45f1f1930d706854181f7ec843331e349a4754b686"

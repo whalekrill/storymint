@@ -23,5 +23,8 @@ class SolanaAuthenticationBackend(BaseBackend):
         except Exception:
             pass
         else:
-            user, created = User.objects.get_or_create(username=public_key)
+            try:
+                user = User.objects.get(address=public_key)
+            except User.DoesNotExist:
+                user = User.objects.create_user(username=public_key, address=public_key)
             return user

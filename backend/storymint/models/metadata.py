@@ -4,14 +4,17 @@ from django.utils.translation import gettext_lazy as _
 
 from storymint.constants import ImageGenerator
 
-from .base import AttributeBase, DescriptionBase, ImageBase, NameBase
+from .base import AttributeBase, DescriptionBase, ImageBase, NameBase, UUIDBase
 
 
-class Metadata(NameBase, DescriptionBase, ImageBase, AttributeBase):
+class Metadata(UUIDBase, NameBase, DescriptionBase, ImageBase, AttributeBase):
     """Asset Metadata."""
 
-    world = models.ForeignKey(
-        "storymint.World", related_name="metadata", on_delete=models.CASCADE
+    world = models.OneToOneField(
+        "storymint.World",
+        related_name="metadata",
+        on_delete=models.CASCADE,
+        unique=True,
     )
     collection = models.CharField(
         _("collection"),
@@ -26,12 +29,12 @@ class Metadata(NameBase, DescriptionBase, ImageBase, AttributeBase):
         _("generator"),
         choices=ImageGenerator.choices,
         max_length=255,
-        default=ImageGenerator.choices[0],
+        default=ImageGenerator.choices[0][0],
     )
 
     def get_image_generator(self) -> str:
         """Get image generator."""
-        return import_string(self.generator)
+        return import_string(f"storymint.{self.generator}")
 
     class Meta:
         db_table = "storymint_metadata"

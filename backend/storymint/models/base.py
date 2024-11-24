@@ -1,5 +1,5 @@
 import json
-from io import StringIO
+from io import BytesIO
 from uuid import uuid4
 
 from django.core.files.base import ContentFile
@@ -7,6 +7,17 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from storymint.serializers import MetadataSerializer
+
+
+def get_default_attributes() -> dict:
+    """Get default attributes."""
+    return [
+        {"trait_type": "Knowledge", "value": 1},
+        {"trait_type": "Charm", "value": 1},
+        {"trait_type": "Guts", "value": 1},
+        {"trait_type": "Kindness", "value": 1},
+        {"trait_type": "Proficiency", "value": 1},
+    ]
 
 
 class UUIDBase(models.Model):
@@ -51,12 +62,11 @@ class ImageBase(models.Model):
 
     def update_image(self) -> None:
         """Update image."""
-        if not self.image.name:
-            ImageGenerator = self.get_image_generator()
-            self.image = ImageGenerator(self.attrs)
-            ImageGenerator = self.generator
-            self.image = ImageGenerator(self.attrs)
-            self.image.name = f"{self.uuid}.png"
+        ImageGenerator = self.get_image_generator()
+        generator = ImageGenerator(self.attrs)
+        buffer = generator.generate()
+        self.image = ContentFile(buffer.getvalue())
+        self.image.name = f"{self.uuid}.png"
 
     class Meta:
         abstract = True
@@ -66,19 +76,25 @@ class AttributeBase(models.Model):
     """Attribute base."""
 
     metadata = models.FileField(_("metadata"), upload_to="metadata", blank=True)
-    attributes = models.JSONField(_("attributes"), default=list)
+    attributes = models.JSONField(_("attributes"), default=get_default_attributes)
+    max_value = models.PositiveIntegerField(_("max value"), default=5)
 
     @property
     def attrs(self) -> dict:
         """Attributes."""
-        return {attr["trait_value"]: attr["value"] for attr in self.attributes}
+        return {
+            attr["trait_type"]: attr["value"] / self.max_value
+            for attr in self.attributes
+            if isinstance(attr["value"], int)
+        }
 
     def update_metadata(self) -> None:
         """Update metadata."""
-        buffer = StringIO()
+        buffer = BytesIO()
         serializer = MetadataSerializer(self)
-        data = json.dumps(serializer.data)
-        buffer.write(data)
+        data = serializer.data
+        data = json.dumps({k: v for k, v in data.items() if v})
+        buffer.write(data.encode())
         self.metadata = ContentFile(buffer.getvalue())
         self.metadata.name = f"{self.uuid}.json"
 

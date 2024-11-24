@@ -49,9 +49,11 @@ def create_user(ctx: Any) -> None:
     """Create a superuser."""
     from django.contrib.auth import get_user_model
 
+    username = config("SUPER_USER")
+    password = config("SUPER_USER_PASSWORD")
     User = get_user_model()
-    user = User.objects.create(username="storymint", is_superuser=True, is_staff=True)
-    user.set_password("storymint")
+    user = User.objects.create(username=username, is_superuser=True, is_staff=True)
+    user.set_password(password)
     user.save()
 
 

@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.forms import Form
 from django.http import HttpRequest
@@ -6,6 +7,7 @@ from semantic_admin import SemanticModelAdmin
 from storymint.models import World
 
 
+@admin.register(World)
 class StorymintWorldAdmin(SemanticModelAdmin):
     """Storymint world admin."""
 

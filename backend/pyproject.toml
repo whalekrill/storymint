@@ -27,6 +27,7 @@ python-decouple = "*"
 sentry-sdk = {version = "*", extras = ["django"]}
 solathon = "*"
 whitenoise = "*"
+django-svelte-jsoneditor = "^0.4.2"
 
 [tool.poetry.dev-dependencies]
 black = "*"
