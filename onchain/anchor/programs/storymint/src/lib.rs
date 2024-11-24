@@ -13,7 +13,7 @@ mod state;
 
 use crate::instructions::*;
 
-declare_id!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
+declare_id!("5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B");
 
 #[program]
 pub mod storymint {

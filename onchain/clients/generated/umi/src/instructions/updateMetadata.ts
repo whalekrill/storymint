@@ -88,7 +88,7 @@ export function updateMetadata(
   // Program ID.
   const programId = context.programs.getPublicKey(
     'storymint',
-    '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'
+    '5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B'
   );
 
   // Accounts.

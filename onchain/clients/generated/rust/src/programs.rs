@@ -9,5 +9,5 @@ use solana_program::{pubkey, pubkey::Pubkey};
 
 
   /// `storymint` program ID.
-  pub const STORYMINT_ID: Pubkey = pubkey!("3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr");
+  pub const STORYMINT_ID: Pubkey = pubkey!("5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B");
 

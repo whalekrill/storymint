@@ -21,7 +21,7 @@ import {
 } from '../instructions';
 
 export const STORYMINT_PROGRAM_ADDRESS =
-  '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr' as Address<'3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'>;
+  '5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B' as Address<'5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B'>;
 
 export enum StorymintAccount {
   BaseCollectionV1,
@@ -132,7 +132,7 @@ export function identifyStorymintInstruction(
 }
 
 export type ParsedStorymintInstruction<
-  TProgram extends string = '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr',
+  TProgram extends string = '5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B',
 > =
   | ({
       instructionType: StorymintInstruction.BurnAndWithdraw;

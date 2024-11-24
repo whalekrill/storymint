@@ -18,7 +18,7 @@ import {
 } from '../errors';
 
 export const STORYMINT_PROGRAM_ID =
-  '3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr' as PublicKey<'3kLyy6249ZFsZyG74b6eSwuvDUVndkFM54cvK8gnietr'>;
+  '5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B' as PublicKey<'5qGtv9tb8yWuLG6jm2EPTBa3SsLP2hkhToB7tZT6mp5B'>;
 
 export function createStorymintProgram(): Program {
   return {
