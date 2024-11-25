@@ -32,28 +32,68 @@ export const STORYMINT_ERROR__UNDERFLOW = 0x1776; // 6006
 export const STORYMINT_ERROR__INVALID_UPDATE_AUTHORITY = 0x1777; // 6007
 /** InvalidMetadataUpdate: Invalid metadata update */
 export const STORYMINT_ERROR__INVALID_METADATA_UPDATE = 0x1778; // 6008
+/** InsufficientFunds: Insufficient funds for minting */
+export const STORYMINT_ERROR__INSUFFICIENT_FUNDS = 0x1779; // 6009
+/** InvalidMplCoreProgram: Invalid MPL Core program address */
+export const STORYMINT_ERROR__INVALID_MPL_CORE_PROGRAM = 0x177a; // 6010
+/** InvalidOwner: Invalid owner signature */
+export const STORYMINT_ERROR__INVALID_OWNER = 0x177b; // 6011
+/** RentCalculationError: Rent calculation failed */
+export const STORYMINT_ERROR__RENT_CALCULATION_ERROR = 0x177c; // 6012
+/** InvalidVaultInit: Invalid token vault initialization */
+export const STORYMINT_ERROR__INVALID_VAULT_INIT = 0x177d; // 6013
+/** TransferFailed: System transfer failed */
+export const STORYMINT_ERROR__TRANSFER_FAILED = 0x177e; // 6014
+/** InvalidMetadataParams: Invalid metadata parameters */
+export const STORYMINT_ERROR__INVALID_METADATA_PARAMS = 0x177f; // 6015
+/** AssetCreationFailed: Asset creation failed */
+export const STORYMINT_ERROR__ASSET_CREATION_FAILED = 0x1780; // 6016
+/** InvalidPdaDerivation: Invalid PDA derivation */
+export const STORYMINT_ERROR__INVALID_PDA_DERIVATION = 0x1781; // 6017
+/** StateUpdateFailed: State update failed */
+export const STORYMINT_ERROR__STATE_UPDATE_FAILED = 0x1782; // 6018
 
 export type StorymintError =
+  | typeof STORYMINT_ERROR__ASSET_CREATION_FAILED
+  | typeof STORYMINT_ERROR__INSUFFICIENT_FUNDS
   | typeof STORYMINT_ERROR__INVALID_AUTHORITY
   | typeof STORYMINT_ERROR__INVALID_COLLECTION
+  | typeof STORYMINT_ERROR__INVALID_METADATA_PARAMS
   | typeof STORYMINT_ERROR__INVALID_METADATA_UPDATE
+  | typeof STORYMINT_ERROR__INVALID_MPL_CORE_PROGRAM
+  | typeof STORYMINT_ERROR__INVALID_OWNER
+  | typeof STORYMINT_ERROR__INVALID_PDA_DERIVATION
   | typeof STORYMINT_ERROR__INVALID_UPDATE_AUTHORITY
   | typeof STORYMINT_ERROR__INVALID_VAULT_BALANCE
+  | typeof STORYMINT_ERROR__INVALID_VAULT_INIT
   | typeof STORYMINT_ERROR__MAX_SUPPLY_REACHED
   | typeof STORYMINT_ERROR__OVERFLOW
+  | typeof STORYMINT_ERROR__RENT_CALCULATION_ERROR
+  | typeof STORYMINT_ERROR__STATE_UPDATE_FAILED
+  | typeof STORYMINT_ERROR__TRANSFER_FAILED
   | typeof STORYMINT_ERROR__UNAUTHORIZED_UPDATE
   | typeof STORYMINT_ERROR__UNDERFLOW;
 
 let storymintErrorMessages: Record<StorymintError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   storymintErrorMessages = {
+    [STORYMINT_ERROR__ASSET_CREATION_FAILED]: `Asset creation failed`,
+    [STORYMINT_ERROR__INSUFFICIENT_FUNDS]: `Insufficient funds for minting`,
     [STORYMINT_ERROR__INVALID_AUTHORITY]: `Invalid authority`,
     [STORYMINT_ERROR__INVALID_COLLECTION]: `Invalid collection data`,
+    [STORYMINT_ERROR__INVALID_METADATA_PARAMS]: `Invalid metadata parameters`,
     [STORYMINT_ERROR__INVALID_METADATA_UPDATE]: `Invalid metadata update`,
+    [STORYMINT_ERROR__INVALID_MPL_CORE_PROGRAM]: `Invalid MPL Core program address`,
+    [STORYMINT_ERROR__INVALID_OWNER]: `Invalid owner signature`,
+    [STORYMINT_ERROR__INVALID_PDA_DERIVATION]: `Invalid PDA derivation`,
     [STORYMINT_ERROR__INVALID_UPDATE_AUTHORITY]: `Invalid update authority`,
     [STORYMINT_ERROR__INVALID_VAULT_BALANCE]: `Invalid vault balance`,
+    [STORYMINT_ERROR__INVALID_VAULT_INIT]: `Invalid token vault initialization`,
     [STORYMINT_ERROR__MAX_SUPPLY_REACHED]: `Maximum supply reached`,
     [STORYMINT_ERROR__OVERFLOW]: `Arithmetic overflow`,
+    [STORYMINT_ERROR__RENT_CALCULATION_ERROR]: `Rent calculation failed`,
+    [STORYMINT_ERROR__STATE_UPDATE_FAILED]: `State update failed`,
+    [STORYMINT_ERROR__TRANSFER_FAILED]: `System transfer failed`,
     [STORYMINT_ERROR__UNAUTHORIZED_UPDATE]: `Unauthorized metadata update`,
     [STORYMINT_ERROR__UNDERFLOW]: `Arithmetic underflow`,
   };

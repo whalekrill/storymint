@@ -37,6 +37,36 @@ pub enum StorymintError {
     /// 6008 - Invalid metadata update
     #[error("Invalid metadata update")]
     InvalidMetadataUpdate = 0x1778,
+    /// 6009 - Insufficient funds for minting
+    #[error("Insufficient funds for minting")]
+    InsufficientFunds = 0x1779,
+    /// 6010 - Invalid MPL Core program address
+    #[error("Invalid MPL Core program address")]
+    InvalidMplCoreProgram = 0x177A,
+    /// 6011 - Invalid owner signature
+    #[error("Invalid owner signature")]
+    InvalidOwner = 0x177B,
+    /// 6012 - Rent calculation failed
+    #[error("Rent calculation failed")]
+    RentCalculationError = 0x177C,
+    /// 6013 - Invalid token vault initialization
+    #[error("Invalid token vault initialization")]
+    InvalidVaultInit = 0x177D,
+    /// 6014 - System transfer failed
+    #[error("System transfer failed")]
+    TransferFailed = 0x177E,
+    /// 6015 - Invalid metadata parameters
+    #[error("Invalid metadata parameters")]
+    InvalidMetadataParams = 0x177F,
+    /// 6016 - Asset creation failed
+    #[error("Asset creation failed")]
+    AssetCreationFailed = 0x1780,
+    /// 6017 - Invalid PDA derivation
+    #[error("Invalid PDA derivation")]
+    InvalidPdaDerivation = 0x1781,
+    /// 6018 - State update failed
+    #[error("State update failed")]
+    StateUpdateFailed = 0x1782,
 }
 
 impl solana_program::program_error::PrintProgramError for StorymintError {

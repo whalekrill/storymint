@@ -20,4 +20,24 @@ pub enum CustomError {
     InvalidUpdateAuthority,
     #[msg("Invalid metadata update")]
     InvalidMetadataUpdate,
+    #[msg("Insufficient funds for minting")]
+    InsufficientFunds,
+    #[msg("Invalid MPL Core program address")]
+    InvalidMplCoreProgram,
+    #[msg("Invalid owner signature")]
+    InvalidOwner,
+    #[msg("Rent calculation failed")]
+    RentCalculationError,
+    #[msg("Invalid token vault initialization")]
+    InvalidVaultInit,
+    #[msg("System transfer failed")]
+    TransferFailed,
+    #[msg("Invalid metadata parameters")]
+    InvalidMetadataParams,
+    #[msg("Asset creation failed")]
+    AssetCreationFailed,
+    #[msg("Invalid PDA derivation")]
+    InvalidPdaDerivation,
+    #[msg("State update failed")]
+    StateUpdateFailed,
 }

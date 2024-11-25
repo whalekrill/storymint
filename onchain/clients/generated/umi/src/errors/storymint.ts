@@ -132,6 +132,136 @@ export class InvalidMetadataUpdateError extends ProgramError {
 codeToErrorMap.set(0x1778, InvalidMetadataUpdateError);
 nameToErrorMap.set('InvalidMetadataUpdate', InvalidMetadataUpdateError);
 
+/** InsufficientFunds: Insufficient funds for minting */
+export class InsufficientFundsError extends ProgramError {
+  override readonly name: string = 'InsufficientFunds';
+
+  readonly code: number = 0x1779; // 6009
+
+  constructor(program: Program, cause?: Error) {
+    super('Insufficient funds for minting', program, cause);
+  }
+}
+codeToErrorMap.set(0x1779, InsufficientFundsError);
+nameToErrorMap.set('InsufficientFunds', InsufficientFundsError);
+
+/** InvalidMplCoreProgram: Invalid MPL Core program address */
+export class InvalidMplCoreProgramError extends ProgramError {
+  override readonly name: string = 'InvalidMplCoreProgram';
+
+  readonly code: number = 0x177a; // 6010
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid MPL Core program address', program, cause);
+  }
+}
+codeToErrorMap.set(0x177a, InvalidMplCoreProgramError);
+nameToErrorMap.set('InvalidMplCoreProgram', InvalidMplCoreProgramError);
+
+/** InvalidOwner: Invalid owner signature */
+export class InvalidOwnerError extends ProgramError {
+  override readonly name: string = 'InvalidOwner';
+
+  readonly code: number = 0x177b; // 6011
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid owner signature', program, cause);
+  }
+}
+codeToErrorMap.set(0x177b, InvalidOwnerError);
+nameToErrorMap.set('InvalidOwner', InvalidOwnerError);
+
+/** RentCalculationError: Rent calculation failed */
+export class RentCalculationErrorError extends ProgramError {
+  override readonly name: string = 'RentCalculationError';
+
+  readonly code: number = 0x177c; // 6012
+
+  constructor(program: Program, cause?: Error) {
+    super('Rent calculation failed', program, cause);
+  }
+}
+codeToErrorMap.set(0x177c, RentCalculationErrorError);
+nameToErrorMap.set('RentCalculationError', RentCalculationErrorError);
+
+/** InvalidVaultInit: Invalid token vault initialization */
+export class InvalidVaultInitError extends ProgramError {
+  override readonly name: string = 'InvalidVaultInit';
+
+  readonly code: number = 0x177d; // 6013
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid token vault initialization', program, cause);
+  }
+}
+codeToErrorMap.set(0x177d, InvalidVaultInitError);
+nameToErrorMap.set('InvalidVaultInit', InvalidVaultInitError);
+
+/** TransferFailed: System transfer failed */
+export class TransferFailedError extends ProgramError {
+  override readonly name: string = 'TransferFailed';
+
+  readonly code: number = 0x177e; // 6014
+
+  constructor(program: Program, cause?: Error) {
+    super('System transfer failed', program, cause);
+  }
+}
+codeToErrorMap.set(0x177e, TransferFailedError);
+nameToErrorMap.set('TransferFailed', TransferFailedError);
+
+/** InvalidMetadataParams: Invalid metadata parameters */
+export class InvalidMetadataParamsError extends ProgramError {
+  override readonly name: string = 'InvalidMetadataParams';
+
+  readonly code: number = 0x177f; // 6015
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid metadata parameters', program, cause);
+  }
+}
+codeToErrorMap.set(0x177f, InvalidMetadataParamsError);
+nameToErrorMap.set('InvalidMetadataParams', InvalidMetadataParamsError);
+
+/** AssetCreationFailed: Asset creation failed */
+export class AssetCreationFailedError extends ProgramError {
+  override readonly name: string = 'AssetCreationFailed';
+
+  readonly code: number = 0x1780; // 6016
+
+  constructor(program: Program, cause?: Error) {
+    super('Asset creation failed', program, cause);
+  }
+}
+codeToErrorMap.set(0x1780, AssetCreationFailedError);
+nameToErrorMap.set('AssetCreationFailed', AssetCreationFailedError);
+
+/** InvalidPdaDerivation: Invalid PDA derivation */
+export class InvalidPdaDerivationError extends ProgramError {
+  override readonly name: string = 'InvalidPdaDerivation';
+
+  readonly code: number = 0x1781; // 6017
+
+  constructor(program: Program, cause?: Error) {
+    super('Invalid PDA derivation', program, cause);
+  }
+}
+codeToErrorMap.set(0x1781, InvalidPdaDerivationError);
+nameToErrorMap.set('InvalidPdaDerivation', InvalidPdaDerivationError);
+
+/** StateUpdateFailed: State update failed */
+export class StateUpdateFailedError extends ProgramError {
+  override readonly name: string = 'StateUpdateFailed';
+
+  readonly code: number = 0x1782; // 6018
+
+  constructor(program: Program, cause?: Error) {
+    super('State update failed', program, cause);
+  }
+}
+codeToErrorMap.set(0x1782, StateUpdateFailedError);
+nameToErrorMap.set('StateUpdateFailed', StateUpdateFailedError);
+
 /**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
